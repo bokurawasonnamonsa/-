@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>究極のUTC司令塔 WEB</title>
+    <style>
+        body { background-color: #1e1e1e; color: #ABB2BF; font-family: 'Consolas', sans-serif; margin: 0; padding: 0; font-size: 13px; overflow-x: hidden; }
+        .container { width: 100%; max-width: 1900px; padding: 15px; box-sizing: border-box; margin: auto; }
+        .sticky-header { position: sticky; top: 0; left: 0; width: 100%; background: #1e1e1e; z-index: 100; padding: 15px 25px; border-bottom: 2px solid #3E4451; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;}
+        .utc-main { font-size: 32px; color: white; font-weight: bold; display: flex; align-items: baseline; gap: 15px; }
+        
+        .status-bar { display: flex; align-items: center; background: #1E2227; padding: 6px 15px; border-radius: 6px; border: 1px solid #3E4451; gap: 15px; font-size: 13px; }
+        .status-divider { width: 1px; height: 20px; background-color: #3E4451; }
+        .status-val { font-size: 16px; font-weight: bold; margin: 0 4px; }
+        
+        .enemy-card { background: #282C34; border: 1px solid #E06C75; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+        .enemy-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+        
+        .pair-panel { background: #2A2E37; padding: 10px 15px; margin-bottom: 15px; border: 2px solid #E5C07B; border-radius: 8px; }
+        .pair-cb-box { background: #1E2227; padding: 5px 10px; border-radius: 4px; border: 1px solid #3E4451; }
+
+        .manual-panel { background: #21252B; border: 2px solid #98C379; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .manual-box { background: #2A2E37; border: 1px solid #3E4451; border-radius: 6px; padding: 10px; flex: 1; margin: 0 10px; display: flex; flex-direction: column; align-items: center; }
+        .manual-title { font-size: 14px; font-weight: bold; margin-bottom: 8px; width:100%; text-align:center;}
+
+        .alliances-container { display: flex; gap: 15px; width: 100%; justify-content: space-between; }
+        .alliance-col { width: calc(33.333% - 10px); background: #282C34; border: 1px solid #3E4451; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; box-sizing: border-box;}
+        .squads-flex { display: flex; flex-direction: column; gap: 15px; flex: 1; }
+        
+        .header-bar { display: flex; align-items: center; background: #2A2E37; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; border-left: 6px solid;}
+        .header-bar-enemy { border-color: #E06C75; }
+        .header-bar-ally { border-color: #61AFEF; justify-content: space-between; flex-wrap: wrap; gap: 10px;}
+        
+        .inline-calc { display: flex; align-items: center; gap: 15px; }
+        .row { display: flex; align-items: center; background: #21252B; margin-bottom: 5px; padding: 7px 9px; border-radius: 7px; gap: 7px; }
+        
+        .name-wrapper { position: relative; display: inline-block; }
+        .online-dot { width: 8px; height: 8px; border-radius: 50%; background-color: #5C6370; position: absolute; top: -3px; left: -3px; border: 2px solid #21252B; z-index: 10; transition: background-color 0.3s; }
+        .online-dot.active { background-color: #98C379; box-shadow: 0 0 4px #98C379; } 
+        .online-dot.away { background-color: #E5C07B; box-shadow: 0 0 4px #E5C07B; } 
+        
+        .radio-container { display: flex; flex-direction: column; align-items: center; width: 30px;}
+        .radio-label { font-size: 10px; font-weight: bold;}
+        
+        input.alliance-input { width: 140px; font-size: 18px; background: #181A1F; border: 1px solid #56B6C2; color: #56B6C2; font-weight: bold; padding: 6px 10px; border-radius: 4px;}
+        select.alliance-role { font-size: 14px; background: #181A1F; border: 1px solid #C678DD; color: #C678DD; font-weight: bold; padding: 6px; border-radius: 4px; cursor: pointer;}
+        input.player-name { width: 122px; background: #1E2227; border: 1px solid #3E4451; font-weight: bold; padding: 6px 6px 6px 12px; border-radius: 4px; font-size: 16px;}
+        input.color-enemy { color: #E06C75 !important; } 
+        input.color-ally1 { color: #C678DD !important; } 
+        input.color-ally2 { color: #56B6C2 !important; }
+        
+        button { cursor: pointer; border: none; border-radius: 3px; font-weight: bold; color: white; }
+        .btn-gray { background: #3E4451; } .btn-red { background: #E06C75; } .btn-green { background: #98C379; color: #282C34; }
+        
+        .timer-box { background: #1E2227; padding: 3px 5px; display: flex; align-items: center; border: 1px solid #3E4451; border-radius: 4px;}
+        .updown-col { display: flex; flex-direction: column; align-items: center; gap: 1px;}
+        .updown-btn { width: 16px; height: 12px; font-size: 8px; padding: 0;}
+        .val-txt { font-size: 19px; color: #E5C07B; font-weight: bold; margin: 0 2px; width: 15px; text-align: center;}
+        .colon { color: #E5C07B; font-size: 16px; font-weight: bold; width: 6px; text-align: center; }
+        .st-btn { width: 24px; height: 16px; font-size: 10px; padding:0; margin-bottom: 2px;}
+        
+        .sub-box { background: #1E2227; padding: 3px 5px; display: flex; align-items: center; border: 1px solid #3E4451; border-left:none; border-radius: 0 4px 4px 0;}
+        .sub-updown-btn { width: 12px; height: 10px; font-size: 7px; padding: 0;}
+        .sub-val-txt { font-size: 12px; color: #ABB2BF; font-weight: bold; width: 10px; text-align: center;}
+        .sub-disp { font-size: 15px; color: #D08EF2; font-weight: bold; width: 48px; text-align: right; margin-right:4px;}
+        
+        .target-box { color: #C8D1DE; font-size: 12px; padding-left: 8px; width: 165px; display: flex; flex-direction: column; line-height: 1.25; }
+        #enemy_rows .row { gap: 4px; padding: 6px 6px; box-sizing: border-box; overflow: hidden; }
+        #enemy_rows input.player-name { width: 90px; font-size: 14px; padding-left: 8px; }
+        #enemy_rows .target-box { width: 118px; padding-left: 4px; font-size: 11px; }
+        #enemy_rows .timer-box { transform: scale(0.92); transform-origin: left center; }
+        
+        .gorei-panel { background: #2A2E37; border: 1px solid #56B6C2; padding: 8px 12px; border-radius: 0 4px 4px 4px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; border-top: none;}
+        .squad-title { font-size: 14px; font-weight: bold; padding: 6px 12px; border-radius: 4px 4px 0 0; display: inline-block; background: #3E4451; color: white; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;}
+    </style>
+</head>
+<body>
+
+<div class="sticky-header">
+    <div class="utc-main">
+        <span id="utc">UTC --:--:--</span>
+        <span id="offsetDisp" style="font-size: 14px; font-weight: normal; color: #98C379;">(同期中...)</span>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 20px;">
+        <button style="background: #181A1F; border: 2px solid #61AFEF; color: #61AFEF; padding: 8px 16px; font-size: 13px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.5);" onclick="window.open('/support_hq_3301', '_blank')" onmouseover="this.style.background='#61AFEF'; this.style.color='white';" onmouseout="this.style.background='#181A1F'; this.style.color='#61AFEF';">✉️ サポートセンターを別枠で開く</button>
+        <button class="btn-gray" style="padding: 8px 16px; font-size: 13px; border-radius: 6px;" onclick="send('toggle_rally')" id="rallyToggleBtn">⏱ 5分(切替)</button>
+        <div class="status-bar">
+            <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
+                <span style="color:#ffffff; margin-right:8px;">[全同盟]</span>
+                👑集結主:<span class="status-val" style="color:#E5C07B;" id="countLeader_total">0</span> 
+                🏇乗り手:<span class="status-val" style="color:#C678DD;" id="countRider_total">0</span>
+            </div>
+            <div class="status-divider"></div>
+            <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
+                <span id="lbl_count_aln0" style="color:#61AFEF; margin-right:5px; width:30px;">APL</span>
+                👑<span class="status-val" style="color:#E5C07B;" id="countLeader_aln0">0</span> 
+                🏇<span class="status-val" style="color:#C678DD;" id="countRider_aln0">0</span>
+            </div>
+            <div class="status-divider"></div>
+            <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
+                <span id="lbl_count_aln1" style="color:#61AFEF; margin-right:5px; width:30px;">PKD</span>
+                👑<span class="status-val" style="color:#E5C07B;" id="countLeader_aln1">0</span> 
+                🏇<span class="status-val" style="color:#C678DD;" id="countRider_aln1">0</span>
+            </div>
+            <div class="status-divider"></div>
+            <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
+                <span id="lbl_count_aln2" style="color:#61AFEF; margin-right:5px; width:30px;">MTC</span>
+                👑<span class="status-val" style="color:#E5C07B;" id="countLeader_aln2">0</span> 
+                🏇<span class="status-val" style="color:#C678DD;" id="countRider_aln2">0</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="manual-panel" id="manual_panel_content"></div>
+    <div class="pair-panel" id="pairing_panel_content"></div>
+
+    <div class="enemy-card">
+        <div class="header-bar header-bar-enemy">
+            <div style="color: white; font-weight: bold; font-size: 16px; margin-right: 30px;">◆ 敵国 (ターゲット)</div>
+            <div class="inline-calc">
+                <div style="color: #C678DD; font-weight: bold; font-size: 14px;">【 マーク (1秒前 UTC) 】</div>
+                <div id="insTarget" style="font-size: 20px; color: #E5C07B; font-weight: bold;">--:--:--</div>
+                <div id="insRemain" style="font-size: 20px; color: #98C379; font-weight: bold;">--:--</div>
+            </div>
+        </div>
+        <div id="enemy_rows" class="enemy-grid"></div>
+    </div>
+
+    <div id="alliances_container" class="alliances-container"></div>
+</div>
+
+<script>
+    let ws; let isBuilt = false; let timeOffset = 0; 
+    let reconnectDelayMs = 1000;
+    let heartbeatTimer = null;
+    let insertTargetIdx = -1; let delayTargetIdxs = [-1,-1,-1,-1,-1,-1];
+    let currentRoles = ["", "", ""];
+    let cachedArrTimes = {};
+    let lastCancelTrigger = 0;
+    let globalLocalState = null; 
+
+    function getSyncedNow() { return new Date(Date.now() + timeOffset); }
+    function send(cmd, idx=null, val=null) { if(ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({cmd: cmd, idx: idx, val: val})); }
+    function startHeartbeat() {
+        stopHeartbeat();
+        heartbeatTimer = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({cmd: "ping"}));
+        }, 20000);
+    }
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
+
+    function syncManBaseToSquad(sqIdStr) {
+        let sqId = parseInt(sqIdStr);
+        if (sqId === -1 || !globalLocalState) return;
+        let arrTime = getVirtualArrTime(sqId, globalLocalState, getSyncedNow().getTime());
+        if (arrTime) {
+            send('set_manual_base_abs', null, arrTime / 1000);
+        }
+        document.getElementById('manBaseSyncSelect').value = "-1";
+    }
+
+    function buildRow(i, radioType, radioName, colorClass) {
+        let label = radioType === 'insert' ? 'ﾏｰｸ' : '抜く';
+        let labelColor = radioType === 'insert' ? '#E06C75' : '#C678DD';
+        let cmd = radioType === 'insert' ? 'set_insert_target' : 'set_delay_target';
+        
+        return `
+        <div class="row">
+            <div class="radio-container">
+                <div class="radio-label" style="color:${labelColor}">${label}</div>
+                <input type="radio" name="${radioName}" id="radio_${i}" value="${i}" onclick="send('${cmd}', ${i})">
+            </div>
+            <div class="name-wrapper">
+                <div id="dot_${i}" class="online-dot" title="未登録"></div>
+                <input class="name player-name ${colorClass}" id="name_${i}" onblur="send('update_name', ${i}, this.value)" onkeydown="if(event.key==='Enter') send('update_name', ${i}, this.value)">
+            </div>
+            <button class="btn-red" style="padding: 3px 6px; font-size: 11px; height: 24px; border-radius: 4px;" onclick="if(confirm('クリアしますか？')) send('clear_player', ${i})" title="クリア">✖</button>
+            <div class="timer-box">
+                <div class="updown-col"><button class="btn-gray updown-btn" onclick="send('mod_main', ${i}, 600)">▲</button><div class="val-txt" id="m10_${i}">0</div><button class="btn-gray updown-btn" onclick="send('mod_main', ${i}, -600)">▼</button></div>
+                <div class="updown-col"><button class="btn-gray updown-btn" onclick="send('mod_main', ${i}, 60)">▲</button><div class="val-txt" id="m1_${i}">0</div><button class="btn-gray updown-btn" onclick="send('mod_main', ${i}, -60)">▼</button></div>
+                <div class="colon">:</div>
+                <div class="updown-col"><button class="btn-gray updown-btn" onclick="send('mod_main', ${i}, 10)">▲</button><div class="val-txt" id="s10_${i}">0</div><button class="btn-gray updown-btn" onclick="send('mod_main', ${i}, -10)">▼</button></div>
+                <div class="updown-col"><button class="btn-gray updown-btn" onclick="send('mod_main', ${i}, 1)">▲</button><div class="val-txt" id="s1_${i}">0</div><button class="btn-gray updown-btn" onclick="send('mod_main', ${i}, -1)">▼</button></div>
+                <div style="display:flex; flex-direction:column; margin-left:6px;">
+                    <button class="btn-green st-btn" onclick="send('start', ${i})">▶</button>
+                    <button class="btn-red st-btn" onclick="send('stop', ${i})">■</button>
+                </div>
+            </div>
+            <div class="sub-box">
+                <div style="display:flex;">
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_sub', ${i}, 60)">▲</button><div class="sub-val-txt" id="sm1_${i}">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_sub', ${i}, -60)">▼</button></div>
+                    <div style="color:#ABB2BF;font-size:12px;align-self:center">:</div>
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_sub', ${i}, 10)">▲</button><div class="sub-val-txt" id="ss10_${i}">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_sub', ${i}, -10)">▼</button></div>
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_sub', ${i}, 1)">▲</button><div class="sub-val-txt" id="ss1_${i}">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_sub', ${i}, -1)">▼</button></div>
+                </div>
+                <div class="sub-disp" id="subdisp_${i}">00:00</div>
+            </div>
+            <div class="target-box">
+                <span id="dispatch_${i}" style="color:#E5C07B; font-weight:bold;"></span>
+                <span id="tgt_${i}">▶--:--:--</span>
+            </div>
+        </div>`;
+    }
+
+    function buildGoreiPanel(squadId, color) {
+        return `
+        <div class="gorei-panel" style="border-color: ${color};">
+            <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <span style="color:#ABB2BF; font-size:11px;">猶予+</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei', ${squadId}, 10)">▲</button><div class="sub-val-txt" id="goreiE10_${squadId}" style="color:#E5C07B;">1</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei', ${squadId}, -10)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei', ${squadId}, 1)">▲</button><div class="sub-val-txt" id="goreiE1_${squadId}" style="color:#E5C07B;">5</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei', ${squadId}, -1)">▼</button></div>
+                        <span style="color:#ABB2BF; font-size:11px;">秒</span>
+                    </div>
+                    <button style="background: ${color}; color: white; padding: 4px 10px; font-size:12px; border-radius:4px;" onclick="send('fire_gorei', ${squadId})">即時号令 (今のﾀｲﾐﾝｸﾞ)</button>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; background:#1E2227; padding:4px 6px; border-radius:4px; border:1px solid #3E4451;">
+                    <span style="color:#ABB2BF; font-size:11px;">着弾:</span>
+                    <div style="display:flex; align-items:center;">
+                        <span id="goreiTargetHH_${squadId}" style="font-size:16px; color:#61AFEF; font-weight:bold;">00</span><span style="color:#61AFEF; font-weight:bold; margin:0 2px;">:</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, 600)">▲</button><div class="sub-val-txt" id="goreiTargetM10_${squadId}" style="color:#61AFEF; font-size:16px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, -600)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, 60)">▲</button><div class="sub-val-txt" id="goreiTargetM1_${squadId}" style="color:#61AFEF; font-size:16px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, -60)">▼</button></div><span style="color:#61AFEF; font-weight:bold; margin:0 2px;">:</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, 10)">▲</button><div class="sub-val-txt" id="goreiTargetS10_${squadId}" style="color:#61AFEF; font-size:16px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, -10)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, 1)">▲</button><div class="sub-val-txt" id="goreiTargetS1_${squadId}" style="color:#61AFEF; font-size:16px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, -1)">▼</button></div>
+                    </div>
+                    <button style="background: #98C379; color: #282C34; padding: 4px 6px; font-size:11px; border-radius:4px; font-weight:bold;" onclick="send('fire_gorei_fixed', ${squadId})">着弾指定号令</button>
+                </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-left:5px; align-items:center;">
+                <button class="btn-red" style="padding: 6px 12px; font-size:12px; border-radius:4px;" onclick="send('cancel_gorei', ${squadId})">解除</button>
+                <div id="goreiState_${squadId}" style="color:#E5C07B; font-size:11px; width:45px; text-align:center;"></div>
+            </div>
+        </div>`;
+    }
+
+    function buildManualPanel() {
+        let html = `
+            <div class="manual-box" style="border-color:#E5C07B;">
+                <div class="manual-title" style="color:#E5C07B; display:flex; justify-content:space-between; align-items:center;">
+                    <span>⏱️ 3301着弾(基準)</span>
+                    <select id="manBaseSyncSelect" style="background:#181A1F; border:1px solid #E5C07B; color:#E5C07B; font-size:11px; padding:2px; border-radius:3px; font-weight:bold;" onchange="syncManBaseToSquad(this.value)">
+                        <option value="-1">手動で設定</option>
+                        <option value="0">APL-第1班の着弾に合わせる</option>
+                        <option value="1">APL-第2班の着弾に合わせる</option>
+                        <option value="2">PKD-第1班の着弾に合わせる</option>
+                        <option value="3">PKD-第2班の着弾に合わせる</option>
+                        <option value="4">MTC-第1班の着弾に合わせる</option>
+                        <option value="5">MTC-第2班の着弾に合わせる</option>
+                    </select>
+                </div>
+                <div style="display:flex; align-items:center; margin-top:8px;">
+                    <span id="manBaseHH" style="font-size:24px; color:#E5C07B; font-weight:bold;">00</span><span style="color:#E5C07B; font-weight:bold; margin:0 3px;">:</span>
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_base', null, 600)">▲</button><div class="sub-val-txt" id="manBaseM10" style="color:#E5C07B; font-size:20px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_base', null, -600)">▼</button></div>
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_base', null, 60)">▲</button><div class="sub-val-txt" id="manBaseM1" style="color:#E5C07B; font-size:20px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_base', null, -60)">▼</button></div><span style="color:#E5C07B; font-weight:bold; margin:0 3px;">:</span>
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_base', null, 10)">▲</button><div class="sub-val-txt" id="manBaseS10" style="color:#E5C07B; font-size:20px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_base', null, -10)">▼</button></div>
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_base', null, 1)">▲</button><div class="sub-val-txt" id="manBaseS1" style="color:#E5C07B; font-size:20px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_base', null, -1)">▼</button></div>
+                </div>
+            </div>
+            
+            <div style="font-size:24px; color:#ABB2BF;">▶</div>
+
+            <div class="manual-box" style="border-color:#98C379;">
+                <div class="manual-title" style="color:#98C379;">🟢 入替着弾(占領同盟)</div>
+                <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+                    <span style="color:#ABB2BF; font-size:11px;">基準から +</span>
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_swap_margin', null, 10)">▲</button><div class="sub-val-txt" id="manSwapE10" style="color:#98C379;">1</div><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_swap_margin', null, -10)">▼</button></div>
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_swap_margin', null, 1)">▲</button><div class="sub-val-txt" id="manSwapE1" style="color:#98C379;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_swap_margin', null, -1)">▼</button></div>
+                    <span style="color:#ABB2BF; font-size:11px;">秒後</span>
+                </div>
+                <div id="manSwapTarget" style="font-size:24px; color:#98C379; font-weight:bold; font-family:monospace; margin-bottom:8px;">00:00:00</div>
+                <div style="display:flex; gap:5px; width:100%;">
+                    <button style="background:#98C379; color:#282C34; padding:6px; font-weight:bold; border-radius:4px; flex:1;" onclick="send('fire_manual_swap')">発動</button>
+                    <button class="btn-red" style="padding:6px; border-radius:4px;" onclick="send('cancel_manual_swap')">解除</button>
+                </div>
+                <div id="manSwapState" style="color:#E5C07B; font-size:11px; height:12px; margin-top:3px;"></div>
+            </div>
+            
+            <div style="font-size:24px; color:#ABB2BF;">▶</div>
+
+            <div class="manual-box" style="border-color:#E06C75;">
+                <div class="manual-title" style="color:#E06C75;">🔴 占領抜き(攻撃同盟)</div>
+                <div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">
+                    <span style="color:#ABB2BF; font-size:11px;">入替着弾から -</span>
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_wd_margin', null, 10)">▲</button><div class="sub-val-txt" id="manWdE10" style="color:#E06C75;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_wd_margin', null, -10)">▼</button></div>
+                    <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_wd_margin', null, 1)">▲</button><div class="sub-val-txt" id="manWdE1" style="color:#E06C75;">1</div><button class="btn-gray sub-updown-btn" onclick="send('mod_manual_wd_margin', null, -1)">▼</button></div>
+                    <span style="color:#ABB2BF; font-size:11px;">秒前</span>
+                </div>
+                <div id="manWdTarget" style="font-size:24px; color:#E06C75; font-weight:bold; font-family:monospace; margin-bottom:8px;">00:00:00</div>
+                <div style="display:flex; gap:5px; width:100%;">
+                    <button style="background:#E06C75; color:white; padding:6px; font-weight:bold; border-radius:4px; flex:1;" onclick="send('fire_manual_wd')">発動</button>
+                    <button class="btn-red" style="padding:6px; border-radius:4px;" onclick="send('cancel_manual_wd')">解除</button>
+                </div>
+                <div id="manWdState" style="color:#E5C07B; font-size:11px; height:12px; margin-top:3px;"></div>
+            </div>
+        `;
+        document.getElementById('manual_panel_content').innerHTML = html;
+    }
+
+    function buildPairingPanel() {
+        let cbHtml = "";
+        let defaultNames = ["APL", "PKD", "MTC"];
+        for(let a=0; a<3; a++) {
+            cbHtml += `
+                <div class="pair-cb-box">
+                    <div style="color:#61AFEF; font-weight:bold; margin-bottom:5px; font-size:12px;" id="pair_aln_label_${a}">${defaultNames[a]}</div>
+                    <label style="cursor:pointer; display:block; color:#C678DD;"><input type="checkbox" id="pair_cb_${a*2}" onclick="send('toggle_pair_squad', ${a*2})"> 第1班</label>
+                    <label style="cursor:pointer; display:block; color:#56B6C2; margin-top:3px;"><input type="checkbox" id="pair_cb_${a*2+1}" onclick="send('toggle_pair_squad', ${a*2+1})"> 第2班</label>
+                </div>
+            `;
+        }
+        let html = `
+        <h3 style="color:#E5C07B; margin-top:0; margin-bottom:10px;">🔗 複数班ペアリング号令（同時着弾）</h3>
+        <div style="display:flex; align-items:center; gap:20px;">
+            <div style="display:flex; gap:10px;">${cbHtml}</div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:10px; border-left:1px solid #3E4451; padding-left:20px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <span style="color:#ABB2BF; font-size:13px;">猶予+</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei', null, 10)">▲</button><div class="sub-val-txt" id="pairGoreiE10" style="color:#E5C07B; font-size:14px;">1</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei', null, -10)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei', null, 1)">▲</button><div class="sub-val-txt" id="pairGoreiE1" style="color:#E5C07B; font-size:14px;">5</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei', null, -1)">▼</button></div>
+                        <span style="color:#ABB2BF; font-size:13px;">秒</span>
+                    </div>
+                    <button style="background: #E5C07B; color: #282C34; padding: 6px 20px; font-size:15px; font-weight:bold; border-radius:4px;" onclick="send('fire_pair_gorei')">即時号令 (今のﾀｲﾐﾝｸﾞ)</button>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; background:#1E2227; padding:6px 10px; border-radius:4px; border:1px solid #3E4451;">
+                    <span style="color:#ABB2BF; font-size:13px;">ペア着弾(UTC):</span>
+                    <div style="display:flex; align-items:center;">
+                        <span id="pairGoreiTargetHH" style="font-size:18px; color:#E5C07B; font-weight:bold;">00</span><span style="color:#E5C07B; font-weight:bold; margin:0 3px;">:</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, 600)">▲</button><div class="sub-val-txt" id="pairGoreiTargetM10" style="color:#E5C07B; font-size:18px; width:12px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, -600)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, 60)">▲</button><div class="sub-val-txt" id="pairGoreiTargetM1" style="color:#E5C07B; font-size:18px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, -60)">▼</button></div><span style="color:#E5C07B; font-weight:bold; margin:0 3px;">:</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, 10)">▲</button><div class="sub-val-txt" id="pairGoreiTargetS10" style="color:#E5C07B; font-size:18px; width:12px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, -10)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, 1)">▲</button><div class="sub-val-txt" id="pairGoreiTargetS1" style="color:#E5C07B; font-size:18px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, -1)">▼</button></div>
+                    </div>
+                    <button style="background: #98C379; color: #282C34; padding: 6px 20px; font-size:14px; font-weight:bold; border-radius:4px;" onclick="send('fire_pair_gorei_fixed')">着弾指定号令</button>
+                </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px; align-items:center; margin-left:15px;">
+                <button class="btn-red" style="padding: 10px 20px; font-size:14px; border-radius:4px;" onclick="send('cancel_pair_gorei')">一斉解除</button>
+            </div>
+        </div>`;
+        document.getElementById('pairing_panel_content').innerHTML = html;
+    }
+
+    function buildAlliancePanel(a, role, data) {
+        const staffName = (data && data.staff_names && data.staff_names[a]) ? data.staff_names[a] : "";
+        let panelHtml = `
+            <div class="header-bar header-bar-ally">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <input class="alliance-input" id="aln_name_${a}" placeholder="同盟名を入力" onblur="send('update_alliance', ${a}, this.value)">
+                    <select class="alliance-role" id="aln_role_${a}" onchange="send('update_alliance_role', ${a}, this.value)">
+                        <option value="occupy" ${role==='occupy'?'selected':''}>🟢 占領同盟</option>
+                        <option value="attack" ${role==='attack'?'selected':''}>🔴 攻撃同盟</option>
+                    </select>
+                </div>
+                <div id="staff_name_disp_${a}" style="font-size:12px; color:#E5C07B; font-weight:bold;">
+                    ${staffName ? `参謀: ${staffName}` : "参謀: 未登録"}
+                </div>
+            </div>
+        `;
+
+        panelHtml += `<div class="squads-flex">`;
+        
+        let s1Title = `
+            <div class="squad-title" style="border-bottom: 2px solid #C678DD; color: #C678DD; width: 100%; box-sizing: border-box; display:flex; justify-content:space-between; align-items:center;">
+                第1班 (連撃部隊)
+            </div>`;
+        panelHtml += `
+            <div class="squad-block">
+                ${s1Title}
+                ${buildGoreiPanel(a*2, '#C678DD')}
+                <div id="rows_squad_${a*2}"></div>
+            </div>`;
+
+        let s2Title = `
+            <div class="squad-title" style="border-bottom: 2px solid #56B6C2; color: #56B6C2; width: 100%; box-sizing: border-box; display:flex; justify-content:space-between; align-items:center;">
+                第2班 (連撃部隊)
+            </div>`;
+        panelHtml += `
+            <div class="squad-block">
+                ${s2Title}
+                ${buildGoreiPanel(a*2+1, '#56B6C2')}
+                <div id="rows_squad_${a*2+1}"></div>
+            </div>
+        </div>`;
+        return panelHtml;
+    }
+
+    function buildDOM() {
+        buildManualPanel();
+        buildPairingPanel();
+        let enemyHtml = '';
+        for(let i=0; i<6; i++) enemyHtml += buildRow(i, 'insert', 'ins_tgt', 'color-enemy');
+        document.getElementById('enemy_rows').innerHTML = enemyHtml;
+
+        let alnHtml = '';
+        for(let a=0; a<3; a++) {
+            let initRole = a === 0 ? 'occupy' : 'attack';
+            alnHtml += `<div class="alliance-col" id="alliance_container_${a}">${buildAlliancePanel(a, initRole, null)}</div>`;
+        }
+        document.getElementById('alliances_container').innerHTML = alnHtml;
+
+        for(let a=0; a<3; a++) {
+            let sq1 = '', sq2 = '';
+            for(let i=0; i<6; i++) {
+                sq1 += buildRow(6 + a*12 + i, 'delay', `del_tgt_${a*2}`, 'color-ally1');
+                sq2 += buildRow(12 + a*12 + i, 'delay', `del_tgt_${a*2+1}`, 'color-ally2');
+            }
+            document.getElementById(`rows_squad_${a*2}`).innerHTML = sq1;
+            document.getElementById(`rows_squad_${a*2+1}`).innerHTML = sq2;
+        }
+    }
+
+    function connect() {
+        let ws_protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+        ws = new WebSocket(ws_protocol + window.location.host + "/ws");
+        ws.onopen = () => {
+            reconnectDelayMs = 1000;
+            startHeartbeat();
+        };
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data); const data = msg.data;
+                globalLocalState = data; 
+                if(msg.server_timestamp) {
+                    timeOffset = msg.server_timestamp - Date.now();
+                    let elOffset = document.getElementById('offsetDisp');
+                    if(elOffset) elOffset.innerText = `(補正: ${timeOffset > 0 ? "+" : ""}${(timeOffset/1000).toFixed(2)}秒)`;
+                }
+                if(msg.type === "init") { buildDOM(); isBuilt = true; }
+                if(!isBuilt) return;
+                updateUI(data, msg.utc);
+            } catch (err) { console.error(err); }
+        };
+        ws.onclose = () => {
+            stopHeartbeat();
+            const wait = reconnectDelayMs + Math.floor(Math.random() * 400);
+            setTimeout(connect, wait);
+            reconnectDelayMs = Math.min(reconnectDelayMs * 2, 15000);
+        };
+    }
+    connect();
+
+    function updateUI(data, utcTime) {
+        document.getElementById('utc').innerText = "UTC " + utcTime;
+        insertTargetIdx = data.insert_target_idx; delayTargetIdxs = data.delay_target_idxs;
+        
+        document.getElementById('countLeader_total').innerText = data.online_counts.total.leader;
+        document.getElementById('countRider_total').innerText = data.online_counts.total.rider;
+        
+        for(let i=0; i<3; i++) {
+            let lbl = document.getElementById(`lbl_count_aln${i}`);
+            if(lbl) lbl.innerText = data.alliance_names[i] || ["APL", "PKD", "MTC"][i];
+            
+            let lCount = document.getElementById(`countLeader_aln${i}`);
+            if(lCount) lCount.innerText = data.online_counts[`aln${i}`].leader;
+            
+            let rCount = document.getElementById(`countRider_aln${i}`);
+            if(rCount) rCount.innerText = data.online_counts[`aln${i}`].rider;
+        }
+
+        let now = getSyncedNow().getTime();
+        
+        if (data.cancel_trigger !== lastCancelTrigger) {
+            lastCancelTrigger = data.cancel_trigger;
+            cachedArrTimes = {};
+        }
+
+        document.getElementById('manSwapE10').innerText = Math.floor(data.manual_swap_margin / 10);
+        document.getElementById('manSwapE1').innerText = data.manual_swap_margin % 10;
+        document.getElementById('manWdE10').innerText = Math.floor(data.manual_wd_margin / 10);
+        document.getElementById('manWdE1').innerText = data.manual_wd_margin % 10;
+
+        let manBaseTs = data.manual_base_target ? data.manual_base_target * 1000 : now;
+        let dBase = new Date(manBaseTs);
+        document.getElementById('manBaseHH').innerText = String(dBase.getUTCHours()).padStart(2, '0');
+        document.getElementById('manBaseM10').innerText = Math.floor(dBase.getUTCMinutes() / 10);
+        document.getElementById('manBaseM1').innerText = dBase.getUTCMinutes() % 10;
+        document.getElementById('manBaseS10').innerText = Math.floor(dBase.getUTCSeconds() / 10);
+        document.getElementById('manBaseS1').innerText = dBase.getUTCSeconds() % 10;
+        
+        let baseColor = data.manual_base_target ? "#E5C07B" : "#ABB2BF";
+        document.getElementById('manBaseHH').style.color = baseColor;
+        document.getElementById('manBaseM10').style.color = baseColor;
+        document.getElementById('manBaseM1').style.color = baseColor;
+        document.getElementById('manBaseS10').style.color = baseColor;
+        document.getElementById('manBaseS1').style.color = baseColor;
+
+        let dSwap = new Date(manBaseTs + data.manual_swap_margin * 1000);
+        document.getElementById('manSwapTarget').innerText = `${String(dSwap.getUTCHours()).padStart(2, '0')}:${String(dSwap.getUTCMinutes()).padStart(2, '0')}:${String(dSwap.getUTCSeconds()).padStart(2, '0')}`;
+        document.getElementById('manSwapState').innerText = data.manual_swap_trigger_time ? "✅ 発動中" : "";
+
+        let dWd = new Date(dSwap.getTime() - data.manual_wd_margin * 1000);
+        document.getElementById('manWdTarget').innerText = `${String(dWd.getUTCHours()).padStart(2, '0')}:${String(dWd.getUTCMinutes()).padStart(2, '0')}:${String(dWd.getUTCSeconds()).padStart(2, '0')}`;
+        document.getElementById('manWdState').innerText = data.manual_wd_trigger_time ? "✅ 発動中" : "";
+
+        for(let a=0; a<3; a++) {
+            if (currentRoles[a] !== data.alliance_roles[a]) {
+                currentRoles[a] = data.alliance_roles[a];
+                document.getElementById(`alliance_container_${a}`).innerHTML = buildAlliancePanel(a, data.alliance_roles[a], data);
+                let sq1 = '', sq2 = '';
+                for(let i=0; i<6; i++) {
+                    sq1 += buildRow(6 + a*12 + i, 'delay', `del_tgt_${a*2}`, 'color-ally1');
+                    sq2 += buildRow(12 + a*12 + i, 'delay', `del_tgt_${a*2+1}`, 'color-ally2');
+                }
+                document.getElementById(`rows_squad_${a*2}`).innerHTML = sq1;
+                document.getElementById(`rows_squad_${a*2+1}`).innerHTML = sq2;
+            }
+
+            let elName = document.getElementById(`aln_name_${a}`);
+            if(elName && document.activeElement !== elName) elName.value = data.alliance_names[a];
+
+            let alnLabel = document.getElementById(`pair_aln_label_${a}`);
+            if(alnLabel) alnLabel.innerText = data.alliance_names[a] || ["APL", "PKD", "MTC"][a];
+            let staffDisp = document.getElementById(`staff_name_disp_${a}`);
+            if (staffDisp) {
+                const sName = (data.staff_names && data.staff_names[a]) ? data.staff_names[a] : "";
+                staffDisp.innerText = sName ? `参謀: ${sName}` : "参謀: 未登録";
+            }
+        }
+        
+        document.getElementById('pairGoreiE10').innerText = Math.floor(data.pair_gorei_offset / 10);
+        document.getElementById('pairGoreiE1').innerText = data.pair_gorei_offset % 10;
+
+        let pairMarches = [];
+        for (let s = 0; s < 6; s++) {
+            if (data.pair_selected[s]) {
+                let startIdx = 6 + s * 6;
+                for (let i = startIdx; i < startIdx + 6; i++) {
+                    if (data.timers[i].name !== "") pairMarches.push(data.timers[i].sub_set);
+                }
+            }
+        }
+        let pairMaxMarch = pairMarches.length > 0 ? Math.max(...pairMarches) : 0;
+        let minPairTgtTs = now + (data.pair_gorei_offset + data.default_rally + pairMaxMarch) * 1000;
+        let pairDispTs = data.pair_fixed_target ? data.pair_fixed_target * 1000 : minPairTgtTs;
+        let pairD = new Date(pairDispTs);
+        
+        document.getElementById('pairGoreiTargetHH').innerText = String(pairD.getUTCHours()).padStart(2, '0');
+        document.getElementById('pairGoreiTargetM10').innerText = Math.floor(pairD.getUTCMinutes() / 10);
+        document.getElementById('pairGoreiTargetM1').innerText = pairD.getUTCMinutes() % 10;
+        document.getElementById('pairGoreiTargetS10').innerText = Math.floor(pairD.getUTCSeconds() / 10);
+        document.getElementById('pairGoreiTargetS1').innerText = pairD.getUTCSeconds() % 10;
+        
+        let pairColor = data.pair_fixed_target ? "#E5C07B" : "#61AFEF";
+        document.getElementById('pairGoreiTargetHH').style.color = pairColor;
+        document.getElementById('pairGoreiTargetM10').style.color = pairColor;
+        document.getElementById('pairGoreiTargetM1').style.color = pairColor;
+        document.getElementById('pairGoreiTargetS10').style.color = pairColor;
+        document.getElementById('pairGoreiTargetS1').style.color = pairColor;
+
+        for(let s=0; s<6; s++) {
+            document.getElementById(`goreiE10_${s}`).innerText = Math.floor(data.gorei_offsets[s] / 10);
+            document.getElementById(`goreiE1_${s}`).innerText = data.gorei_offsets[s] % 10;
+            
+            let startIdx = 6 + s * 6;
+            let marches = [];
+            for(let i=startIdx; i<startIdx+6; i++) { if(data.timers[i].name !== "") marches.push(data.timers[i].sub_set); }
+            let maxMarch = marches.length > 0 ? Math.max(...marches) : 0;
+            
+            let minTgtTs = now + (data.gorei_offsets[s] + data.default_rally + maxMarch) * 1000;
+            let dispTs = data.gorei_fixed_targets[s] ? data.gorei_fixed_targets[s] * 1000 : minTgtTs;
+            let d = new Date(dispTs);
+            
+            document.getElementById(`goreiTargetHH_${s}`).innerText = String(d.getUTCHours()).padStart(2, '0');
+            document.getElementById(`goreiTargetM10_${s}`).innerText = Math.floor(d.getUTCMinutes() / 10);
+            document.getElementById(`goreiTargetM1_${s}`).innerText = d.getUTCMinutes() % 10;
+            document.getElementById(`goreiTargetS10_${s}`).innerText = Math.floor(d.getUTCSeconds() / 10);
+            document.getElementById(`goreiTargetS1_${s}`).innerText = d.getUTCSeconds() % 10;
+            
+            let color = data.gorei_fixed_targets[s] ? "#E5C07B" : "#61AFEF";
+            document.getElementById(`goreiTargetHH_${s}`).style.color = color;
+            document.getElementById(`goreiTargetM10_${s}`).style.color = color;
+            document.getElementById(`goreiTargetM1_${s}`).style.color = color;
+            document.getElementById(`goreiTargetS10_${s}`).style.color = color;
+            document.getElementById(`goreiTargetS1_${s}`).style.color = color;
+
+            let isGoreiActive = data.timers.slice(startIdx, startIdx+6).some(t => t.state === 4);
+            document.getElementById(`goreiState_${s}`).innerText = isGoreiActive ? "待機中" : "";
+        }
+
+        for(let i=0; i<42; i++) {
+            let rb = document.getElementById('radio_'+i);
+            if(rb) {
+                if(i<6) rb.checked = (insertTargetIdx === i);
+                else { let squadId = Math.floor((i - 6) / 6); rb.checked = (delayTargetIdxs[squadId] === i); }
+            }
+
+            let t = data.timers[i]; 
+            let ni = document.getElementById('name_'+i); 
+            if(ni && document.activeElement !== ni) ni.value = t.name;
+            
+            let dot = document.getElementById('dot_'+i);
+            if(dot) {
+                dot.classList.remove('active', 'away');
+                if(t.name !== "") {
+                    if (t.online) { dot.classList.add('active'); dot.title = "オンライン"; } 
+                    else if (t.device_mode === '1device') { dot.classList.add('away'); dot.title = "1端末(ゲーム中)"; } 
+                    else { dot.title = "オフライン"; }
+                } else { dot.title = "未登録"; }
+            }
+
+            const ms = t.sec;
+            document.getElementById('m10_'+i).innerText = Math.floor(ms/600); 
+            document.getElementById('m1_'+i).innerText = Math.floor((ms%600)/60);
+            document.getElementById('s10_'+i).innerText = Math.floor((ms%60)/10); 
+            document.getElementById('s1_'+i).innerText = Math.floor(ms%10);
+            
+            document.getElementById('sm1_'+i).innerText = Math.floor(t.sub_set/60); 
+            document.getElementById('ss10_'+i).innerText = Math.floor((t.sub_set%60)/10); 
+            document.getElementById('ss1_'+i).innerText = Math.floor(t.sub_set%10);
+            document.getElementById('subdisp_'+i).innerText = t.state === 2 ? formatSec(t.sub_sec) : "00:00";
+            
+            let tgtStr = "▶--:--:--"; let dispatchStr = ""; let adjUTC = now + t.off;
+            
+            if(t.state === 4) {
+                let waitSec = Math.max(0, (new Date(t.start_at).getTime() - now) / 1000);
+                dispatchStr = `🚀出征まで:${formatSec(waitSec)}`;
+                let tgtD = new Date(adjUTC + (waitSec + data.default_rally + t.sub_set) * 1000);
+                tgtStr = `▶${String(tgtD.getUTCHours()).padStart(2,'0')}:${String(tgtD.getUTCMinutes()).padStart(2,'0')}:${String(tgtD.getUTCSeconds()).padStart(2,'0')}`;
+            } else if(t.state === 1) {
+                let tgtD = new Date(adjUTC + (t.sec + t.sub_set) * 1000);
+                tgtStr = `▶${String(tgtD.getUTCHours()).padStart(2,'0')}:${String(tgtD.getUTCMinutes()).padStart(2,'0')}:${String(tgtD.getUTCSeconds()).padStart(2,'0')}`;
+            } else if(t.state === 2) {
+                let tgtD = new Date(t.frozen_target);
+                tgtStr = `▶${String(tgtD.getUTCHours()).padStart(2,'0')}:${String(tgtD.getUTCMinutes()).padStart(2,'0')}:${String(tgtD.getUTCSeconds()).padStart(2,'0')}`;
+            }
+            document.getElementById('dispatch_'+i).innerText = dispatchStr;
+            document.getElementById('tgt_'+i).innerText = tgtStr;
+        }
+        calcExtras(data, now);
+    }
+
+    function getTargetTime(t, now, default_rally) {
+        if(t.state === 0) return null;
+        let adjUTC = now + t.off;
+        if(t.state === 4) {
+            let w = Math.max(0, (new Date(t.start_at).getTime() - now) / 1000);
+            return adjUTC + (w + default_rally + t.sub_set) * 1000;
+        } else if(t.state === 1) { return adjUTC + (t.sec + t.sub_set) * 1000;
+        } else if(t.state === 2) { return new Date(t.frozen_target).getTime(); }
+        return null;
+    }
+
+    function getVirtualArrTime(sqId, data, now, depth=0) {
+        if(sqId < 0 || sqId > 5 || depth > 3) return null;
+        let start = 6 + sqId * 6;
+        let arrs = [];
+        let marches = [];
+        for(let i=start; i<start+6; i++) {
+            let t = data.timers[i];
+            if(t.name !== "") marches.push(t.sub_set);
+            let tgt = getTargetTime(t, now, data.default_rally);
+            if(tgt) arrs.push(tgt);
+        }
+        
+        if (arrs.length > 0) {
+            let maxArr = Math.max(...arrs);
+            cachedArrTimes[sqId] = { time: maxArr, updated: now };
+            return maxArr;
+        }
+        
+        let alnIdx = Math.floor(sqId / 2);
+        if (data.alliance_roles[alnIdx] === 'occupy') {
+            let tgtSq = data.swap_base_squad;
+            if (tgtSq >= 0 && tgtSq !== sqId) {
+                let baseArr = getVirtualArrTime(tgtSq, data, now, depth+1);
+                if (baseArr !== null) {
+                    let maxMarch = marches.length > 0 ? Math.max(...marches) : 0;
+                    let calcArr = baseArr + data.swap_extras[alnIdx] * 1000 + maxMarch * 1000;
+                    cachedArrTimes[sqId] = { time: calcArr, updated: now };
+                    return calcArr;
+                }
+            }
+        }
+        if (cachedArrTimes[sqId] && (now - cachedArrTimes[sqId].updated < 300000)) return cachedArrTimes[sqId].time;
+        return null;
+    }
+
+    function calcExtras(data, now) {
+        let elInsTgt = document.getElementById('insTarget');
+        let elInsRem = document.getElementById('insRemain');
+
+        let insTargetTime = null;
+        if (insertTargetIdx >= 0 && insertTargetIdx < 6 && data.timers[insertTargetIdx].state !== 0) {
+            let tgt = getTargetTime(data.timers[insertTargetIdx], now, data.default_rally);
+            if (tgt) insTargetTime = tgt - 1000;
+        } else {
+            let tArrA = [];
+            for(let i=0; i<6; i++) { let t = getTargetTime(data.timers[i], now, data.default_rally); if(t) tArrA.push(t); }
+            if(tArrA.length > 0) insTargetTime = Math.max(...tArrA) - 1000; 
+        }
+
+        if(insTargetTime) {
+            let d = new Date(insTargetTime);
+            if(elInsTgt) elInsTgt.innerText = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}:${String(d.getUTCSeconds()).padStart(2, '0')}`;
+            if(elInsRem) elInsRem.innerText = formatSec(Math.max(0, (insTargetTime - now)/1000));
+        } else {
+            if(elInsTgt) elInsTgt.innerText = "--:--:--"; 
+            if(elInsRem) elInsRem.innerText = "--:--";
+        }
+    }
+
+    function formatSec(s) { 
+        if (s < 0) s = 0; const m = Math.floor(s/60), ss = Math.floor(s%60); 
+        return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`; 
+    }
+</script>
+</body>
+</html>

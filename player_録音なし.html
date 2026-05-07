@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>司令塔 プレイヤー画面</title>
+    <style>
+        body { background-color: #1e1e1e; color: #ABB2BF; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
+        .utc-main { font-size: 32px; color: white; font-weight: bold; margin-bottom: 10px; display: flex; flex-direction: column; align-items: center;}
+        .card { background: #282C34; border: 1px solid #3E4451; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+        .role-btn { padding: 15px; font-size: 18px; width: 45%; margin: 5px; border-radius: 8px; border:none; font-weight:bold;}
+        .active { background: #61AFEF; color: white; } .inactive { background: #3E4451; color: #ABB2BF; }
+        
+        .input-group { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 15px 0;}
+        input[type="text"] { padding: 12px; font-size: 18px; width: 80%; border-radius: 6px; border:none; text-align:center;}
+        .time-inputs { display: flex; justify-content: center; align-items: center; gap: 10px;}
+        input[type="number"] { padding: 12px; font-size: 18px; width: 60px; border-radius: 6px; border:none; text-align:center;}
+        .time-label { font-size: 18px; font-weight: bold;}
+        
+        .status-rally { color: #98C379; font-size: 24px; font-weight: bold; }
+        .status-march { color: #C678DD; font-size: 24px; font-weight: bold; }
+        .countdown { font-size: 48px; color: #E5C07B; font-weight: bold; margin: 10px 0; }
+        .target { font-size: 18px; color: #ABB2BF; margin-top: 5px; }
+        .target-cd { font-size: 20px; color: #61AFEF; font-weight: bold; margin-top: 5px;}
+        
+        .btn-audio { padding: 10px 20px; border-radius: 30px; font-size: 16px; font-weight: bold; border: none; cursor: pointer; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .audio-off { background: #E06C75; color: white; }
+        .audio-on { background: #98C379; color: #282C34; }
+    </style>
+</head>
+<body>
+    <div class="utc-main">
+        <span id="utc">UTC --:--:--</span>
+        <span id="offsetDisp" style="font-size: 14px; font-weight: normal; color: #98C379;">(同期中...)</span>
+    </div>
+
+    <button id="audioBtn" class="btn-audio audio-on" onclick="toggleAudio()">🔊 音声ON (タップでOFF)</button>
+
+    <div id="setup">
+        <div class="card">
+            <h3>あなたの役割を選択</h3>
+            <button id="btnLeader" class="role-btn inactive" onclick="setRole('leader')">集結主</button>
+            <button id="btnRider" class="role-btn inactive" onclick="setRole('rider')">乗り手</button>
+            
+            <div id="leaderInputs" style="display:none;">
+                <div class="input-group">
+                    <input type="text" id="pName" placeholder="名前を入力 (集結主のみ)">
+                    <div style="color:#61AFEF; font-weight:bold; margin-top:5px;">行軍時間を入力</div>
+                    <div class="time-inputs">
+                        <input type="number" id="pMin" value="0" min="0" max="10"> <span class="time-label">分</span>
+                        <input type="number" id="pSec" value="30" min="0" max="59"> <span class="time-label">秒</span>
+                    </div>
+                </div>
+                <button class="role-btn active" style="width:80%" onclick="register()">登録して開始</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="display" style="display:none;"></div>
+
+<script>
+    let ws;
+    let myRole = null; 
+    let myName = "";
+    let myMarchSec = 0; 
+    
+    let timeOffset = 0; 
+    function getSyncedNow() { return new Date(Date.now() + timeOffset); }
+    
+    let audioEnabled = true;
+    let spokenMyDepart = -1;
+    let spokenRiderIns = -1;
+    let spokenRiderSwap = -1;
+    
+    let last_cancel_trigger = null; 
+    let localVoice = null;
+    let isRegisteredConfirmed = false;
+
+    // ==========================================
+    // ★ バックグラウンド維持エンジン (Web Audio API)
+    // ==========================================
+    let audioCtx = null;
+
+    function initBackgroundAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+        // OSを騙すために、人間には聞こえない極小ボリュームの音を永遠に鳴らし続ける
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 440;
+        gain.gain.value = 0.0001; // ほぼ無音
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+    }
+
+    // ★ バックグラウンド用のビープ音（電子音）生成
+    function playBeep(type) {
+        if (!audioCtx) return;
+        let osc = audioCtx.createOscillator();
+        let gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'notice') {
+            // 18秒前の予告（ピーン）
+            osc.frequency.value = 880; 
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.5);
+        } else if (type === 'countdown') {
+            // 10秒前〜1秒前のカウント（ピッ）
+            osc.frequency.value = 1000;
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.15);
+        } else if (type === 'start') {
+            // 0秒のスタート（ピィーーー！）
+            osc.frequency.value = 1500;
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
+            osc.start(audioCtx.currentTime);
+            osc.stop(audioCtx.currentTime + 0.8);
+        }
+    }
+
+    window.onload = () => {
+        let savedName = localStorage.getItem("utc_my_name");
+        let savedMin = localStorage.getItem("utc_my_min");
+        let savedSec = localStorage.getItem("utc_my_sec");
+
+        if (savedName !== null) document.getElementById('pName').value = savedName;
+        if (savedMin !== null) document.getElementById('pMin').value = savedMin;
+        if (savedSec !== null) document.getElementById('pSec').value = savedSec;
+        
+        loadLocalVoice(); 
+    };
+
+    function loadLocalVoice() {
+        let voices = window.speechSynthesis.getVoices();
+        localVoice = voices.find(v => v.lang === 'ja-JP' && v.localService) || 
+                     voices.find(v => v.lang === 'ja-JP' || v.lang === 'ja_JP') || null;
+    }
+    window.speechSynthesis.onvoiceschanged = loadLocalVoice;
+
+    function connect() {
+        let ws_protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+        ws = new WebSocket(ws_protocol + window.location.host + "/ws");
+        
+        ws.onmessage = (e) => {
+            const msg = JSON.parse(e.data); 
+            
+            if(msg.server_timestamp) {
+                timeOffset = msg.server_timestamp - Date.now();
+                let sign = timeOffset > 0 ? "+" : "";
+                let elOffset = document.getElementById('offsetDisp');
+                if(elOffset) elOffset.innerText = `(補正: ${sign}${(timeOffset/1000).toFixed(2)}秒)`;
+            }
+
+            if (msg.data.cancel_trigger !== undefined) {
+                if (last_cancel_trigger === null) {
+                    last_cancel_trigger = msg.data.cancel_trigger;
+                } else if (msg.data.cancel_trigger !== last_cancel_trigger) {
+                    last_cancel_trigger = msg.data.cancel_trigger;
+                    if (myRole === 'leader' && audioEnabled) {
+                        speak("集結を解除して下さい", "notice");
+                    }
+                }
+            }
+
+            if (myRole === 'leader' && myName !== "") {
+                let isMyNameStillThere = false;
+                msg.data.timers.slice(3,6).forEach(t => {
+                    if (t.name === myName) isMyNameStillThere = true;
+                });
+                
+                if (isMyNameStillThere) {
+                    isRegisteredConfirmed = true;
+                } else if (isRegisteredConfirmed) {
+                    document.getElementById('setup').style.display = 'block';
+                    document.getElementById('display').style.display = 'none';
+                    myName = "";
+                    myRole = null;
+                    isRegisteredConfirmed = false;
+                    document.getElementById('btnLeader').className = 'role-btn inactive';
+                    document.getElementById('btnRider').className = 'role-btn inactive';
+                    document.getElementById('leaderInputs').style.display = 'none';
+                    if (audioEnabled) speak("登録が解除されました", "notice");
+                    return; 
+                }
+            }
+            
+            document.getElementById('utc').innerText = "UTC " + msg.utc;
+            let html = "";
+            let now = getSyncedNow();
+
+            if (myRole === 'rider') {
+                let insTargetTime = getInsTargetTime(msg.data, now);
+                let swapTargetTime = getSwapTargetTime(msg.data, now);
+
+                let insStartHtml = "<div style='color:#7F848E;font-size:18px;margin:10px 0;'>ターゲット待機中</div>";
+                if (insTargetTime) {
+                    let myStart = new Date(insTargetTime - myMarchSec * 1000);
+                    let wait = (myStart.getTime() - now.getTime()) / 1000;
+                    let arrivalWait = (insTargetTime - now.getTime()) / 1000;
+                    
+                    if (wait >= 0) {
+                        insStartHtml = `<div class="countdown">${formatSec(wait)}</div>
+                                        <div class="target">着弾予定: ${new Date(insTargetTime).toISOString().substr(11,8)}</div>
+                                        <div class="target-cd">着弾まで: ${formatSec(arrivalWait)}</div>`;
+                        handleRiderVoice(wait, "ins"); 
+                    } else {
+                        insStartHtml = `<div class="countdown" style="color:#7F848E;">出発済</div>
+                                        <div class="target">着弾予定: ${new Date(insTargetTime).toISOString().substr(11,8)}</div>
+                                        <div class="target-cd">着弾まで: ${formatSec(arrivalWait)}</div>`;
+                    }
+                } else { spokenRiderIns = -1; }
+
+                let swapStartHtml = "<div style='color:#7F848E;font-size:18px;margin:10px 0;'>ターゲット待機中</div>";
+                if (swapTargetTime) {
+                    let myStart = new Date(swapTargetTime - myMarchSec * 1000);
+                    let wait = (myStart.getTime() - now.getTime()) / 1000;
+                    let arrivalWait = (swapTargetTime - now.getTime()) / 1000;
+
+                    if (wait >= 0) {
+                        swapStartHtml = `<div class="countdown">${formatSec(wait)}</div>
+                                         <div class="target">着弾予定: ${new Date(swapTargetTime).toISOString().substr(11,8)}</div>
+                                         <div class="target-cd">着弾まで: ${formatSec(arrivalWait)}</div>`;
+                        handleRiderVoice(wait, "swap"); 
+                    } else {
+                        swapStartHtml = `<div class="countdown" style="color:#7F848E;">出発済</div>
+                                         <div class="target">着弾予定: ${new Date(swapTargetTime).toISOString().substr(11,8)}</div>
+                                         <div class="target-cd">着弾まで: ${formatSec(arrivalWait)}</div>`;
+                    }
+                } else { spokenRiderSwap = -1; }
+
+                html += `<div class="card" style="border: 2px solid #C678DD;">
+                    <h2 style="color:#C678DD;margin:0">【 マーク(差込) 】出発まで</h2>
+                    ${insStartHtml}
+                </div>`;
+                html += `<div class="card" style="border: 2px solid #98C379;">
+                    <h2 style="color:#98C379;margin:0">【 入替 】出発まで</h2>
+                    ${swapStartHtml}
+                </div>`;
+                
+                html += `<hr style="border-color:#3E4451; margin:20px 0;">`;
+                html += `<h3 style="color:#ABB2BF; margin-bottom: 10px;">▼ 現在の出征部隊 ▼</h3>`;
+            }
+
+            msg.data.timers.slice(3,6).forEach((t, i) => {
+                if(myRole === 'leader' && t.name !== myName) return;
+                if(myRole === 'rider' && t.name === "") return;
+
+                let status = "待機中"; 
+                let time = "";
+                let targetHtml = "";
+
+                if(t.state === 4) {
+                    let wait = Math.max(0, (new Date(t.start_at).getTime() - now.getTime())/1000);
+                    let delayNote = (i + 3 === msg.data.delay_target_idx) ? " <span style='color:#E06C75'>(+1秒遅延)</span>" : "";
+                    status = "集結ボタンを押すまで" + delayNote; 
+                    time = formatSec(wait);
+                    
+                    if (myRole === 'leader') handleMyVoice(wait);
+
+                    let myTarget = new Date(now.getTime() + (wait + msg.data.default_rally + t.sub_set) * 1000);
+                    let arrivalWait = (myTarget.getTime() - now.getTime()) / 1000;
+                    targetHtml = `
+                        <div class="target">着弾予定: ${myTarget.toISOString().substr(11,8)}</div>
+                        <div class="target-cd">着弾まで: ${formatSec(arrivalWait)}</div>
+                    `;
+
+                } else if(t.state === 1) { 
+                    status = "🚀 集結中 (出征まで)"; 
+                    time = formatSec(t.sec);
+
+                    if (myRole === 'leader') handleMyVoice(t.sec);
+
+                    let myTarget = new Date(now.getTime() + (t.sec + t.sub_set) * 1000);
+                    let arrivalWait = (myTarget.getTime() - now.getTime()) / 1000;
+                    targetHtml = `
+                        <div class="target">着弾予定: ${myTarget.toISOString().substr(11,8)}</div>
+                        <div class="target-cd">着弾まで: ${formatSec(arrivalWait)}</div>
+                    `;
+
+                } else if(t.state === 2) { 
+                    status = "⚔️ 行軍中"; 
+                    time = formatSec(t.sub_sec); 
+                    
+                    if (myRole === 'leader') handleMyVoice(t.sub_sec);
+
+                    let myTarget = new Date(t.frozen_target);
+                    let arrivalWait = (myTarget.getTime() - now.getTime()) / 1000;
+                    targetHtml = `
+                        <div class="target">着弾予定: ${myTarget.toISOString().substr(11,8)}</div>
+                        <div class="target-cd">着弾まで: ${formatSec(arrivalWait)}</div>
+                    `;
+                } else {
+                    spokenMyDepart = -1; 
+                }
+
+                html += `<div class="card">
+                    <h2 style="color:#61AFEF;margin:0">${t.name}部隊</h2>
+                    <div style="font-size:18px;margin-top:10px">${status}</div>
+                    <div class="countdown">${time}</div>
+                    ${targetHtml}
+                </div>`;
+            });
+
+            document.getElementById('display').innerHTML = html || "<div style='color:#7F848E;'>部隊の情報を待っています...</div>";
+        };
+        ws.onclose = () => setTimeout(connect, 1000);
+    }
+    
+    connect();
+
+    function toggleAudio() {
+        audioEnabled = !audioEnabled;
+        let b = document.getElementById('audioBtn');
+        if (audioEnabled) {
+            loadLocalVoice(); 
+            initBackgroundAudio(); // ★ 音声ON時にバックグラウンドエンジン起動
+            b.innerText = "🔊 音声ON (タップでOFF)";
+            b.className = "btn-audio audio-on";
+            speak("音声案内をオンにしました", "notice");
+        } else {
+            b.innerText = "🔇 音声OFF (タップでON)";
+            b.className = "btn-audio audio-off";
+            window.speechSynthesis.cancel();
+        }
+    }
+
+    // ★ 音声とビープのハイブリッド制御
+    function speak(text, beepType) {
+        if(!audioEnabled) return;
+        
+        // 画面がバックグラウンド（非表示）にいる場合、ナレーションはブロックされるのでビープ音を鳴らす
+        if (document.visibilityState === 'hidden') {
+            if (beepType) playBeep(beepType);
+            return;
+        }
+
+        // 画面が開いている場合はナレーション
+        window.speechSynthesis.cancel(); 
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'ja-JP'; 
+        u.rate = 1.2; 
+        if (localVoice) u.voice = localVoice;
+        try { window.speechSynthesis.speak(u); } catch(e) {}
+    }
+
+    function setRole(r) {
+        myRole = r;
+        document.getElementById('btnLeader').className = r=='leader'?'role-btn active':'role-btn inactive';
+        document.getElementById('btnRider').className = r=='rider'?'role-btn active':'role-btn inactive';
+        document.getElementById('leaderInputs').style.display = 'block';
+        document.getElementById('pName').style.display = r=='leader'?'block':'none';
+    }
+    
+    function register() {
+        let min = document.getElementById('pMin').value;
+        let sec = document.getElementById('pSec').value;
+        if(min === "" || sec === "") return alert("行軍を入力してください");
+        
+        localStorage.setItem("utc_my_min", min);
+        localStorage.setItem("utc_my_sec", sec);
+        isRegisteredConfirmed = false;
+
+        // ★ 登録時にバックグラウンドエンジンを確実に起動
+        initBackgroundAudio();
+        speak("", "notice"); 
+
+        if(myRole === 'leader') {
+            myName = document.getElementById('pName').value;
+            if(!myName) return alert("名前を入力してください");
+            
+            localStorage.setItem("utc_my_name", myName);
+            
+            ws.send(JSON.stringify({cmd:"register_player", val:{role:"leader", name:myName, march_min:min, march_sec:sec}}));
+        } else if (myRole === 'rider') {
+            myName = "乗り手";
+            myMarchSec = parseInt(min) * 60 + parseInt(sec);
+            ws.send(JSON.stringify({cmd:"register_player", val:{role:"rider"}}));
+        }
+
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('display').style.display = 'block';
+    }
+
+    function getTargetTime(t, now, default_rally) {
+        if(t.state === 0) return null;
+        let adjUTC = new Date(now.getTime() + t.off);
+        if(t.state === 4) {
+            let waitSec = Math.max(0, (new Date(t.start_at).getTime() - now.getTime()) / 1000);
+            return new Date(adjUTC.getTime() + (waitSec + default_rally + t.sub_set) * 1000).getTime();
+        } else if(t.state === 1) {
+            return new Date(adjUTC.getTime() + (t.sec + t.sub_set) * 1000).getTime();
+        } else if(t.state === 2) {
+            return new Date(t.frozen_target).getTime();
+        }
+        return null;
+    }
+
+    function getInsTargetTime(data, now) {
+        let insTargetTime = null;
+        let insertTargetIdx = data.insert_target_idx;
+        if (insertTargetIdx >= 0 && insertTargetIdx < 3 && data.timers[insertTargetIdx].state !== 0) {
+            let tgt = getTargetTime(data.timers[insertTargetIdx], now, data.default_rally);
+            if (tgt) insTargetTime = tgt - 1000;
+        } else {
+            let tArrA = [];
+            for(let i=0; i<3; i++) {
+                let t = getTargetTime(data.timers[i], now, data.default_rally);
+                if(t) tArrA.push(t);
+            }
+            if(tArrA.length > 0) {
+                let latest = Math.max(...tArrA);
+                insTargetTime = latest - 1000; 
+            }
+        }
+        return insTargetTime;
+    }
+
+    function getSwapTargetTime(data, now) {
+        let tArrB = [];
+        for(let i=3; i<6; i++) {
+            let t = getTargetTime(data.timers[i], now, data.default_rally);
+            if(t) tArrB.push(t);
+        }
+        if(tArrB.length > 0) {
+            let latest = Math.max(...tArrB);
+            return latest + data.swap_extra * 1000;
+        }
+        return null;
+    }
+
+    function handleMyVoice(remSec) {
+        if(!audioEnabled) return;
+        let r = Math.floor(remSec);
+        
+        if (r === 18 && spokenMyDepart !== r) {
+            if (myRole === 'leader') {
+                speak("間もなく集結スタート10秒前です", 'notice');
+            } else {
+                speak("まもなく10秒前です", 'notice');
+            }
+            spokenMyDepart = r;
+        } else if (r > 0 && r <= 10 && spokenMyDepart !== r) {
+            speak(getReading(r), 'countdown');
+            spokenMyDepart = r;
+        } else if (r === 0 && spokenMyDepart !== 0) {
+            speak("スタート！", 'start'); 
+            spokenMyDepart = 0;
+        }
+        
+        if (r < 18 && r > 10 && spokenMyDepart === -1) {
+            spokenMyDepart = r;
+        }
+    }
+
+    function handleRiderVoice(remSec, type) {
+        if(!audioEnabled) return;
+        let r = Math.floor(remSec);
+        let spoken = type === "ins" ? spokenRiderIns : spokenRiderSwap;
+        
+        if (r === 18 && spoken !== r) {
+            if (type === "ins") {
+                speak("間もなくさしこみのこうぐんスタート10秒前です", 'notice');
+            } else {
+                speak("間もなくいれかえのこうぐんスタート10秒前です", 'notice');
+            }
+            if(type === "ins") spokenRiderIns = r; else spokenRiderSwap = r;
+        } else if (r > 0 && r <= 10 && spoken !== r) {
+            speak(getReading(r), 'countdown');
+            if(type === "ins") spokenRiderIns = r; else spokenRiderSwap = r;
+        } else if (r === 0 && spoken !== 0) {
+            speak("スタート！", 'start'); 
+            if(type === "ins") spokenRiderIns = 0; else spokenRiderSwap = 0;
+        }
+        
+        if (r < 18 && r > 10 && spoken === -1) {
+            if(type === "ins") spokenRiderIns = r; else spokenRiderSwap = r;
+        }
+    }
+
+    function getReading(num) {
+        const map = {10: "じゅう", 9: "きゅう", 8: "はち", 7: "なな", 6: "ろく", 5: "ご", 4: "よん", 3: "さん", 2: "に", 1: "いち"};
+        return map[num] || num.toString();
+    }
+
+    function formatSec(s) { 
+        if(s < 0) s = 0;
+        const m = Math.floor(s/60), ss = Math.floor(s%60); 
+        return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`; 
+    }
+</script>
+</body>
+</html>

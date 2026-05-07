@@ -1,0 +1,2461 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3301みんなで戦う為のツール</title>
+    <style>
+        :root { --utc-number-font: 'Arial Black', 'Verdana', sans-serif; }
+        body { background-color: #1e1e1e; color: #ABB2BF; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; overflow-x: hidden; }
+        
+        button { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+        
+        .utc-main-wrapper { display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; background: #21252B; padding: 10px; border-radius: 8px; border: 1px solid #3E4451; width: 100%; box-sizing: border-box;}
+        .utc-main { font-size: 28px; color: white; font-weight: bold; margin-bottom: 5px; font-family: var(--utc-number-font); letter-spacing: 2px;}
+        .sync-info { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 100%;}
+        .sync-row { display: flex; align-items: flex-end; justify-content: center; gap: 10px; width: 100%; }
+        
+        .card { background: #282C34; border: 1px solid #3E4451; border-radius: 12px; padding: 20px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
+        .role-btn { padding: 12px; font-size: 16px; width: 80%; margin: 5px auto; border-radius: 8px; border:none; font-weight:bold; cursor: pointer; display:block;}
+        .active { background: #61AFEF; color: white; } .inactive { background: #3E4451; color: #ABB2BF; }
+        
+        .clock-container { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 15px; background: #21252B; padding: 10px; border-radius: 12px; }
+        #analogClock { background: transparent; border-radius: 50%; }
+        .digital-jst { font-size: 34px; color: #98C379; font-weight: 900; font-family: var(--utc-number-font); font-variant-numeric: tabular-nums; letter-spacing: 2px; }
+        
+        .departure-info { background: #E06C75; color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        .departure-time { font-size: 38px; font-weight: 900; font-family: var(--utc-number-font); text-shadow: 2px 2px 4px rgba(0,0,0,0.3); font-variant-numeric: tabular-nums; letter-spacing: 2px; }
+
+        .input-group { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 15px 0;}
+        input[type="text"], input[type="number"] { padding: 12px; font-size: 18px; border-radius: 6px; border:none; text-align:center;}
+        
+        .countdown { font-size: 52px; color: #E5C07B; font-weight: 900; font-family: var(--utc-number-font); font-variant-numeric: tabular-nums; letter-spacing: 3px; margin: 10px 0; }
+        
+        .btn-audio { padding: 10px 20px; border-radius: 30px; font-size: 16px; font-weight: bold; border: none; cursor: pointer; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .btn-audio:disabled,
+        .btn-audio.voice-disabled {
+            background: #5C6370 !important;
+            color: #B8BFCB !important;
+            cursor: not-allowed;
+            opacity: 0.65;
+            box-shadow: none;
+            filter: grayscale(0.25);
+        }
+        .audio-off { background: #3E4451; color: #ABB2BF; } .audio-on { background: #98C379; color: #282C34; }
+        .btn-gray { background: #3E4451; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer;}
+        
+        .squad-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-bottom: 5px; display: inline-block;}
+        .badge-1 { background: #C678DD; color: white; }
+        .badge-2 { background: #56B6C2; color: #282C34; }
+
+        .btn-back { background: #3E4451; color: #ABB2BF; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; margin-top: 10px; width: 80%; display:block; margin: 10px auto 0 auto; }
+        .btn-edit { background: #E5C07B; color: #282C34; padding: 8px 15px; border-radius: 6px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; margin-top: 20px; width: 100%; box-sizing: border-box; }
+        
+        /* ★ サポートチャット関連のスタイル */
+        .btn-support { background: #181A1F; border: 2px solid #61AFEF; color: #61AFEF; padding: 14px 12px; border-radius: 10px; font-size: 16px; font-weight: bold; width: 100%; margin-top: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .btn-support:hover { background: #1f2530; }
+        
+        .chat-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #1e1e1e; z-index: 9999; display: none; flex-direction: column; }
+        .chat-header { background: #282C34; padding: 15px; border-bottom: 2px solid #61AFEF; display: flex; justify-content: space-between; align-items: center; }
+        .chat-close-btn { background: transparent; color: white; border: none; font-size: 20px; cursor: pointer; }
+        .chat-body { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; text-align: left; }
+        .chat-input-wrapper { background: #282C34; padding: 10px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #3E4451; }
+        .chat-input-row { display: flex; gap: 8px; align-items: center; width: 100%; }
+        .btn-chat-img { flex-shrink: 0; background: #3E4451; color: #E5C07B; border: 1px solid #61AFEF; border-radius: 10px; width: 42px; height: 42px; font-size: 18px; cursor: pointer; }
+        .support-pending-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+        .support-pending-thumb { position: relative; height: 52px; border-radius: 8px; overflow: hidden; border: 1px solid #3E4451; }
+        .support-pending-thumb img { height: 52px; display: block; }
+        .support-pending-thumb button { position: absolute; top: 0; right: 0; border: none; background: rgba(0,0,0,.55); color: #fff; width: 20px; height: 20px; font-size: 12px; cursor: pointer; line-height: 1; }
+        .chat-attach-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 6px; display: block; }
+        .chat-input { flex: 1; padding: 12px; border-radius: 20px; border: 1px solid #3E4451; background: #181A1F; color: white; font-size: 15px; outline: none; }
+        .chat-input:focus { border-color: #61AFEF; box-shadow: 0 0 0 2px rgba(97,175,239,0.25); }
+        .chat-send-btn { background: #61AFEF; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        
+        .msg-bubble { max-width: 86%; padding: 11px 15px; border-radius: 15px; font-size: 14px; line-height: 1.5; position: relative; text-align: left; }
+        .msg-time { font-size: 10px; color: #ABB2BF; margin-top: 5px; }
+        .msg-user { align-self: flex-end; background: #61AFEF; color: white; border-bottom-right-radius: 2px; }
+        .msg-admin { align-self: flex-start; background: #3E4451; color: white; border-bottom-left-radius: 2px; }
+        .msg-ai { align-self: flex-start; background: #181A1F; border: 1px solid #98C379; color: #98C379; border-bottom-left-radius: 2px; }
+        .ai-label { font-size: 11px; font-weight: bold; margin-bottom: 4px; display: block; }
+        @media (max-width: 900px) {
+            #audioControlsArea { flex-wrap: wrap; gap: 8px !important; }
+            #audioControlsArea > div { width: 100%; justify-content: center; flex-wrap: wrap; }
+            #audioControlsArea .btn-audio { margin-bottom: 0; }
+        }
+        @media (max-width: 520px) {
+            #audioControlsArea .btn-audio { width: 100%; border-radius: 10px; }
+            #audioControlsArea select { max-width: 140px !important; }
+        }
+        .voice-ready-status {
+            display: none;
+            margin: -8px auto 10px auto;
+            font-size: 12px;
+            color: #ABB2BF;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .voice-ready-status .loading-dots {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        #voiceReadyText { white-space: pre-line; text-align: left; }
+        .voice-ready-status .loading-dots i {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #61AFEF;
+            opacity: 0.25;
+            animation: voiceDots 1.2s infinite ease-in-out;
+        }
+        .voice-ready-status .loading-dots i:nth-child(2) { animation-delay: 0.18s; }
+        .voice-ready-status .loading-dots i:nth-child(3) { animation-delay: 0.36s; }
+        .voice-ready-status.ready .loading-dots { display: none; }
+        @keyframes voiceDots {
+            0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+            40% { opacity: 1; transform: translateY(-2px); }
+        }
+        .staff-panel {
+            border: 1px solid #56B6C2;
+            border-radius: 10px;
+            background: #282C34;
+            margin-top: 0;
+            text-align: left;
+        }
+        .staff-squad-title {
+            font-size: 14px;
+            font-weight: bold;
+            padding: 6px 10px;
+            border-radius: 4px 4px 0 0;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        .staff-gorei-panel {
+            background: #2A2E37;
+            border: 1px solid #56B6C2;
+            border-radius: 0 6px 6px 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .staff-btn {
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        .staff-btn-gray { background: #3E4451; }
+        .staff-btn-green { background: #98C379; color: #282C34; }
+        .staff-btn-red { background: #E06C75; }
+        .staff-btn-purple { background: #C678DD; }
+        .staff-btn-cyan { background: #56B6C2; color: #282C34; }
+        .staff-alliance-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            background: #2A2E37;
+            border-left: 6px solid #61AFEF;
+            margin-bottom: 10px;
+        }
+        .staff-mini-row {
+            display: grid;
+            grid-template-columns: 18px minmax(70px, 1fr) 66px 50px 86px;
+            align-items: center;
+            column-gap: 8px;
+            background: #21252B;
+            border-radius: 7px;
+            padding: 6px 8px;
+            margin-bottom: 6px;
+        }
+        .staff-mini-name {
+            color: #D7DEE9;
+            font-weight: bold;
+            text-align: left;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: keep-all;
+        }
+        .staff-mini-timer {
+            text-align: center;
+            color: #E5C07B;
+            font-weight: bold;
+            font-family: var(--utc-number-font);
+        }
+        .staff-mini-sub {
+            text-align: center;
+            color: #D08EF2;
+            font-weight: bold;
+            font-family: var(--utc-number-font);
+        }
+        .staff-mini-target {
+            text-align: right;
+            color: #C8D1DE;
+            font-size: 12px;
+            font-family: var(--utc-number-font);
+        }
+        .staff-mini-head {
+            display: grid;
+            grid-template-columns: 18px minmax(70px, 1fr) 66px 50px 86px;
+            align-items: center;
+            column-gap: 8px;
+            padding: 2px 8px 6px 8px;
+            color: #ABB2BF;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .staff-mini-head-label {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: keep-all;
+        }
+        .staff-updown-col { display:flex; flex-direction:column; align-items:center; gap:1px; }
+        .staff-updown-btn { width:14px; height:11px; font-size:7px; padding:0; border:none; border-radius:3px; background:#3E4451; color:white; cursor:pointer; }
+        .staff-digit { width:12px; text-align:center; font-size:16px; font-weight:bold; color:#61AFEF; font-family: var(--utc-number-font); }
+        .staff-insert-panel {
+            background: #2A2E37;
+            border: 1px solid #E06C75;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .staff-insert-summary {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: #1E2227;
+            border: 1px solid #3E4451;
+            border-radius: 6px;
+            padding: 7px 9px;
+            margin-bottom: 8px;
+        }
+        .staff-ins-row {
+            display: grid;
+            grid-template-columns: 44px minmax(70px, 1fr) 132px 96px 86px;
+            column-gap: 6px;
+            align-items: center;
+            background: #21252B;
+            border-radius: 7px;
+            padding: 6px 7px;
+            margin-bottom: 6px;
+        }
+        .staff-ins-name {
+            background: #181A1F;
+            border: 1px solid #3E4451;
+            border-radius: 4px;
+            color: #D7DEE9;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 4px 6px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .staff-ins-mini {
+            font-family: var(--utc-number-font);
+            font-weight: bold;
+            text-align: center;
+        }
+        .staff-ins-main { color: #E5C07B; }
+        .staff-ins-sub { color: #D08EF2; }
+        .staff-ins-arr { color: #C8D1DE; text-align: right; font-family: var(--utc-number-font); }
+        .staff-ins-mark {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            font-size: 10px;
+            color: #E06C75;
+            font-weight: bold;
+        }
+        @media (max-width: 700px) {
+            .staff-gorei-panel { padding: 12px 10px; }
+            .staff-updown-col { gap: 3px; }
+            .staff-updown-btn {
+                width: 28px;
+                height: 22px;
+                font-size: 11px;
+                border-radius: 5px;
+                touch-action: manipulation;
+            }
+            .staff-digit { width: 18px; font-size: 20px; }
+            .staff-mini-row, .staff-mini-head { grid-template-columns: 14px minmax(44px, 1fr) 56px 56px 56px; column-gap: 4px; }
+            .staff-mini-row { padding: 7px 8px; }
+            .staff-mini-head { font-size: 10px; padding: 2px 6px 6px 6px; }
+            .staff-ins-row { grid-template-columns: 42px minmax(50px, 1fr) 124px 62px 58px; column-gap: 4px; }
+            .staff-ins-name { font-size: 11px; padding: 4px; }
+            .staff-mini-name {
+                font-size: 14px;
+            }
+            .staff-mini-timer, .staff-mini-sub { font-size: 16px; }
+            .staff-mini-target { font-size: 12px; letter-spacing: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="utc-main-wrapper">
+        <div class="utc-main" id="utc">UTC --:--:--</div>
+        <div class="sync-info">
+            <div style="font-size: 11px; color: #98C379; margin-bottom: 5px;" id="offsetDisp">(ネットの通信遅延は自動補正しています: --秒)</div>
+            <div class="sync-row">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                    <span style="font-size: 11px; color: #ABB2BF; font-weight: bold;">遅めたい</span>
+                    <button onclick="changeManualOffset(-100)" style="background-color: #3A8DCC; color: white; width: 55px; height: 55px; font-size: 30px; font-weight: bold; border: 2px solid #82C5FF; border-bottom: 4px solid #1B5D8F; border-radius: 10px; cursor: pointer; display: flex; justify-content: center; align-items: center; padding-bottom: 4px; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">－</button>
+                    <span style="font-size: 11px; color: #ABB2BF; font-weight: bold;">-0.1秒</span>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; margin: 0 5px;">
+                    <div style="font-size: 11px; color: #ABB2BF; font-weight: bold; margin-bottom: 8px;">ゲーム内UTC時間補正</div>
+                    <div id="manualOffsetDisp" style="font-size: 20px; color: #E5C07B; font-weight:bold; background:#1E2227; border: 1px solid #56B6C2; border-radius: 6px; padding: 6px 12px; font-family: monospace; min-width: 90px; text-align: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">±0.0秒</div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 6px;">
+                    <span style="font-size: 11px; color: #ABB2BF; font-weight: bold;">速めたい</span>
+                    <button onclick="changeManualOffset(100)" style="background-color: #3A8DCC; color: white; width: 55px; height: 55px; font-size: 30px; font-weight: bold; border: 2px solid #82C5FF; border-bottom: 4px solid #1B5D8F; border-radius: 10px; cursor: pointer; display: flex; justify-content: center; align-items: center; padding-bottom: 4px; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">＋</button>
+                    <span style="font-size: 11px; color: #ABB2BF; font-weight: bold;">+0.1秒</span>
+                </div>
+            </div>
+            <div style="font-size: 10px; color: #ABB2BF; margin-top:10px;">※ゲーム内のUTC時間と合うように調整して下さい！</div>
+        </div>
+    </div>
+
+    <div id="topClockArea"></div>
+
+    <div id="multiDeviceWarning" style="display:none; color: #E06C75; font-size: 14px; margin-bottom: 15px; border: 1px dashed #E06C75; padding: 10px; border-radius: 8px; background: rgba(224, 108, 117, 0.1); text-align: left;">
+        ⚠️ <b>【重要: 複数端末の方へ】</b><br>
+        カウントダウンを正確に聞くため、<b>この画面は、常にゲームで使用する端末とは別の端末で開いたまま</b> にしておいて下さい。
+    </div>
+
+    <div id="audioControlsArea" style="display:none; justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px; width: 100%;">
+        <button id="audioBtn" class="btn-audio audio-on" onclick="toggleAudio()" style="margin-bottom: 0;">🔊 音声モード ON</button>
+        <div style="display:flex; align-items:center; gap:6px; background:#1E2227; border:1px solid #3E4451; border-radius:8px; padding:6px;">
+            <span style="font-size:12px; color:#ABB2BF;">キャラ</span>
+            <select id="voiceSpeakerSelect" onchange="onVoiceSpeakerChanged()" style="background:#181A1F; color:#E5C07B; border:1px solid #3E4451; border-radius:6px; padding:4px 6px; max-width:120px;"></select>
+            <span style="font-size:12px; color:#ABB2BF;">スタイル</span>
+            <select id="voiceStyleSelect" onchange="onVoiceStyleChanged()" style="background:#181A1F; color:#61AFEF; border:1px solid #3E4451; border-radius:6px; padding:4px 6px; max-width:120px;"></select>
+        </div>
+        <button id="voiceTestBtn" class="btn-audio" style="background: #56B6C2; color: #282C34; margin-bottom: 0;" onclick="playTestAudio()">📢 音声テスト</button>
+        <button id="countdownDemoBtn" class="btn-audio" style="background: #E5C07B; color: #282C34; margin-bottom: 0;" onclick="startCountdownDemo()">⏱ カウントダウンテスト</button>
+    </div>
+    <div id="voiceReadyStatus" class="voice-ready-status">
+        <span class="loading-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span id="voiceReadyText">VOICEVOX音声を準備中...</span>
+    </div>
+    <div id="countdownDemoBox" style="display:none; margin: 0 auto 15px auto; max-width: 420px; background:#21252B; border:1px solid #3E4451; border-radius:10px; padding:12px; text-align:center;">
+        <div style="font-size:12px; color:#ABB2BF;">デモカウントダウン（本番同等の音声確認）</div>
+        <div id="countdownDemoValue" style="font-size:42px; color:#E5C07B; font-weight:900; letter-spacing:2px; margin-top:5px;">--</div>
+    </div>
+
+    <div id="step1_intro" class="card">
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <button id="btnModeProd" class="btn-gray" style="flex:1; padding:10px 8px; border-radius:8px;" onclick="selectAppMode('prod')">【本番】通常運用</button>
+            <button id="btnModeDrill" class="btn-gray" style="flex:1; padding:10px 8px; border-radius:8px;" onclick="selectAppMode('drill')">【訓練】参謀主導</button>
+        </div>
+        <div style="border: 2px solid #E06C75; background: rgba(224, 108, 117, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left; box-sizing: border-box; width: 100%;">
+            <div style="color: #E06C75; font-size: 16px; font-weight: bold; margin-bottom: 8px; text-align: center;">⚠️ 必ずGoogle Chromeなどの<br>ブラウザーで開いて下さい！</div>
+            <div style="color: #ABB2BF; font-size: 13px; line-height: 1.5; margin-bottom: 15px;">Discordなどのアプリ上で開くと上手くツールが機能しません。また、設定も初期設定に戻ってしまう為、必ずブラウザーを使用して下さい。</div>
+            <div style="display: flex; align-items: center; background: #1E2227; border: 1px solid #3E4451; border-radius: 6px; padding: 5px; width: 100%; box-sizing: border-box;">
+                <input type="text" id="shareUrlInput" readonly style="flex: 1; background: transparent; border: none; color: #61AFEF; font-size: 12px; padding: 5px; outline: none; width: 100%; min-width: 0;">
+                <button onclick="copyShareUrl()" style="background: #61AFEF; color: white; border: none; border-radius: 4px; padding: 8px 12px; font-weight: bold; font-size: 12px; cursor: pointer; white-space: nowrap; margin-left: 5px;">コピー</button>
+            </div>
+        </div>
+
+        <h2 style="color: #61AFEF; margin-top:0;">ご利用環境の確認</h2>
+        <p style="font-size: 16px; margin-top: 15px;">ゲーム画面とこのツールを<br><span style="color:#E5C07B; font-weight:bold;">別々の端末（スマホとPC等）</span><br>で同時に開くことはできますか？</p>
+        <button class="role-btn inactive" style="background:#4CAF50; color:white;" onclick="selectEnv('2device')">💻 はい（別端末で開ける）</button>
+        <button class="role-btn inactive" style="background:#E06C75; color:white;" onclick="selectEnv('1device')">📱 いいえ（スマホ1台のみ）</button>
+    </div>
+
+    <div id="step2_sync" class="card" style="display:none;">
+        <h2 style="color: #E06C75; margin-top:0;">【重要】時計の準備</h2>
+        <p style="font-size: 14px; text-align: left;">ゲームを開くとツールの音声が聞こえなくなるため、お手元に<b style="color:#98C379;">秒まで分かる時計</b>をご用意ください。<br>上部の「日本時間」と、お手元の時計の秒数をピッタリ合わせてから次へ進んでください。</p>
+        <button class="role-btn active" onclick="confirmSync()">⏱️ 時間合わせOK！</button>
+        <button class="btn-back" onclick="goBackTo('step1_intro')">◀ ひとつ前に戻る</button>
+    </div>
+
+    <div id="step2_5_alliance" class="card" style="display:none;">
+        <h3 id="allianceStepTitle" style="margin-top:0;">SVS参加する同盟の選択</h3>
+        <div id="drillConfigArea" style="display:none; background:#1E2227; border:1px solid #3E4451; border-radius:8px; padding:10px; margin-bottom:10px; text-align:left;">
+            <div style="font-size:12px; color:#ABB2BF; margin-bottom:6px;">訓練モード（同盟内限定）</div>
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <button id="drillTabCreate" class="btn-green" style="flex:1; padding:8px; border-radius:6px;" onclick="setDrillTab('create')">新規作成</button>
+                <button id="drillTabJoin" class="btn-gray" style="flex:1; padding:8px; border-radius:6px;" onclick="setDrillTab('join')">ルーム参加</button>
+            </div>
+            <div id="drillCreateArea">
+                <input type="text" id="drillAllianceNameInput" placeholder="訓練同盟名（例: MTC訓練）" style="width:100%; box-sizing:border-box; margin-bottom:6px; padding:8px; border-radius:6px; border:1px solid #3E4451; background:#181A1F; color:white;">
+                <input type="text" id="drillRoomKeyInput" placeholder="参加コード（同盟内共有）" style="width:100%; box-sizing:border-box; margin-bottom:6px; padding:8px; border-radius:6px; border:1px solid #3E4451; background:#181A1F; color:white;">
+                <button class="btn-green" style="width:100%; padding:8px; border-radius:6px;" onclick="createDrillRoom()">作成して入る</button>
+            </div>
+            <div id="drillJoinArea" style="display:none;">
+                <select id="drillRoomSelect" onchange="selectedDrillRoomId=this.value" style="width:100%; box-sizing:border-box; margin-bottom:6px; padding:8px; border-radius:6px; border:1px solid #3E4451; background:#181A1F; color:white;"></select>
+                <input type="text" id="drillJoinCodeInput" placeholder="参加コード" style="width:100%; box-sizing:border-box; margin-bottom:6px; padding:8px; border-radius:6px; border:1px solid #3E4451; background:#181A1F; color:white;">
+                <button class="btn-gray" style="width:100%; padding:8px; border-radius:6px;" onclick="joinDrillRoom()">選択ルームに参加</button>
+            </div>
+        </div>
+        <button id="btnAln0" class="role-btn inactive" onclick="selectAlliance(0)">同盟1</button>
+        <button id="btnAln1" class="role-btn inactive" onclick="selectAlliance(1)">同盟2</button>
+        <button id="btnAln2" class="role-btn inactive" onclick="selectAlliance(2)">同盟3</button>
+        <button class="btn-back" onclick="goBackToEnv()">◀ ひとつ前に戻る</button>
+    </div>
+
+    <div id="step3_setup" class="card" style="display:none;">
+        <div id="allianceDisplay" style="color: #98C379; font-weight: bold; margin-bottom: 15px; font-size: 18px;"></div>
+        <h3 style="margin-top:0;">役割を選択</h3>
+        <button id="btnStaff" class="role-btn inactive" onclick="setRole('staff')" style="background:#E5C07B; color:#282C34;">参謀（同盟内の集結指示）</button>
+        <button id="btnLeader1" class="role-btn inactive" onclick="setRole('leader1')">集結主 (第1班)</button>
+        <button id="btnLeader2" class="role-btn inactive" onclick="setRole('leader2')">集結主 (第2班)</button>
+        <button id="btnRider" class="role-btn inactive" onclick="setRole('rider')">乗り手</button>
+        <div id="staffPlayerRoleArea" style="display:none; background:#1E2227; border:1px solid #3E4451; border-radius:10px; padding:10px; margin:10px 0;">
+            <div style="font-size:13px; color:#E5C07B; margin-bottom:8px; font-weight:bold;">参謀として参加するプレーヤー役割</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+                <button id="btnStaffLeader1" class="btn-gray" style="padding:8px 12px;" onclick="setStaffPlayerRole('leader1')">第1班 集結主</button>
+                <button id="btnStaffLeader2" class="btn-gray" style="padding:8px 12px;" onclick="setStaffPlayerRole('leader2')">第2班 集結主</button>
+                <button id="btnStaffRider" class="btn-gray" style="padding:8px 12px;" onclick="setStaffPlayerRole('rider')">乗り手</button>
+            </div>
+        </div>
+        
+        <div id="inputsArea" style="display:none;">
+            <div class="input-group">
+                <input type="text" id="pName" placeholder="名前を入力" style="width:80%; display:none;">
+                <div style="color:#61AFEF; font-weight:bold; margin-top:5px;">行軍時間を入力</div>
+                <div>
+                    <input type="number" id="pMin" value="0" style="width:50px;"> 分 
+                    <input type="number" id="pSec" value="30" style="width:50px;"> 秒
+                </div>
+                <div style="font-size: 12px; color: #E5C07B; font-weight: bold; margin-top: 5px;">※王城戦開始21:00～に入力して下さい。</div>
+            </div>
+            <button class="role-btn active" onclick="register()">登録して開始</button>
+        </div>
+        <button class="btn-back" onclick="goBackTo('step2_5_alliance')">◀ 同盟の選択に戻る</button>
+    </div>
+
+    <div id="clockContainer" class="clock-container" style="display:none;">
+        <canvas id="analogClock" width="160" height="160"></canvas>
+        <div class="digital-jst" id="jstClock">00:00:00</div>
+        <div style="font-size: 12px;">現在の日本時間 (Synced)</div>
+    </div>
+
+    <div id="display" style="display:none;">
+        <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; border-bottom: 2px solid #3E4451; padding-bottom: 10px;">
+            <div id="displayAllianceName" style="font-size: 24px; font-weight: bold; color: #98C379;"></div>
+            <div id="modeBadge" style="font-size:12px; font-weight:bold; padding:6px 10px; border-radius:6px; background:#3E4451; color:#ABB2BF;">【本番】</div>
+            <button type="button" id="btnLayoutMap" onclick="toggleMap()" style="background: #E5C07B; color: #282C34; border: none; border-radius: 6px; padding: 6px 15px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🗺️ 今回の配置図</button>
+        </div>
+        
+        <div id="mapContainer" style="max-height: 0px; overflow: hidden; transition: max-height 0.3s ease-in-out, margin-bottom 0.3s ease-in-out; margin-bottom: 0px;">
+            <img src="/map.jpg" style="width: 100%; max-width: 600px; border-radius: 8px; border: 2px solid #E5C07B; box-sizing: border-box; display: block; margin: 0 auto;">
+        </div>
+
+        <div id="departureBox"></div>
+        <div id="staffCommandPanel" class="card staff-panel" style="display:none;">
+            <div style="color:#E5C07B; font-weight:bold; margin-bottom:10px;">参謀用：自同盟の集結指示</div>
+            <div id="staffCommandLabel" style="font-size:12px; color:#ABB2BF; margin-bottom:10px;"></div>
+            <div id="staffInsertPanel" style="display:none;"></div>
+            <div id="staffCommandCards" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+        <div id="cardsArea"></div>
+        
+        <button class="btn-edit" onclick="openEditMode()">⚙️ 設定を変更する</button>
+        
+        <!-- ★ チャット画面を開くボタン -->
+        <button class="btn-support" onclick="openSupportChat()">✉️ 質問・SOS窓口（総指揮・AI副官）</button>
+    </div>
+
+    <!-- ★ サポートチャット専用画面（オーバーレイ） -->
+    <div id="chatOverlay" class="chat-overlay">
+        <div class="chat-header">
+            <div style="color:white; font-weight:bold; font-size:18px;">✉️ サポートセンター</div>
+            <button class="chat-close-btn" onclick="closeSupportChat()">✖</button>
+        </div>
+        <div style="background:#1E2227; padding:10px; font-size:12px; color:#98C379; line-height:1.5; text-align:left; border-bottom:1px solid #3E4451;">
+            本ツールのサポートチャットです。<br>
+            ご利用端末の情報と、困っている現象をできるだけ詳しくご記入ください。<br>
+            最初はAI副官が回答しますが、対応が難しい内容は会話内容を確認しながら対応いたします。<br>
+            画像は入力欄左の「🖼」から追加できます（最大3枚）。パソコンはこの画面を開いたまま Ctrl+V、スマホ・タブレットは「🖼」で写真を選ぶか、入力付近を長押しして貼り付けてください。<br>
+            <span style="color:#E06C75;">個人開発のため、返信までお時間をいただく場合があります。あらかじめご了承ください。</span>
+        </div>
+        <div id="chatGate" style="flex:1; display:flex; align-items:flex-start; justify-content:center; padding:10px 8px 0 8px;">
+            <div style="width:100%; max-width:520px; background:#1E2227; border:1px solid #3E4451; border-radius:10px; padding:14px; display:flex; gap:8px; align-items:center;">
+                <input
+                    type="text"
+                    id="supportGateNameInput"
+                    class="chat-input"
+                    maxlength="24"
+                    placeholder="お名前（必須）"
+                    onkeydown="if(event.key==='Enter'){ event.preventDefault(); proceedSupportChat(); }"
+                >
+                <button class="btn-gray" style="padding:10px 14px; border-radius:8px;" onclick="proceedSupportChat()">チャットに進む</button>
+            </div>
+        </div>
+        <div class="chat-body" id="chatBody" style="display:none;">
+            <!-- チャット履歴 -->
+        </div>
+        <div class="chat-input-wrapper" id="chatInputWrap" style="display:none;">
+            <input type="file" id="supportFileInput" accept="image/*" multiple style="display:none">
+            <div id="supportPendingBar" class="support-pending-bar" style="display:none;"></div>
+            <div class="chat-input-row">
+                <button type="button" class="btn-chat-img" title="画像を追加" onclick="document.getElementById('supportFileInput').click()">🖼</button>
+                <input type="text" id="chatInputText" class="chat-input" placeholder="質問・SOSを入力…（画像のみでも可）" onkeydown="if(event.key==='Enter') sendSupportChat()">
+                <button type="button" class="chat-send-btn" onclick="sendSupportChat()">➤</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // ★ ID記憶システム
+    let myClientId = localStorage.getItem("utc_client_id");
+    if (!myClientId) {
+        myClientId = "user_" + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("utc_client_id", myClientId);
+    }
+
+    let deviceMode = null; 
+    let appMode = "prod";
+    let drillRoomKey = "default";
+    let drillJoinCode = "";
+    let drillAllianceName = "";
+    let selectedDrillRoomId = "";
+    let drillTab = "create";
+    let lastDrillRoomsSig = "";
+    let myAllianceIdx = -1; 
+    let audioEnabled = true;
+    let audioCtx = null; 
+    let ws, myRole=null, myName="", myMarchSec=0, timeOffset=0;
+    let supportUserName = "";
+    let supportPendingImages = [];
+    let isStaffCommander = false;
+    let staffPlayerRole = null;
+    let reconnectDelayMs = 1000;
+    let heartbeatTimer = null;
+    let localState = null; 
+    let lastActionState = ""; 
+    let registeredIdx = -1; 
+    let manualTimeOffset = 0;
+    
+    let lastCancelTrigger = 0;
+    let cachedArrTimes = {};
+    let cachedInsTime = null;
+    
+    const voiceBufferCache = {};
+    const voiceFetchPromises = {};
+    let voiceSpeakers = [];
+    let selectedVoiceStyleId = parseInt(localStorage.getItem("utc_voice_style_id") || "3");
+    let globalVoiceLockTime = 0;
+    let currentAudioSource = null;
+    let lastVoiceKeys = {};
+    let countdownDemoTimer = null;
+    let countdownDemoValue = 10;
+    let voiceWarmupPromise = null;
+    let staffMiniAnchors = {};
+    let lastStaffPanelSig = "";
+    let staffPanelRafScheduled = false;
+    let staffPanelRafHandle = null;
+    let drillStaffLive = { present: false, name: "" };
+
+    function staffPanelStructuralSig() {
+        if (!localState || myAllianceIdx < 0) return "_";
+        const parts = [
+            String(myAllianceIdx),
+            String(localState.default_rally),
+            String(localState.cancel_trigger),
+            `ins=${localState.insert_target_idx ?? -1}`,
+            `insoff=${localState.insert_offset_tenth ?? -1}`
+        ];
+        for (let i = 0; i < 3; i++) {
+            const e = localState.timers[i];
+            const phase = (e.state === 4 && e.start_at) ? e.start_at : ((e.state === 1 || e.state === 2) && e.end) ? e.end : "";
+            parts.push(`e${i}|${(e.name || "")}|${e.sec}|${e.sub_set}|${e.state}|${phase}`);
+        }
+        for (let off = 0; off < 2; off++) {
+            const si = myAllianceIdx * 2 + off;
+            parts.push(`g${localState.gorei_offsets[si]}|f${localState.gorei_fixed_targets[si] ?? "x"}`);
+        }
+        const b = 6 + myAllianceIdx * 12;
+        for (let k = 0; k < 12; k++) {
+            const t = localState.timers[b + k];
+            const phase = (t.state === 4 && t.start_at) ? t.start_at : ((t.state === 1 || t.state === 2) && t.end) ? t.end : "";
+            parts.push(`${(t.name || "")}|${t.sub_set}|${t.state}|${phase}|${t.off ?? 0}`);
+        }
+        return parts.join(";");
+    }
+    function syncStaffRowAnchors() {
+        if (!localState || myAllianceIdx < 0) return;
+        const base = 6 + myAllianceIdx * 12;
+        for (let k = 0; k < 12; k++) {
+            const i = base + k;
+            const t = localState.timers[i];
+            let iso = null;
+            let stKind = null;
+            if (t && t.state === 4 && t.start_at) { iso = t.start_at; stKind = 4; }
+            else if (t && t.state === 1 && t.end) { iso = t.end; stKind = 1; }
+            if (!iso) {
+                delete staffMiniAnchors[i];
+                continue;
+            }
+            const prev = staffMiniAnchors[i];
+            const deadline = new Date(iso).getTime();
+            if (prev && prev.iso === iso && prev.stKind === stKind) continue;
+            staffMiniAnchors[i] = { iso, stKind, deadline, refPerf: performance.now(), refSynced: getSyncedNow().getTime() };
+        }
+    }
+    function computeMainSecForStaffRow(timerIdx, t) {
+        if (!t) return 0;
+        const a = staffMiniAnchors[timerIdx];
+        if (a && typeof a.deadline === "number" && typeof a.refPerf === "number" && typeof a.refSynced === "number") {
+            const nowLin = a.refSynced + (performance.now() - a.refPerf);
+            return Math.max(0, Math.floor((a.deadline - nowLin) / 1000));
+        }
+        if (t.state === 2) return 0;
+        const nowTs = getSyncedNow().getTime();
+        if (t.state === 4 && t.start_at) return Math.max(0, Math.floor((new Date(t.start_at).getTime() - nowTs) / 1000));
+        if (t.state === 1 && t.end) return Math.max(0, Math.floor((new Date(t.end).getTime() - nowTs) / 1000));
+        return Math.max(0, Math.floor(Number(t.sec || 0)));
+    }
+    function staffFormatMmSs(sec) {
+        sec = Math.max(0, Math.floor(Number(sec)));
+        return `${String(Math.floor(sec / 60))}:${String(sec % 60).padStart(2, "0")}`;
+    }
+    /** 行軍列: state2 のみカウントダウン(sub_sec)。それ以前は設定の sub_set を固定表示。 */
+    function staffMarchDisplaySec(t) {
+        if (!t) return 0;
+        if (t.state === 2) return Math.max(0, Math.floor(Number(t.sub_sec)));
+        return Math.max(0, Math.floor(Number(t.sub_set)));
+    }
+
+    /** 着弾時刻（UTC ms）。現在時刻に依存しないので表示がブレない（getTargetTime の state1 は t.sec 更新で揺れるのを避ける） */
+    function staffStableLandingMs(t, defaultRally) {
+        if (!t || t.state === 0) return null;
+        const offMs = Number(t.off) || 0;
+        const marchSec = Number(t.sub_set) || 0;
+        const rallySec = Number(defaultRally) || 0;
+        if (t.state === 4 && t.start_at) {
+            const sa = new Date(t.start_at).getTime();
+            return sa + offMs + (rallySec + marchSec) * 1000;
+        }
+        if (t.state === 1 && t.end) {
+            const en = new Date(t.end).getTime();
+            return en + offMs + marchSec * 1000;
+        }
+        if (t.state === 2 && t.frozen_target) return new Date(t.frozen_target).getTime();
+        return null;
+    }
+    function staffFormatImpactUtcMmSs(landingMs) {
+        const dt = new Date(landingMs);
+        return `${String(dt.getUTCMinutes()).padStart(2, "0")}:${String(dt.getUTCSeconds()).padStart(2, "0")}`;
+    }
+    function staffFormatImpactUtcHhMmSs(landingMs) {
+        const dt = new Date(landingMs);
+        return `${String(dt.getUTCHours()).padStart(2, "0")}:${String(dt.getUTCMinutes()).padStart(2, "0")}:${String(dt.getUTCSeconds()).padStart(2, "0")}`;
+    }
+
+    function updateStaffMiniTimersOnly() {
+        if (!localState || myAllianceIdx < 0) return;
+        const base = 6 + myAllianceIdx * 12;
+        for (let k = 0; k < 12; k++) {
+            const i = base + k;
+            const mainEl = document.getElementById("staffMiniMain_" + i);
+            if (!mainEl) continue;
+            const t = localState.timers[i];
+            const mainTxt = staffFormatMmSs(computeMainSecForStaffRow(i, t));
+            if (mainEl.textContent !== mainTxt) mainEl.textContent = mainTxt;
+            const subEl = document.getElementById("staffMiniSub_" + i);
+            if (subEl) {
+                const subTxt = staffFormatMmSs(staffMarchDisplaySec(t));
+                if (subEl.textContent !== subTxt) subEl.textContent = subTxt;
+            }
+            const tgtEl = document.getElementById("staffMiniTgt_" + i);
+            if (!tgtEl) continue;
+            let tgtTxt = "--:--";
+            const land = t ? staffStableLandingMs(t, localState.default_rally) : null;
+            if (land != null) tgtTxt = staffFormatImpactUtcMmSs(land);
+            const tgtLine = `\u25b6${tgtTxt}`;
+            if (tgtEl.textContent !== tgtLine) tgtEl.textContent = tgtLine;
+        }
+    }
+    function maybeRefreshStaffPanelAfterTick() {
+        if (!isStaffCommander || myAllianceIdx === -1 || !localState) return;
+        const sig = staffPanelStructuralSig();
+        if (sig !== lastStaffPanelSig) renderStaffCommandPanel();
+        else {
+            syncStaffRowAnchors();
+            updateStaffMiniTimersOnly();
+            updateStaffInsertTimersOnly();
+        }
+        startStaffPanelTicker();
+    }
+    function sendStaffEnemyCommand(cmd, idx, val) {
+        if (!isStaffCommander || !localState || !ws || ws.readyState !== WebSocket.OPEN) return;
+        const payload = { cmd: cmd, idx: idx };
+        if (val !== undefined) payload.val = val;
+        ws.send(JSON.stringify(payload));
+        if (cmd === "mod_insert_offset_tenth") {
+            const cur = Number(localState.insert_offset_tenth ?? -1);
+            const next = Math.max(-50, Math.min(0, cur + Number(val || 0)));
+            localState.insert_offset_tenth = next;
+            cachedInsTime = null;
+            renderStaffInsertPanel();
+            return;
+        }
+        const t = localState.timers[idx];
+        if (!t) return;
+        if (cmd === "update_name") t.name = String(val || "");
+        else if (cmd === "mod_main") t.sec = Math.max(0, Number(t.sec || 0) + Number(val || 0));
+        else if (cmd === "mod_sub") t.sub_set = Math.max(0, Number(t.sub_set || 0) + Number(val || 0));
+        else if (cmd === "start") {
+            const nowTs = getSyncedNow().getTime();
+            if (Number(t.sec || 0) > 0) {
+                t.state = 1;
+                t.end = new Date(nowTs + Number(t.sec || 0) * 1000).toISOString();
+            }
+        } else if (cmd === "stop") {
+            t.state = 0;
+            t.sec = Number(localState.default_rally || 300);
+            t.end = null;
+            t.start_at = null;
+            t.frozen_target = null;
+            cachedInsTime = null;
+        } else if (cmd === "set_insert_target") {
+            localState.insert_target_idx = (localState.insert_target_idx === idx) ? -1 : idx;
+            cachedInsTime = null;
+        }
+        renderStaffCommandPanel();
+        startStaffPanelTicker();
+    }
+    function staffEnemyMainSec(t, nowTs) {
+        if (!t) return 0;
+        if (t.state === 2) return 0;
+        if (t.state === 4 && t.start_at) return Math.max(0, Math.floor((new Date(t.start_at).getTime() - nowTs) / 1000));
+        if (t.state === 1 && t.end) return Math.max(0, Math.floor((new Date(t.end).getTime() - nowTs) / 1000));
+        return Math.max(0, Math.floor(Number(t.sec || 0)));
+    }
+    function getStaffInsertSummaryTargetMs(nowTs) {
+        if (!localState) return null;
+        const marked = Number(localState.insert_target_idx);
+        if (marked >= 0 && marked < 3) {
+            const mt = localState.timers[marked];
+            if (mt && mt.state !== 0) {
+                const mTgt = getTargetTime(mt, nowTs, localState.default_rally);
+                if (mTgt) return mTgt - 1000;
+            }
+        }
+        const candidates = [];
+        for (let i = 0; i < 3; i++) {
+            const t = localState.timers[i];
+            if (!t || t.state === 0) continue;
+            const tgt = getTargetTime(t, nowTs, localState.default_rally);
+            if (tgt) candidates.push(tgt - 1000);
+        }
+        return candidates.length ? Math.max(...candidates) : null;
+    }
+    function updateStaffInsertTimersOnly() {
+        if (!localState) return;
+        const nowTs = getSyncedNow().getTime();
+        for (let i = 0; i < 3; i++) {
+            const t = localState.timers[i];
+            const mainEl = document.getElementById("staffInsMain_" + i);
+            const subEl = document.getElementById("staffInsSub_" + i);
+            const tgtEl = document.getElementById("staffInsArr_" + i);
+            if (mainEl) mainEl.textContent = staffFormatMmSs(staffEnemyMainSec(t, nowTs));
+            if (subEl) subEl.textContent = staffFormatMmSs(staffMarchDisplaySec(t));
+            if (tgtEl) {
+                const tg = (t && t.state !== 0) ? getTargetTime(t, nowTs, localState.default_rally) : null;
+                tgtEl.textContent = tg ? staffFormatImpactUtcMmSs(tg) : "--:--";
+            }
+        }
+        const sumTgt = getStaffInsertSummaryTargetMs(nowTs);
+        const sumTimeEl = document.getElementById("staffInsTargetMain");
+        const sumRemEl = document.getElementById("staffInsRemainMain");
+        if (sumTimeEl) sumTimeEl.textContent = sumTgt ? staffFormatImpactUtcHhMmSs(sumTgt) : "--:--:--";
+        if (sumRemEl) sumRemEl.textContent = sumTgt ? staffFormatMmSs(Math.max(0, Math.floor((sumTgt - nowTs) / 1000))) : "--:--";
+    }
+
+    function renderStaffInsertPanel() {
+        if (!isStaffCommander || myAllianceIdx === -1 || !localState) return;
+        const wrap = document.getElementById("staffInsertPanel");
+        if (!wrap) return;
+        wrap.style.display = "block";
+        const nowTs = getSyncedNow().getTime();
+        const summaryTgt = getStaffInsertSummaryTargetMs(nowTs);
+        const summaryTgtTxt = summaryTgt ? staffFormatImpactUtcHhMmSs(summaryTgt) : "--:--:--";
+        const summaryRemTxt = summaryTgt ? staffFormatMmSs(Math.max(0, Math.floor((summaryTgt - nowTs) / 1000))) : "--:--";
+        const insOffTenth = Number(localState.insert_offset_tenth ?? -1);
+        const insOffText = `${(insOffTenth / 10).toFixed(1)}秒`;
+
+        let rows = "";
+        for (let i = 0; i < 3; i++) {
+            const t = localState.timers[i];
+            const nm = escapeHtml((t && t.name) ? t.name : "");
+            const mainTxt = staffFormatMmSs(staffEnemyMainSec(t, nowTs));
+            const subTxt = staffFormatMmSs(staffMarchDisplaySec(t));
+            const tgt = (t && t.state !== 0) ? getTargetTime(t, nowTs, localState.default_rally) : null;
+            const tgtTxt = tgt ? staffFormatImpactUtcMmSs(tgt) : "--:--";
+            const checked = Number(localState.insert_target_idx) === i ? "checked" : "";
+            rows += `
+                <div class="staff-ins-row">
+                    <label class="staff-ins-mark"><span>ﾏｰｸ</span><input type="radio" name="staffInsTarget" ${checked} onclick="sendStaffEnemyCommand('set_insert_target', ${i})"></label>
+                    <input class="staff-ins-name" maxlength="16" placeholder="敵${i + 1}名" value="${nm}" onblur="sendStaffEnemyCommand('update_name', ${i}, this.value)" onkeydown="if(event.key==='Enter') sendStaffEnemyCommand('update_name', ${i}, this.value)">
+                    <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
+                        <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_main', ${i}, 60)">▲</button><div class="staff-ins-mini staff-ins-main" id="staffInsMain_${i}">${mainTxt}</div><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_main', ${i}, -60)">▼</button></div>
+                        <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_sub', ${i}, 10)">▲</button><div class="staff-ins-mini staff-ins-sub" id="staffInsSub_${i}">${subTxt}</div><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_sub', ${i}, -10)">▼</button></div>
+                    </div>
+                    <div style="display:flex; gap:4px; justify-content:center;">
+                        <button class="staff-btn staff-btn-green" style="padding:4px 6px; font-size:11px;" onclick="sendStaffEnemyCommand('start', ${i})">▶</button>
+                        <button class="staff-btn staff-btn-red" style="padding:4px 6px; font-size:11px;" onclick="sendStaffEnemyCommand('stop', ${i})">■</button>
+                    </div>
+                    <div class="staff-ins-arr" id="staffInsArr_${i}">▶${tgtTxt}</div>
+                </div>
+            `;
+        }
+
+        wrap.innerHTML = `
+            <div class="staff-insert-panel">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                    <div style="color:#E06C75; font-weight:bold;">差込指示（敵3名）</div>
+                </div>
+                <div class="staff-insert-summary">
+                    <div style="font-size:12px; color:#ABB2BF;">相手側到着時間</div>
+                    <div id="staffInsTargetMain" style="font-size:20px; color:#E5C07B; font-weight:bold; font-family:var(--utc-number-font);">${summaryTgtTxt}</div>
+                    <div>
+                        <div style="font-size:12px; color:#ABB2BF; text-align:right;">相手側到着まで</div>
+                        <div id="staffInsRemainMain" style="font-size:20px; color:#98C379; font-weight:bold; font-family:var(--utc-number-font); text-align:right;">${summaryRemTxt}</div>
+                    </div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:8px;">
+                    <span style="font-size:12px; color:#ABB2BF;">到着-1秒 補正</span>
+                    <button class="staff-updown-btn" style="width:22px; height:20px; font-size:12px;" onclick="sendStaffEnemyCommand('mod_insert_offset_tenth', null, 1)">▲</button>
+                    <div id="staffInsOffsetVal" style="min-width:58px; text-align:center; color:#E5C07B; font-weight:bold; font-family:var(--utc-number-font);">${insOffText}</div>
+                    <button class="staff-updown-btn" style="width:22px; height:20px; font-size:12px;" onclick="sendStaffEnemyCommand('mod_insert_offset_tenth', null, -1)">▼</button>
+                    <span style="font-size:11px; color:#ABB2BF;">(0.0〜-5.0)</span>
+                </div>
+                <div class="staff-mini-head" style="grid-template-columns:44px minmax(70px, 1fr) 132px 96px 86px;">
+                    <div></div><div></div>
+                    <div class="staff-mini-head-label" style="text-align:center;">集結 / 行軍</div>
+                    <div class="staff-mini-head-label" style="text-align:center;">操作</div>
+                    <div class="staff-mini-head-label" style="text-align:right;">到着</div>
+                </div>
+                ${rows}
+            </div>
+        `;
+        updateStaffInsertTimersOnly();
+    }
+
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return "";
+        return String(text)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+    function applyDrillStaffFromMsg(msg) {
+        if (msg && msg.drill_staff && typeof msg.drill_staff.present === "boolean") {
+            drillStaffLive = {
+                present: !!msg.drill_staff.present,
+                name: String(msg.drill_staff.name || "").trim()
+            };
+        }
+    }
+
+    function selectAppMode(mode) {
+        appMode = (mode === "drill") ? "drill" : "prod";
+        localStorage.setItem("utc_app_mode", appMode);
+        const prodBtn = document.getElementById("btnModeProd");
+        const drillBtn = document.getElementById("btnModeDrill");
+        if (prodBtn) prodBtn.className = appMode === "prod" ? "btn-green" : "btn-gray";
+        if (drillBtn) drillBtn.className = appMode === "drill" ? "btn-green" : "btn-gray";
+        const drillCfg = document.getElementById("drillConfigArea");
+        if (drillCfg) drillCfg.style.display = appMode === "drill" ? "block" : "none";
+        const b1 = document.getElementById("btnAln1");
+        const b2 = document.getElementById("btnAln2");
+        const b0 = document.getElementById("btnAln0");
+        if (b1) b1.style.display = appMode === "drill" ? "none" : "block";
+        if (b2) b2.style.display = appMode === "drill" ? "none" : "block";
+        if (b0) b0.style.display = appMode === "drill" ? "none" : "block";
+        const titleEl = document.getElementById("allianceStepTitle");
+        if (titleEl) titleEl.innerText = appMode === "drill" ? "訓練ルームに参加" : "SVS参加する同盟の選択";
+        const badge = document.getElementById("modeBadge");
+        if (badge) {
+            badge.innerText = appMode === "drill" ? "【訓練】" : "【本番】";
+            badge.style.background = appMode === "drill" ? "#C678DD" : "#3E4451";
+            badge.style.color = appMode === "drill" ? "#1E2227" : "#ABB2BF";
+        }
+        const mapBtn = document.getElementById("btnLayoutMap");
+        const mapC = document.getElementById("mapContainer");
+        if (appMode === "drill") {
+            if (mapBtn) mapBtn.style.display = "none";
+            if (mapC) { mapC.style.maxHeight = "0px"; mapC.style.marginBottom = "0px"; }
+        } else if (mapBtn) {
+            mapBtn.style.display = "";
+        }
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: appMode, alliance_id: (myAllianceIdx === -1 ? 0 : myAllianceIdx), room_key: drillRoomKey, alliance_name: drillAllianceName}}));
+            if (appMode === "drill") {
+                ws.send(JSON.stringify({cmd: "set_mode", val: {mode: "drill", room_action: "list"}}));
+            }
+        }
+    }
+
+    function setDrillTab(tab) {
+        drillTab = tab === "join" ? "join" : "create";
+        const tc = document.getElementById("drillTabCreate");
+        const tj = document.getElementById("drillTabJoin");
+        const ca = document.getElementById("drillCreateArea");
+        const ja = document.getElementById("drillJoinArea");
+        if (tc) tc.className = drillTab === "create" ? "btn-green" : "btn-gray";
+        if (tj) tj.className = drillTab === "join" ? "btn-green" : "btn-gray";
+        if (ca) ca.style.display = drillTab === "create" ? "block" : "none";
+        if (ja) ja.style.display = drillTab === "join" ? "block" : "none";
+    }
+
+    function renderDrillRooms(rooms) {
+        const sel = document.getElementById("drillRoomSelect");
+        if (!sel) return;
+        const arr = Array.isArray(rooms) ? rooms : [];
+        const sig = JSON.stringify(arr.map(r => `${r.room_id}:${r.online}:${r.name}`));
+        if (sig === lastDrillRoomsSig) return;
+        lastDrillRoomsSig = sig;
+        const keepValue = selectedDrillRoomId || (sel.value || "");
+        sel.innerHTML = "";
+        const first = document.createElement("option");
+        first.value = "";
+        first.textContent = arr.length ? "ルームを選択" : "作成済みルームなし";
+        sel.appendChild(first);
+        arr.forEach(r => {
+            const opt = document.createElement("option");
+            opt.value = r.room_id;
+            opt.textContent = `${r.name} (${r.online}人)`;
+            sel.appendChild(opt);
+        });
+        if (keepValue) {
+            sel.value = keepValue;
+            selectedDrillRoomId = sel.value || "";
+        }
+    }
+
+    function createDrillRoom() {
+        const dn = (document.getElementById("drillAllianceNameInput").value || "").trim();
+        const rk = (document.getElementById("drillRoomKeyInput").value || "").trim();
+        if (!dn) return alert("訓練同盟名を入力してください");
+        if (!rk) return alert("参加コードを入力してください");
+        drillAllianceName = dn;
+        drillJoinCode = rk;
+        localStorage.setItem("utc_drill_alliance_name", drillAllianceName);
+        localStorage.setItem("utc_drill_join_code", drillJoinCode);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: "drill", alliance_id: 0, room_action: "create", room_code: rk, alliance_name: drillAllianceName}}));
+        }
+    }
+
+    function joinDrillRoom() {
+        const rk = (document.getElementById("drillJoinCodeInput").value || "").trim();
+        const roomId = (document.getElementById("drillRoomSelect").value || "").trim();
+        if (!roomId) return alert("参加するルームを選択してください");
+        if (!rk) return alert("参加コードを入力してください");
+        selectedDrillRoomId = roomId;
+        drillRoomKey = roomId;
+        drillJoinCode = rk;
+        localStorage.setItem("utc_drill_room_key", drillRoomKey);
+        localStorage.setItem("utc_drill_join_code", drillJoinCode);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: "drill", alliance_id: 0, room_action: "join", room_id: roomId, room_code: rk}}));
+        }
+    }
+    function getVoiceCacheKey(text) {
+        return `${selectedVoiceStyleId}:${text}`;
+    }
+    function isCriticalVoiceText(text) {
+        return text === "スタート" || text === "抜いてください" || /^[0-9]+$/.test(text);
+    }
+    function startHeartbeat() {
+        stopHeartbeat();
+        heartbeatTimer = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({cmd: "ping"}));
+        }, 20000);
+    }
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
+
+    function toggleMap() {
+        if (appMode === "drill") return;
+        let mapDiv = document.getElementById('mapContainer');
+        if (mapDiv.style.maxHeight === "0px" || mapDiv.style.maxHeight === "") {
+            mapDiv.style.maxHeight = "1000px"; 
+            mapDiv.style.marginBottom = "15px";
+        } else {
+            mapDiv.style.maxHeight = "0px";
+            mapDiv.style.marginBottom = "0px";
+        }
+    }
+
+    function getSyncedNow() { return new Date(Date.now() + timeOffset + manualTimeOffset); }
+
+    /** サーバー時刻の追従を急に変えず、集結カウントの「1秒戻る」チラつきを抑える */
+    function applyServerTimeOffset(rawServerMs) {
+        if (rawServerMs == null || isNaN(Number(rawServerMs))) return;
+        const desired = Number(rawServerMs) - Date.now();
+        const drift = desired - timeOffset;
+        if (Math.abs(drift) > 4000) {
+            timeOffset = desired;
+            return;
+        }
+        const cap = 150;
+        let step = Math.round(drift * 0.4);
+        if (step > cap) step = cap;
+        if (step < -cap) step = -cap;
+        timeOffset += step;
+    }
+
+    function changeManualOffset(val) {
+        manualTimeOffset += val;
+        let displaySec = Math.abs(manualTimeOffset / 1000).toFixed(1);
+        if(displaySec === "0.0") {
+            document.getElementById('manualOffsetDisp').innerText = `±0.0秒`;
+        } else {
+            let signStr = manualTimeOffset > 0 ? "+" : "-";
+            document.getElementById('manualOffsetDisp').innerText = `${signStr}${displaySec}秒`;
+        }
+    }
+
+    function copyShareUrl() {
+        let url = window.location.href;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(url).then(() => { alert("URLをコピーしました！"); }).catch(err => { fallbackCopyTextToClipboard(url); });
+        } else { fallbackCopyTextToClipboard(url); }
+    }
+
+    function fallbackCopyTextToClipboard(text) {
+        let urlInput = document.getElementById('shareUrlInput');
+        urlInput.select();
+        try { document.execCommand("copy"); alert("URLをコピーしました！"); } 
+        catch (err) { alert("コピーに失敗しました。"); }
+    }
+
+    function hideAllSteps() {
+        document.getElementById('step1_intro').style.display = 'none';
+        document.getElementById('step2_sync').style.display = 'none';
+        document.getElementById('step2_5_alliance').style.display = 'none';
+        document.getElementById('step3_setup').style.display = 'none';
+        document.getElementById('display').style.display = 'none';
+    }
+
+    function goBackTo(targetId) { hideAllSteps(); document.getElementById(targetId).style.display = 'block'; stopStaffPanelTicker(); }
+    function goBackToEnv() { hideAllSteps(); if (deviceMode === '1device') document.getElementById('step2_sync').style.display = 'block'; else document.getElementById('step1_intro').style.display = 'block'; }
+    function openEditMode() { hideAllSteps(); document.getElementById('step3_setup').style.display = 'block'; stopStaffPanelTicker(); }
+
+    function syncSupportNameInput() {
+        const el = document.getElementById("supportGateNameInput");
+        if (!el) return;
+        el.value = supportUserName || "";
+    }
+
+    function saveSupportUserName(silent) {
+        const el = document.getElementById("supportGateNameInput");
+        if (!el) return false;
+        const nm = String(el.value || "").trim();
+        if (!nm) {
+            if (!silent) {
+                alert("サポートチャットは名前入力が必須です。");
+                el.focus();
+            }
+            return false;
+        }
+        supportUserName = nm;
+        localStorage.setItem("utc_support_user_name", nm);
+        el.value = nm;
+        return true;
+    }
+
+    function getSupportSenderName() {
+        let nm = String(supportUserName || "").trim();
+        if (!nm) {
+            const el = document.getElementById("supportGateNameInput");
+            if (el) nm = String(el.value || "").trim();
+        }
+        if (!nm && myName) nm = String(myName).trim();
+        if (!nm) nm = String(localStorage.getItem("utc_support_user_name") || "").trim();
+        supportUserName = nm;
+        syncSupportNameInput();
+        return nm;
+    }
+
+    function setSupportChatStage(showChat) {
+        const gate = document.getElementById("chatGate");
+        const body = document.getElementById("chatBody");
+        const inputWrap = document.getElementById("chatInputWrap");
+        if (gate) gate.style.display = showChat ? "none" : "flex";
+        if (body) body.style.display = showChat ? "flex" : "none";
+        if (inputWrap) inputWrap.style.display = showChat ? "flex" : "none";
+    }
+
+    function proceedSupportChat() {
+        if (!saveSupportUserName(false)) return;
+        setSupportChatStage(true);
+        renderChatBody(true);
+        const inputEl = document.getElementById("chatInputText");
+        if (inputEl) inputEl.focus();
+    }
+
+    // ★ チャット画面の開閉
+    function openSupportChat() {
+        document.getElementById('chatOverlay').style.display = 'flex';
+        getSupportSenderName();
+        syncSupportNameInput();
+        setSupportChatStage(false);
+        const nameEl = document.getElementById("supportGateNameInput");
+        if (nameEl) nameEl.focus();
+    }
+    function closeSupportChat() {
+        document.getElementById('chatOverlay').style.display = 'none';
+        setSupportChatStage(false);
+    }
+
+    function selectEnv(mode) {
+        deviceMode = mode;
+        hideAllSteps();
+        if (mode === '1device') {
+            document.getElementById('topClockArea').appendChild(document.getElementById('clockContainer'));
+            document.getElementById('clockContainer').style.display = 'flex';
+            document.getElementById('step2_sync').style.display = 'block';
+        } else {
+            document.getElementById('step2_5_alliance').style.display = 'block';
+        }
+    }
+
+    function confirmSync() { hideAllSteps(); document.getElementById('step2_5_alliance').style.display = 'block'; }
+
+    function selectAlliance(idx) {
+        if (appMode === "drill") {
+            idx = 0;
+        }
+        myAllianceIdx = idx;
+        isStaffCommander = false;
+        staffPlayerRole = null;
+        myRole = null;
+        hideAllSteps();
+        document.getElementById('step3_setup').style.display = 'block';
+        let alnName = (localState && localState.alliance_names[idx]) ? localState.alliance_names[idx] : `同盟 ${idx+1}`;
+        document.getElementById('allianceDisplay').innerText = `【 ${alnName} 】`;
+        document.getElementById('displayAllianceName').innerText = `【 ${alnName} 】`;
+        for(let i=0; i<3; i++) {
+            document.getElementById(`btnAln${i}`).className = (i === idx) ? 'role-btn active' : 'role-btn inactive';
+        }
+        if (appMode === "drill" && ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: "drill", alliance_id: idx, room_key: drillRoomKey, alliance_name: drillAllianceName}}));
+        }
+    }
+
+    function setStaffPlayerRole(role) {
+        staffPlayerRole = role;
+        myRole = role;
+        document.getElementById('inputsArea').style.display = 'block';
+        document.getElementById('pName').style.display = 'block';
+        document.getElementById('pName').placeholder = "参謀名（必須）";
+        document.getElementById('btnStaffLeader1').className = role === 'leader1' ? 'btn-green' : 'btn-gray';
+        document.getElementById('btnStaffLeader2').className = role === 'leader2' ? 'btn-green' : 'btn-gray';
+        document.getElementById('btnStaffRider').className = role === 'rider' ? 'btn-green' : 'btn-gray';
+    }
+
+    function sendStaffGorei(action, squadOffset) {
+        if (!isStaffCommander || myAllianceIdx === -1 || !ws || ws.readyState !== WebSocket.OPEN) return;
+        const squadId = myAllianceIdx * 2 + squadOffset;
+        if (action === 'fire') ws.send(JSON.stringify({cmd:"fire_gorei", idx:squadId}));
+        if (action === 'fire_fixed') ws.send(JSON.stringify({cmd:"fire_gorei_fixed", idx:squadId}));
+        if (action === 'cancel') ws.send(JSON.stringify({cmd:"cancel_gorei", idx:squadId}));
+        if (action === 'mod_offset') ws.send(JSON.stringify({cmd:"mod_gorei", idx:squadId, val: arguments[2]}));
+        if (action === 'mod_target') ws.send(JSON.stringify({cmd:"mod_gorei_target", idx:squadId, val: arguments[2]}));
+
+        // 体感ラグを減らすため、参謀UIはローカル状態を先に更新して即再描画する
+        if (localState) {
+            if (action === 'mod_offset') {
+                const d = parseInt(arguments[2] || 0);
+                const cur = parseInt(localState.gorei_offsets[squadId] || 0);
+                localState.gorei_offsets[squadId] = Math.max(0, cur + d);
+            } else if (action === 'mod_target') {
+                const d = parseInt(arguments[2] || 0);
+                const nowTs = getSyncedNow().getTime() / 1000;
+                const startIdx = 6 + squadId * 6;
+                const marches = [];
+                for (let i = startIdx; i < startIdx + 6; i++) {
+                    const t = localState.timers[i];
+                    if (t && (t.name || "").trim() !== "") marches.push(parseInt(t.sub_set || 0));
+                }
+                const maxMarch = marches.length ? Math.max(...marches) : 0;
+                const minTgt = nowTs + (parseInt(localState.gorei_offsets[squadId] || 0)) + (parseInt(localState.default_rally || 0)) + maxMarch;
+                const cur = localState.gorei_fixed_targets[squadId] ? parseFloat(localState.gorei_fixed_targets[squadId]) : minTgt;
+                const next = cur + d;
+                localState.gorei_fixed_targets[squadId] = (next > minTgt) ? next : null;
+            } else if (action === 'cancel') {
+                localState.gorei_fixed_targets[squadId] = null;
+            }
+            renderStaffCommandPanel();
+            startStaffPanelTicker();
+        }
+    }
+
+    function startStaffPanelTicker() {
+        if (staffPanelRafScheduled) return;
+        staffPanelRafScheduled = true;
+        staffPanelRafHandle = setInterval(() => {
+            if (!isStaffCommander || !localState) return;
+            const p = document.getElementById("staffCommandPanel");
+            if (!p || p.style.display === "none") return;
+            syncStaffRowAnchors();
+            updateStaffMiniTimersOnly();
+            updateStaffInsertTimersOnly();
+        }, 200);
+    }
+
+    function stopStaffPanelTicker() {
+        staffPanelRafScheduled = false;
+        if (staffPanelRafHandle != null) {
+            clearInterval(staffPanelRafHandle);
+            staffPanelRafHandle = null;
+        }
+    }
+
+    function renderStaffCommandPanel() {
+        if (!isStaffCommander || myAllianceIdx === -1 || !localState) return;
+        const cards = document.getElementById("staffCommandCards");
+        if (!cards) return;
+        const allianceName = (localState.alliance_names && localState.alliance_names[myAllianceIdx]) ? localState.alliance_names[myAllianceIdx] : `同盟${myAllianceIdx + 1}`;
+        const roleTxt = localState.alliance_roles && localState.alliance_roles[myAllianceIdx] === "occupy" ? "占領同盟" : "攻撃同盟";
+        const roleColor = roleTxt === "占領同盟" ? "#98C379" : "#E06C75";
+        const nowTs = getSyncedNow().getTime();
+        let html = "";
+        html += `
+            <div class="staff-alliance-head">
+                <div style="color:#ffffff; font-size:28px; line-height:1;">|</div>
+                <div style="font-size:30px; color:#ffffff; font-weight:bold;">${allianceName}</div>
+                <div style="color:${roleColor}; font-weight:bold;">${appMode === "drill" ? "" : `● ${roleTxt}`}</div>
+            </div>
+        `;
+        for (let offset = 0; offset < 2; offset++) {
+            const squadId = myAllianceIdx * 2 + offset;
+            const title = offset === 0 ? "第1班" : "第2班";
+            const goreiOffset = localState.gorei_offsets[squadId] || 0;
+            const startIdx = 6 + squadId * 6;
+            const marches = [];
+            for (let i = startIdx; i < startIdx + 6; i++) {
+                const t = localState.timers[i];
+                if (t && t.name !== "") marches.push(t.sub_set || 0);
+            }
+            const maxMarch = marches.length ? Math.max(...marches) : 0;
+            const minTargetTs = nowTs + (goreiOffset + localState.default_rally + maxMarch) * 1000;
+            const dispTargetTs = localState.gorei_fixed_targets[squadId] ? localState.gorei_fixed_targets[squadId] * 1000 : minTargetTs;
+            const d = new Date(dispTargetTs);
+            const hh = String(d.getUTCHours()).padStart(2, "0");
+            const mm = String(d.getUTCMinutes()).padStart(2, "0");
+            const ss = String(d.getUTCSeconds()).padStart(2, "0");
+            const isFixedTarget = !!localState.gorei_fixed_targets[squadId];
+            const targetColor = isFixedTarget ? "#E5C07B" : "#61AFEF";
+
+            const titleClass = offset === 0 ? "staff-btn-purple" : "staff-btn-cyan";
+            const borderColor = offset === 0 ? "#C678DD" : "#56B6C2";
+            let rowsHtml = "";
+            for (let i = startIdx; i < startIdx + 6; i++) {
+                const t = localState.timers[i];
+                const nm = (t && t.name && t.name.trim() !== "") ? t.name : "---";
+                let mainSec = t ? Math.max(0, Math.floor(Number(t.sec || 0))) : 0;
+                if (t && t.state === 4 && t.start_at) {
+                    mainSec = Math.max(0, Math.floor((new Date(t.start_at).getTime() - nowTs) / 1000));
+                } else if (t && t.state === 1 && t.end) {
+                    mainSec = Math.max(0, Math.floor((new Date(t.end).getTime() - nowTs) / 1000));
+                } else if (t && t.state === 2) {
+                    mainSec = 0;
+                }
+                const marchDisp = staffMarchDisplaySec(t);
+                const mainTxt = `${String(Math.floor(mainSec / 60)).padStart(1, "0")}:${String(mainSec % 60).padStart(2, "0")}`;
+                const subTxt = staffFormatMmSs(marchDisp);
+                let tgtTxt = "--:--";
+                const land = (t && t.state && t.state !== 0) ? staffStableLandingMs(t, localState.default_rally) : null;
+                if (land != null) tgtTxt = staffFormatImpactUtcMmSs(land);
+                rowsHtml += `
+                    <div class="staff-mini-row">
+                        <div style="color:#7f8796;">●</div>
+                        <div class="staff-mini-name">${nm}</div>
+                        <div class="staff-mini-timer" id="staffMiniMain_${i}">${mainTxt}</div>
+                        <div class="staff-mini-sub" id="staffMiniSub_${i}">${subTxt}</div>
+                        <div class="staff-mini-target" id="staffMiniTgt_${i}">▶${tgtTxt}</div>
+                    </div>
+                `;
+            }
+            const g10 = Math.floor(goreiOffset / 10);
+            const g1 = goreiOffset % 10;
+            html += `
+            <div>
+                <div class="staff-squad-title ${titleClass}">${title}</div>
+                <div class="staff-gorei-panel" style="border-color:${borderColor};">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                        <div style="display:flex; align-items:center; gap:5px;">
+                            <span style="color:#ABB2BF; font-size:12px;">猶予+</span>
+                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_offset', ${offset}, 10)">▲</button><div class="staff-digit" style="color:#E5C07B;">${g10}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_offset', ${offset}, -10)">▼</button></div>
+                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_offset', ${offset}, 1)">▲</button><div class="staff-digit" style="color:#E5C07B;">${g1}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_offset', ${offset}, -1)">▼</button></div>
+                            <span style="color:#ABB2BF; font-size:12px;">秒</span>
+                        </div>
+                        <button class="staff-btn ${offset === 0 ? 'staff-btn-purple' : 'staff-btn-cyan'}" onclick="sendStaffGorei('fire', ${offset})">即時号令（今のタイミング）</button>
+                    </div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; background:#1E2227; border:1px solid #3E4451; border-radius:4px; padding:6px; margin-bottom:8px;">
+                        <div style="display:flex; align-items:center;">
+                            <span style="font-size:12px; color:#ABB2BF; margin-right:6px;">着弾:</span>
+                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 600)">▲</button><div class="staff-digit" style="color:${targetColor};">${Math.floor(parseInt(mm,10)/10)}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -600)">▼</button></div>
+                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 60)">▲</button><div class="staff-digit" style="color:${targetColor};">${parseInt(mm,10)%10}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -60)">▼</button></div>
+                            <span style="color:${targetColor}; font-weight:bold; margin:0 2px;">:</span>
+                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 10)">▲</button><div class="staff-digit" style="color:${targetColor};">${Math.floor(parseInt(ss,10)/10)}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -10)">▼</button></div>
+                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 1)">▲</button><div class="staff-digit" style="color:${targetColor};">${parseInt(ss,10)%10}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -1)">▼</button></div>
+                        </div>
+                        <button class="staff-btn staff-btn-green" onclick="sendStaffGorei('fire_fixed', ${offset})">着弾指定号令</button>
+                    </div>
+                    <button class="staff-btn staff-btn-red" onclick="sendStaffGorei('cancel', ${offset})">解除</button>
+                    <div style="margin-top:8px;">
+                        <div class="staff-mini-head">
+                            <div></div>
+                            <div></div>
+                            <div class="staff-mini-head-label" style="text-align:center;">集結時間</div>
+                            <div class="staff-mini-head-label" style="text-align:center;">行軍時間</div>
+                            <div class="staff-mini-head-label" style="text-align:right;">着弾時間</div>
+                        </div>
+                        ${rowsHtml}
+                    </div>
+                </div>
+            </div>`;
+        }
+        cards.innerHTML = html;
+        lastStaffPanelSig = staffPanelStructuralSig();
+        syncStaffRowAnchors();
+        updateStaffMiniTimersOnly();
+        renderStaffInsertPanel();
+    }
+
+    function clearRegistrationAndReset() {
+        if (!confirm("設定を最初からやり直しますか？")) return;
+        if (myRole && myRole.startsWith('leader') && myName !== "") {
+            if (registeredIdx !== -1) ws.send(JSON.stringify({cmd: "clear_player", idx: registeredIdx}));
+        }
+        location.reload();
+    }
+
+    function drawClock() {
+        const canvas = document.getElementById('analogClock');
+        const ctx = canvas.getContext('2d');
+        const radius = canvas.height / 2;
+        const faceRadius = radius * 0.95;
+        
+        const d = getSyncedNow();
+        const h = (d.getUTCHours() + 9) % 12;
+        const m = d.getUTCMinutes();
+        const s = d.getUTCSeconds();
+
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.save(); ctx.translate(radius, radius);
+        ctx.beginPath(); ctx.arc(0, 0, faceRadius, 0, 2*Math.PI); 
+        ctx.fillStyle = '#ffffff'; ctx.fill();
+        ctx.strokeStyle = '#222222'; ctx.lineWidth = 6; ctx.stroke();
+
+        for(let i = 0; i < 60; i++) {
+            let ang = i * Math.PI / 30;
+            ctx.rotate(ang); ctx.beginPath();
+            if(i % 5 === 0) { ctx.moveTo(0, -faceRadius * 0.95); ctx.lineTo(0, -faceRadius * 0.85); ctx.lineWidth = 3; } 
+            else { ctx.moveTo(0, -faceRadius * 0.95); ctx.lineTo(0, -faceRadius * 0.90); ctx.lineWidth = 1; }
+            ctx.strokeStyle = '#666666'; ctx.stroke(); ctx.rotate(-ang);
+        }
+        ctx.font = "bold " + (radius * 0.28) + "px Arial";
+        ctx.textBaseline = "middle"; ctx.textAlign = "center"; ctx.fillStyle = '#333333';
+        for(let num = 1; num <= 12; num++) {
+            let ang = num * Math.PI / 6;
+            ctx.rotate(ang); ctx.translate(0, -faceRadius * 0.68); ctx.rotate(-ang);
+            ctx.fillText(num.toString(), 0, 0);
+            ctx.rotate(ang); ctx.translate(0, faceRadius * 0.68); ctx.rotate(-ang);
+        }
+        drawHand(ctx, (h*Math.PI/6)+(m*Math.PI/360), faceRadius*0.5, 6, '#222222');
+        drawHand(ctx, (m*Math.PI/30)+(s*Math.PI/1800), faceRadius*0.75, 4, '#222222');
+        drawHand(ctx, s*Math.PI/30, faceRadius*0.85, 2, '#E06C75');
+        ctx.beginPath(); ctx.arc(0, 0, 5, 0, 2*Math.PI); ctx.fillStyle = '#222222'; ctx.fill();
+        ctx.restore();
+        const hhStr = String((d.getUTCHours() + 9) % 24).padStart(2, '0');
+        document.getElementById('jstClock').innerText = `${hhStr}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        requestAnimationFrame(drawClock);
+    }
+    function drawHand(ctx, pos, length, width, color) { ctx.beginPath(); ctx.lineWidth = width; ctx.lineCap = "round"; ctx.strokeStyle = color; ctx.moveTo(0,0); ctx.rotate(pos); ctx.lineTo(0, -length); ctx.stroke(); ctx.rotate(-pos); }
+    drawClock();
+
+    function drawStaticClock(canvasId, d) {
+        const canvas = document.getElementById(canvasId);
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const radius = canvas.height / 2;
+        const faceRadius = radius * 0.95;
+        const h = d.getUTCHours() % 12; const m = d.getUTCMinutes(); const s = d.getUTCSeconds();
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        ctx.save(); ctx.translate(radius, radius);
+        for(let i = 0; i < 60; i++) {
+            let ang = i * Math.PI / 30; ctx.rotate(ang); ctx.beginPath();
+            if(i % 5 === 0) { ctx.moveTo(0, -faceRadius * 0.9); ctx.lineTo(0, -faceRadius * 0.75); ctx.lineWidth = 2.5; }
+            else { ctx.moveTo(0, -faceRadius * 0.9); ctx.lineTo(0, -faceRadius * 0.85); ctx.lineWidth = 1; }
+            ctx.strokeStyle = '#666'; ctx.stroke(); ctx.rotate(-ang);
+        }
+        ctx.font = "bold " + (radius * 0.35) + "px Arial"; ctx.textBaseline = "middle"; ctx.textAlign = "center"; ctx.fillStyle = '#333';
+        for(let num = 1; num <= 12; num++) {
+            let ang = num * Math.PI / 6; ctx.rotate(ang); ctx.translate(0, -faceRadius * 0.58); ctx.rotate(-ang);
+            ctx.fillText(num.toString(), 0, 0); ctx.rotate(ang); ctx.translate(0, faceRadius * 0.58); ctx.rotate(-ang);
+        }
+        drawHand(ctx, (h*Math.PI/6)+(m*Math.PI/360), faceRadius*0.5, 4, '#222');
+        drawHand(ctx, (m*Math.PI/30)+(s*Math.PI/1800), faceRadius*0.75, 3, '#222');
+        drawHand(ctx, s*Math.PI/30, faceRadius*0.85, 1.5, '#E06C75');
+        ctx.beginPath(); ctx.arc(0, 0, 4, 0, 2*Math.PI); ctx.fillStyle = '#222'; ctx.fill();
+        ctx.restore();
+    }
+
+    function playVoiceDynamic(text) {
+        if (!audioEnabled) return;
+
+        const cacheKey = getVoiceCacheKey(text);
+        if (voiceBufferCache[cacheKey]) {
+            if (currentAudioSource) {
+                try { currentAudioSource.stop(); } catch(e) {}
+            }
+            let source = audioCtx.createBufferSource();
+            source.buffer = voiceBufferCache[cacheKey];
+            source.connect(audioCtx.destination);
+            currentAudioSource = source;
+            source.start(0);
+        } else {
+            // カウントダウン等の重要音声はVOICEVOX優先。未準備時にOS読み上げへ落とさない。
+            if (!isCriticalVoiceText(text)) {
+                fallbackTTS(text);
+            }
+            fetchAndCacheVoice(text);
+        }
+    }
+
+    async function fetchAndCacheVoice(text) {
+        const cacheKey = getVoiceCacheKey(text);
+        if (voiceBufferCache[cacheKey]) return;
+        if (voiceFetchPromises[cacheKey]) return await voiceFetchPromises[cacheKey];
+        voiceFetchPromises[cacheKey] = (async () => {
+            try {
+            let url = window.location.protocol + "//" + window.location.host + "/api/voice?text=" + encodeURIComponent(text) + "&speaker=" + selectedVoiceStyleId;
+            let res = await fetch(url);
+            if (res.ok) {
+                let arrayBuffer = await res.arrayBuffer();
+                await new Promise((resolve) => audioCtx.decodeAudioData(arrayBuffer, (buffer) => {
+                    voiceBufferCache[cacheKey] = buffer;
+                    resolve();
+                }));
+            }
+            } catch(e) {
+                console.warn("音声の取得に失敗しました:", text);
+            } finally {
+                delete voiceFetchPromises[cacheKey];
+            }
+        })();
+        await voiceFetchPromises[cacheKey];
+    }
+
+    function fallbackTTS(text) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            let ut = new SpeechSynthesisUtterance(text);
+            ut.lang = 'ja-JP';
+            ut.rate = 1.35; 
+            window.speechSynthesis.speak(ut);
+        }
+    }
+
+    async function preloadCommonVoices() {
+        const texts = [
+            "音声テストです",
+            "10", "9", "8", "7", "6", "5", "4", "3", "2", "1", 
+            "スタート", "抜いてください",
+            "集結開始の準備をお願いします", 
+            "差込の準備をお願いします", 
+            "占領入替の準備をお願いします", 
+            "占領から抜く準備をして下さい"
+        ];
+        for (let t of texts) {
+            await fetchAndCacheVoice(t);
+        }
+    }
+
+    function setVoiceReadyStatus(text, ready=false) {
+        const el = document.getElementById("voiceReadyStatus");
+        const textEl = document.getElementById("voiceReadyText");
+        if (!el) return;
+        el.style.display = 'flex';
+        el.classList.toggle("ready", !!ready);
+        el.style.color = ready ? '#98C379' : '#ABB2BF';
+        if (textEl) {
+            textEl.innerText = text;
+        } else {
+            el.innerText = text;
+        }
+        setVoiceTestButtonsEnabled(!!ready);
+    }
+
+    function setVoiceTestButtonsEnabled(enabled) {
+        const testBtn = document.getElementById("voiceTestBtn");
+        const countdownBtn = document.getElementById("countdownDemoBtn");
+        [testBtn, countdownBtn].forEach((btn) => {
+            if (!btn) return;
+            btn.disabled = !enabled;
+            btn.classList.toggle("voice-disabled", !enabled);
+        });
+    }
+
+    async function ensureVoiceReady() {
+        if (audioCtx === null) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (voiceWarmupPromise) {
+            await voiceWarmupPromise;
+            return;
+        }
+        voiceWarmupPromise = (async () => {
+            setVoiceReadyStatus("VOICEVOX音声を準備中...\n音声ダウンロード中。数秒～数十秒お待ちください。", false);
+            await preloadCommonVoices();
+            if (voiceBufferCache[getVoiceCacheKey("10")]) {
+                setVoiceReadyStatus("VOICEVOX音声の準備完了", true);
+            } else {
+                setVoiceReadyStatus("VOICEVOX音声を準備中...\n音声ダウンロード中。数秒～数十秒お待ちください。", false);
+            }
+        })();
+        await voiceWarmupPromise;
+        voiceWarmupPromise = null;
+    }
+
+    function playCachedVoice(text) {
+        const cacheKey = getVoiceCacheKey(text);
+        if (!voiceBufferCache[cacheKey]) return false;
+        if (currentAudioSource) {
+            try { currentAudioSource.stop(); } catch(e) {}
+        }
+        let source = audioCtx.createBufferSource();
+        source.buffer = voiceBufferCache[cacheKey];
+        source.connect(audioCtx.destination);
+        currentAudioSource = source;
+        source.start(0);
+        return true;
+    }
+
+    async function loadVoiceSpeakers() {
+        try {
+            const url = window.location.protocol + "//" + window.location.host + "/api/voice_speakers";
+            const res = await fetch(url);
+            if (!res.ok) return;
+            const data = await res.json();
+            voiceSpeakers = Array.isArray(data.speakers) ? data.speakers : [];
+            renderVoiceSelectors();
+        } catch (e) {
+            console.warn("話者一覧の取得に失敗しました");
+        }
+    }
+
+    function renderVoiceSelectors() {
+        const spSel = document.getElementById("voiceSpeakerSelect");
+        const stSel = document.getElementById("voiceStyleSelect");
+        if (!spSel || !stSel) return;
+        if (!voiceSpeakers.length) {
+            voiceSpeakers = [{name: "デフォルト", styles: [{id: 3, name: "ノーマル"}]}];
+        }
+        spSel.innerHTML = "";
+        voiceSpeakers.forEach((sp, idx) => {
+            const opt = document.createElement("option");
+            opt.value = String(idx);
+            opt.textContent = sp.name;
+            spSel.appendChild(opt);
+        });
+        let speakerIdx = 0;
+        for (let i = 0; i < voiceSpeakers.length; i++) {
+            if ((voiceSpeakers[i].styles || []).some(s => s.id === selectedVoiceStyleId)) {
+                speakerIdx = i;
+                break;
+            }
+        }
+        spSel.value = String(speakerIdx);
+        fillStyleOptions(speakerIdx);
+    }
+
+    function fillStyleOptions(speakerIdx) {
+        const stSel = document.getElementById("voiceStyleSelect");
+        if (!stSel) return;
+        const styles = (voiceSpeakers[speakerIdx] && voiceSpeakers[speakerIdx].styles) ? voiceSpeakers[speakerIdx].styles : [];
+        stSel.innerHTML = "";
+        styles.forEach(st => {
+            const opt = document.createElement("option");
+            opt.value = String(st.id);
+            opt.textContent = st.name || `style-${st.id}`;
+            stSel.appendChild(opt);
+        });
+        if (!styles.some(s => s.id === selectedVoiceStyleId) && styles.length) {
+            selectedVoiceStyleId = styles[0].id;
+        }
+        stSel.value = String(selectedVoiceStyleId);
+        localStorage.setItem("utc_voice_style_id", String(selectedVoiceStyleId));
+    }
+
+    function onVoiceSpeakerChanged() {
+        const spSel = document.getElementById("voiceSpeakerSelect");
+        const idx = parseInt(spSel.value || "0");
+        fillStyleOptions(idx);
+        ensureVoiceReady();
+    }
+
+    function onVoiceStyleChanged() {
+        const stSel = document.getElementById("voiceStyleSelect");
+        selectedVoiceStyleId = parseInt(stSel.value || "3");
+        localStorage.setItem("utc_voice_style_id", String(selectedVoiceStyleId));
+        ensureVoiceReady();
+    }
+
+    async function playTestAudio() {
+        if(audioCtx === null) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        if (!audioEnabled) {
+            alert("音声モードがOFFになっています。ONにしてからお試しください。");
+            return;
+        }
+        await ensureVoiceReady();
+        if (!playCachedVoice("音声テストです")) {
+            alert("VOICEVOX音声を準備中です。数秒後に再度お試しください。");
+        }
+    }
+
+    async function startCountdownDemo() {
+        if(audioCtx === null) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        if (!audioEnabled) {
+            alert("音声モードがOFFになっています。ONにしてからお試しください。");
+            return;
+        }
+        if (countdownDemoTimer) return;
+        await ensureVoiceReady();
+
+        const box = document.getElementById('countdownDemoBox');
+        const valEl = document.getElementById('countdownDemoValue');
+        const btn = document.getElementById('countdownDemoBtn');
+        countdownDemoValue = 10;
+        box.style.display = 'block';
+        btn.disabled = true;
+        btn.innerText = "⏱ テスト中...";
+
+        const tick = () => {
+            if (countdownDemoValue > 0) {
+                valEl.innerText = String(countdownDemoValue);
+                if (!playCachedVoice(String(countdownDemoValue))) playVoiceDynamic(String(countdownDemoValue));
+                countdownDemoValue -= 1;
+                countdownDemoTimer = setTimeout(tick, 1000);
+            } else {
+                valEl.innerText = "START";
+                if (!playCachedVoice("スタート")) playVoiceDynamic("スタート");
+                countdownDemoTimer = setTimeout(() => {
+                    valEl.innerText = "--";
+                    btn.disabled = false;
+                    btn.innerText = "⏱ カウントダウンテスト";
+                    countdownDemoTimer = null;
+                }, 1200);
+            }
+        };
+
+        tick();
+    }
+
+    function escapeChatHtml(s) {
+        return String(s || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function supportCompressToJpeg(dataUrl, maxW, q) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                let tw = img.naturalWidth, th = img.naturalHeight;
+                if (tw > maxW) { th = Math.round(th * (maxW / tw)); tw = maxW; }
+                const c = document.createElement("canvas");
+                c.width = tw; c.height = th;
+                const ctx = c.getContext("2d");
+                ctx.drawImage(img, 0, 0, tw, th);
+                const out = c.toDataURL("image/jpeg", q);
+                const base64 = out.split(",")[1];
+                resolve({ mime: "image/jpeg", data: base64 });
+            };
+            img.onerror = () => reject(new Error("image load"));
+            img.src = dataUrl;
+        });
+    }
+
+    function renderSupportPending() {
+        const bar = document.getElementById("supportPendingBar");
+        if (!bar) return;
+        if (!supportPendingImages.length) {
+            bar.style.display = "none";
+            bar.innerHTML = "";
+            return;
+        }
+        bar.style.display = "flex";
+        let html = "";
+        supportPendingImages.forEach((att, idx) => {
+            const url = "data:" + att.mime + ";base64," + att.data;
+            html += `<div class="support-pending-thumb"><img src="${url}" alt=""><button type="button" onclick="removeSupportPending(${idx})" title="削除">×</button></div>`;
+        });
+        bar.innerHTML = html;
+    }
+
+    function removeSupportPending(idx) {
+        supportPendingImages.splice(idx, 1);
+        renderSupportPending();
+    }
+
+    async function addSupportImageBlob(blob) {
+        if (!blob || !blob.type || blob.type.indexOf("image/") !== 0) return;
+        if (supportPendingImages.length >= 3) {
+            alert("画像は最大3枚までです。");
+            return;
+        }
+        const reader = new FileReader();
+        const dataUrl = await new Promise((res, rej) => {
+            reader.onload = () => res(reader.result);
+            reader.onerror = rej;
+            reader.readAsDataURL(blob);
+        });
+        try {
+            const comp = await supportCompressToJpeg(dataUrl, 1600, 0.82);
+            supportPendingImages.push(comp);
+            renderSupportPending();
+        } catch (e) {
+            alert("画像の処理に失敗しました。");
+        }
+    }
+
+    function supportOnFilePick(e) {
+        const files = Array.from(e.target.files || []);
+        e.target.value = "";
+        files.slice(0, 3).forEach(f => { addSupportImageBlob(f); });
+    }
+
+    function supportOnPaste(e) {
+        const wrap = document.getElementById("chatInputWrap");
+        if (!wrap || wrap.style.display === "none") return;
+        const items = e.clipboardData && e.clipboardData.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf("image") !== -1) {
+                e.preventDefault();
+                const f = items[i].getAsFile();
+                if (f) addSupportImageBlob(f);
+                break;
+            }
+        }
+    }
+
+    // ★ チャット送信処理
+    function sendSupportChat() {
+        let inputEl = document.getElementById('chatInputText');
+        let msg = inputEl.value.trim();
+        const hasImg = supportPendingImages.length > 0;
+        if ((!msg && !hasImg) || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+        let senderName = getSupportSenderName();
+        if (!senderName) {
+            alert("送信前にお名前を入力してください。");
+            setSupportChatStage(false);
+            const nameEl = document.getElementById("supportGateNameInput");
+            if (nameEl) nameEl.focus();
+            return;
+        }
+        supportUserName = senderName;
+        localStorage.setItem("utc_support_user_name", senderName);
+
+        const payload = {
+            cmd: "send_support_chat",
+            msg: msg || (hasImg ? "（画像を送信）" : ""),
+            client_id: myClientId,
+            name: senderName
+        };
+        if (hasImg) payload.attachments = supportPendingImages.map(a => ({ mime: a.mime, data: a.data }));
+        ws.send(JSON.stringify(payload));
+        inputEl.value = "";
+        supportPendingImages = [];
+        renderSupportPending();
+    }
+
+    // ★ チャット履歴の描画（forceScrollBottom: 開いた直後などは最下部へ。通常は上を読んでいるときスクロール位置を維持）
+    function renderChatBody(forceScrollBottom) {
+        if (!localState || !localState.support_chats || !localState.support_chats[myClientId]) return;
+        let chatBody = document.getElementById('chatBody');
+        if (!chatBody) return;
+        const nearBottomPx = 120;
+        let savedTop = chatBody.scrollTop;
+        let stickBottom = !!forceScrollBottom;
+        if (!stickBottom && chatBody.scrollHeight > chatBody.clientHeight) {
+            const dist = chatBody.scrollHeight - chatBody.scrollTop - chatBody.clientHeight;
+            stickBottom = dist <= nearBottomPx;
+        }
+
+        let chatData = localState.support_chats[myClientId].messages;
+        const threadName = (localState.support_chats[myClientId].name || supportUserName || "").trim();
+        let html = "";
+        
+        chatData.forEach(msg => {
+            let imgs = "";
+            if (msg.attachments && msg.attachments.length) {
+                msg.attachments.forEach(att => {
+                    const safeMime = (att.mime && /^image\/(jpeg|png|gif|webp)$/i.test(att.mime)) ? att.mime : "image/jpeg";
+                    const d = (att.data || "").replace(/\s/g, "");
+                    if (d) imgs += `<img class="chat-attach-preview" src="data:${safeMime};base64,${d}" alt="画像">`;
+                });
+            }
+            const body = escapeChatHtml(msg.text || "").replace(/\n/g, "<br>");
+            if (msg.sender === "user") {
+                const nameLbl = threadName
+                    ? `<span class="ai-label" style="opacity:0.95; color:rgba(255,255,255,0.92);">${escapeChatHtml(threadName)}</span>`
+                    : "";
+                html += `
+                <div class="msg-bubble msg-user">
+                    ${nameLbl}
+                    <div>${body}</div>${imgs}
+                    <div class="msg-time" style="color:#E5E5E5; text-align:right;">${msg.time}</div>
+                </div>`;
+            } else if (msg.sender === "ai") {
+                html += `
+                <div class="msg-bubble msg-ai">
+                    <span class="ai-label">🤖 AI副官</span>
+                    <div>${escapeChatHtml(msg.text || "").replace(/\n/g, "<br>")}</div>
+                    <div class="msg-time">${msg.time}</div>
+                </div>`;
+            } else if (msg.sender === "admin") {
+                html += `
+                <div class="msg-bubble msg-admin">
+                    <span class="ai-label" style="color:#61AFEF;">👑 総指揮</span>
+                    <div>${escapeChatHtml(msg.text || "").replace(/\n/g, "<br>")}</div>${imgs}
+                    <div class="msg-time">${msg.time}</div>
+                </div>`;
+            }
+        });
+        
+        chatBody.innerHTML = html;
+        if (stickBottom) {
+            chatBody.scrollTop = chatBody.scrollHeight;
+        } else {
+            chatBody.scrollTop = Math.min(savedTop, Math.max(0, chatBody.scrollHeight - chatBody.clientHeight));
+        }
+    }
+
+    document.addEventListener('touchstart', function() {
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        if ('speechSynthesis' in window) {
+            let silent = new SpeechSynthesisUtterance("");
+            silent.volume = 0;
+            window.speechSynthesis.speak(silent);
+        }
+    }, {passive: true});
+
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                connect();
+            }
+        }
+    });
+
+    window.onload = () => {
+        const qsMode = new URLSearchParams(window.location.search).get("mode");
+        const savedMode = localStorage.getItem("utc_app_mode");
+        drillAllianceName = localStorage.getItem("utc_drill_alliance_name") || "";
+        drillRoomKey = localStorage.getItem("utc_drill_room_key") || "default";
+        drillJoinCode = localStorage.getItem("utc_drill_join_code") || "";
+        const dnEl = document.getElementById("drillAllianceNameInput");
+        const rkEl = document.getElementById("drillRoomKeyInput");
+        const joinCodeEl = document.getElementById("drillJoinCodeInput");
+        if (dnEl && drillAllianceName) dnEl.value = drillAllianceName;
+        if (rkEl && drillJoinCode) rkEl.value = drillJoinCode;
+        if (joinCodeEl && drillJoinCode) joinCodeEl.value = drillJoinCode;
+        setDrillTab("create");
+        selectAppMode(qsMode === "drill" ? "drill" : (savedMode === "drill" ? "drill" : "prod"));
+        let savedName = localStorage.getItem("utc_my_name");
+        let savedMin = localStorage.getItem("utc_my_min");
+        let savedSec = localStorage.getItem("utc_my_sec");
+        supportUserName = String(localStorage.getItem("utc_support_user_name") || "").trim();
+        if (!supportUserName && savedName) {
+            supportUserName = String(savedName).trim();
+            if (supportUserName) localStorage.setItem("utc_support_user_name", supportUserName);
+        }
+        syncSupportNameInput();
+        if (savedName) document.getElementById('pName').value = savedName;
+        if (savedMin) document.getElementById('pMin').value = savedMin;
+        if (savedSec) document.getElementById('pSec').value = savedSec;
+        
+        let urlInput = document.getElementById('shareUrlInput');
+        if(urlInput) urlInput.value = window.location.href;
+        loadVoiceSpeakers();
+        ensureVoiceReady();
+        const sFile = document.getElementById("supportFileInput");
+        if (sFile) sFile.addEventListener("change", supportOnFilePick);
+        const sOv = document.getElementById("chatOverlay");
+        if (sOv) sOv.addEventListener("paste", supportOnPaste);
+    };
+
+    function setRole(r) { 
+        const staffArea = document.getElementById('staffPlayerRoleArea');
+        if (r === 'staff') {
+            isStaffCommander = true;
+            staffPlayerRole = null;
+            myRole = null;
+            staffArea.style.display = 'block';
+            document.getElementById('inputsArea').style.display = 'none';
+            document.getElementById('btnStaff').className = 'role-btn active';
+            document.getElementById('btnLeader1').className = 'role-btn inactive';
+            document.getElementById('btnLeader2').className = 'role-btn inactive';
+            document.getElementById('btnRider').className = 'role-btn inactive';
+            document.getElementById('btnStaffLeader1').className = 'btn-gray';
+            document.getElementById('btnStaffLeader2').className = 'btn-gray';
+            document.getElementById('btnStaffRider').className = 'btn-gray';
+            document.getElementById('pName').placeholder = "参謀名（必須）";
+            return;
+        }
+        isStaffCommander = false;
+        staffPlayerRole = null;
+        myRole = r;
+        staffArea.style.display = 'none';
+        document.getElementById('inputsArea').style.display = 'block';
+        document.getElementById('pName').style.display = r.startsWith('leader') ? 'block' : 'none';
+        document.getElementById('pName').placeholder = "名前を入力";
+        document.getElementById('btnStaff').className = 'role-btn inactive';
+        document.getElementById('btnLeader1').className = (r === 'leader1') ? 'role-btn active' : 'role-btn inactive';
+        document.getElementById('btnLeader2').className = (r === 'leader2') ? 'role-btn active' : 'role-btn inactive';
+        document.getElementById('btnRider').className = (r === 'rider') ? 'role-btn active' : 'role-btn inactive';
+    }
+
+    function register() {
+        if(audioCtx === null) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if(audioCtx.state === 'suspended') audioCtx.resume();
+        if ('speechSynthesis' in window) {
+            let ut = new SpeechSynthesisUtterance("");
+            ut.volume = 0;
+            window.speechSynthesis.speak(ut);
+        }
+        
+        setTimeout(() => { preloadCommonVoices(); }, 1000 + Math.random() * 4000);
+
+        myMarchSec = parseInt(document.getElementById('pMin').value)*60 + parseInt(document.getElementById('pSec').value);
+        localStorage.setItem("utc_my_min", document.getElementById('pMin').value);
+        localStorage.setItem("utc_my_sec", document.getElementById('pSec').value);
+
+        if (registeredIdx !== -1) {
+            ws.send(JSON.stringify({cmd: "clear_player", idx: registeredIdx}));
+            registeredIdx = -1;
+        }
+
+        const effectiveRole = isStaffCommander ? staffPlayerRole : myRole;
+        if (!effectiveRole) return alert("役割を選択してください");
+        ws.send(JSON.stringify({cmd:"set_staff_mode", val:{enabled: isStaffCommander, alliance_id: myAllianceIdx}}));
+        myRole = effectiveRole;
+
+        const inputName = (document.getElementById('pName').value || "").trim();
+        if (isStaffCommander && !inputName) return alert("参謀名を入力してください");
+
+        if(effectiveRole.startsWith('leader')) {
+            myName = inputName;
+            if(!myName) return alert("名前を入力してください");
+            localStorage.setItem("utc_my_name", myName);
+            supportUserName = myName;
+            localStorage.setItem("utc_support_user_name", supportUserName);
+            ws.send(JSON.stringify({cmd:"register_player", val:{role:effectiveRole, alliance_id:myAllianceIdx, name:myName, march_min:0, march_sec:myMarchSec, device_mode: deviceMode}}));
+        } else {
+            myName = isStaffCommander ? inputName : "乗り手";
+            if (myName) localStorage.setItem("utc_my_name", myName);
+            if (isStaffCommander && myName) {
+                supportUserName = myName;
+                localStorage.setItem("utc_support_user_name", supportUserName);
+            }
+            ws.send(JSON.stringify({cmd:"register_player", val:{role:"rider", alliance_id:myAllianceIdx, name: myName, device_mode: deviceMode}}));
+        }
+        if (isStaffCommander) {
+            ws.send(JSON.stringify({cmd:"set_staff_name", val:{alliance_id: myAllianceIdx, name: inputName}}));
+        }
+        
+        hideAllSteps();
+        document.getElementById('display').style.display = 'block';
+        
+        if (deviceMode === '2device') {
+            document.getElementById('audioControlsArea').style.display = 'flex';
+            document.getElementById('multiDeviceWarning').style.display = 'block'; 
+        }
+        document.getElementById('staffCommandPanel').style.display = isStaffCommander ? 'block' : 'none';
+        const alnName = (localState && localState.alliance_names[myAllianceIdx]) ? localState.alliance_names[myAllianceIdx] : `同盟${myAllianceIdx + 1}`;
+        document.getElementById('staffCommandLabel').innerText = `${alnName} の第1班/第2班のみ指示できます。`;
+        if (isStaffCommander) {
+            renderStaffCommandPanel();
+            startStaffPanelTicker();
+        } else {
+            stopStaffPanelTicker();
+        }
+    }
+
+    function connect() {
+        if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
+        let ws_protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+        const alnParam = myAllianceIdx === -1 ? 0 : myAllianceIdx;
+        ws = new WebSocket(ws_protocol + window.location.host + `/ws?mode=${appMode}&aln=${alnParam}&room=${encodeURIComponent(drillRoomKey)}`);
+        ws.onopen = () => {
+            reconnectDelayMs = 1000;
+            startHeartbeat();
+            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: appMode, alliance_id: alnParam, room_key: drillRoomKey, alliance_name: drillAllianceName}}));
+        };
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                
+                if (msg.type === "sync") {
+                    applyDrillStaffFromMsg(msg);
+                    if(msg.server_timestamp) {
+                        applyServerTimeOffset(msg.server_timestamp);
+                        let displayD = new Date(Date.now() + timeOffset + manualTimeOffset);
+                        let dHH = String(displayD.getUTCHours()).padStart(2, '0');
+                        let dMM = String(displayD.getUTCMinutes()).padStart(2, '0');
+                        let dSS = String(displayD.getUTCSeconds()).padStart(2, '0');
+                        document.getElementById('utc').innerText = `UTC ${dHH}:${dMM}:${dSS}`;
+                    }
+                    return; 
+                }
+                if (msg.type === "mode_error") {
+                    alert(msg.message || "訓練モードの参加に失敗しました。");
+                    return;
+                }
+                if (msg.type === "mode_ok") {
+                    if (msg.room_id) {
+                        selectedDrillRoomId = msg.room_id;
+                        drillRoomKey = msg.room_id;
+                        localStorage.setItem("utc_drill_room_key", drillRoomKey);
+                    }
+                    lastActionState = "";
+                    cachedArrTimes = {};
+                    cachedInsTime = null;
+                    lastVoiceKeys = {};
+                    if (appMode === "drill") selectAlliance(0);
+                    return;
+                }
+                if (msg.type === "drill_rooms") {
+                    renderDrillRooms(msg.rooms || []);
+                    return;
+                }
+
+                if(msg.server_timestamp) applyServerTimeOffset(msg.server_timestamp);
+                if (!msg.data) return;
+
+                let displayD = new Date(Date.now() + timeOffset + manualTimeOffset);
+                let dHH = String(displayD.getUTCHours()).padStart(2, '0');
+                let dMM = String(displayD.getUTCMinutes()).padStart(2, '0');
+                let dSS = String(displayD.getUTCSeconds()).padStart(2, '0');
+                document.getElementById('utc').innerText = `UTC ${dHH}:${dMM}:${dSS}`;
+                
+                let autoSec = (timeOffset / 1000).toFixed(2);
+                let autoSign = autoSec >= 0 ? "+" : "";
+                document.getElementById('offsetDisp').innerText = `(ネットの通信遅延は自動補正しています: ${autoSign}${autoSec}秒)`;
+                
+                localState = msg.data;
+                applyDrillStaffFromMsg(msg);
+                if (msg.drill_rooms) {
+                    renderDrillRooms(msg.drill_rooms);
+                }
+                
+                if (appMode !== "drill") {
+                    for (let a = 0; a < 3; a++) {
+                        let btn = document.getElementById(`btnAln${a}`);
+                        if (btn && localState.alliance_names[a]) {
+                            btn.innerText = localState.alliance_names[a];
+                        }
+                    }
+                }
+                if (myAllianceIdx !== -1 && localState.alliance_names[myAllianceIdx]) {
+                    let alnName = localState.alliance_names[myAllianceIdx];
+                    if (appMode === "drill" && drillAllianceName) {
+                        alnName = drillAllianceName;
+                    }
+                    let disp1 = document.getElementById('allianceDisplay');
+                    if (disp1) disp1.innerText = `【 ${alnName} 】`;
+                    let disp2 = document.getElementById('displayAllianceName');
+                    if (disp2) disp2.innerText = `【 ${alnName} 】`;
+                    let staffLbl = document.getElementById('staffCommandLabel');
+                    if (staffLbl && isStaffCommander) staffLbl.innerText = `${alnName} の第1班/第2班のみ指示できます。`;
+                }
+                
+                // サポートチャット本文が表示中のときだけ再描画（上スクロール閲覧中は位置を維持）
+                const chatOv = document.getElementById('chatOverlay');
+                const chatBd = document.getElementById('chatBody');
+                if (chatOv && chatOv.style.display === 'flex' && chatBd && chatBd.style.display !== 'none') {
+                    renderChatBody();
+                }
+                if (isStaffCommander) maybeRefreshStaffPanelAfterTick();
+
+            } catch (err) { console.error(err); }
+        };
+        ws.onclose = () => {
+            stopHeartbeat();
+            stopStaffPanelTicker();
+            const wait = reconnectDelayMs + Math.floor(Math.random() * 800);
+            setTimeout(connect, wait);
+            reconnectDelayMs = Math.min(reconnectDelayMs * 2, 15000);
+        };
+    }
+
+    function buildBoxHTML(b, now) {
+        let isActionDone = (b.actionMs <= now);
+        let boxBg = isActionDone ? "#3E4451" : "#2A2E37";
+        let bdColor = isActionDone ? "#3E4451" : b.color;
+        let txtColor = isActionDone ? "#ABB2BF" : b.color;
+        let cdText = isActionDone ? "00:00" : formatSec((b.actionMs - now)/1000);
+        let actionLabel = isActionDone ? `✅ ${b.actionLabel} 完了` : `⏳ ${b.actionLabel} まで`;
+
+        if (deviceMode === '1device') {
+            return `
+            <div class="departure-info" style="background:${boxBg}; color:#fff; border:2px solid ${bdColor}; padding: 20px;">
+                <div style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">💡 あなたの出発時刻 (日本時間)</div>
+                <div style="display:flex; justify-content:center; align-items:center; gap: 25px;">
+                    <canvas id="clock_${b.type}" width="110" height="110" style="background:#fff; border-radius:50%; border:4px solid #282C34; box-shadow: 0 2px 5px rgba(0,0,0,0.5);"></canvas>
+                    <span class="departure-time" id="jst_${b.type}">--:--:--</span>
+                </div>
+                <div style="font-size:13px; margin-top:15px; font-weight:bold; background:rgba(0,0,0,0.2); padding:6px; border-radius:4px;">※お手元の時計がこの時間になったらボタンを押す！</div>
+                
+                <div style="margin-top:20px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.5);">
+                    <div style="font-size: 20px; font-weight: bold; color:${txtColor}; letter-spacing: 1px;">${actionLabel}</div>
+                    <div id="cd_${b.type}" style="font-size: 56px; color: ${txtColor}; font-weight: 900; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 3px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); margin: 15px 0;">${cdText}</div>
+                    <div style="margin-top:15px; background:rgba(0,0,0,0.3); padding:10px; border-radius:6px;">
+                        <div style="font-size:15px; color:#ABB2BF;">🎯 ${b.arrLabel}時間 (UTC)</div>
+                        <div id="arr_${b.type}" style="font-size:32px; color:#98C379; font-weight:bold; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin-top: 5px;">--:--:--</div>
+                    </div>
+                </div>
+            </div>`;
+        } else {
+            return `
+            <div class="departure-info" style="background:${boxBg}; color:#61AFEF; border:2px solid ${bdColor}; box-shadow: 0 4px 8px rgba(0,0,0,0.5); margin-bottom: 20px; padding: 25px 15px;">
+                <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color:${txtColor}; letter-spacing: 1px;">${actionLabel}</div>
+                <div id="cd_${b.type}" class="departure-time" style="color:${txtColor}; font-size: 76px; font-weight: 900; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 4px; margin: 20px 0;">${cdText}</div>
+                <div style="margin-top:20px; background:#1E2227; padding:15px; border-radius:8px; border:1px solid #3E4451;">
+                    <div style="font-size:16px; color:#ABB2BF; margin-bottom: 5px;">🎯 ${b.arrLabel}時間 (UTC)</div>
+                    <div id="arr_${b.type}" style="font-size:40px; color:#98C379; font-weight:bold; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 2px;">--:--:--</div>
+                </div>
+            </div>`;
+        }
+    }
+
+    function updateBoxDynamic(b, now) {
+        let isActionDone = (b.actionMs <= now);
+        let cdEl = document.getElementById(`cd_${b.type}`);
+        if (cdEl && !isActionDone) cdEl.innerText = formatSec((b.actionMs - now) / 1000);
+
+        let arrEl = document.getElementById(`arr_${b.type}`);
+        if (arrEl) {
+            let d = new Date(b.targetMs);
+            arrEl.innerText = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}:${String(d.getUTCSeconds()).padStart(2, '0')}`;
+        }
+
+        if (deviceMode === '1device') {
+            let jstEl = document.getElementById(`jst_${b.type}`);
+            if (jstEl) {
+                let d = new Date(b.actionMs + 9 * 3600000); 
+                jstEl.innerText = `${String(d.getUTCHours() % 24).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}:${String(d.getUTCSeconds()).padStart(2, '0')}`;
+            }
+        }
+    }
+
+    function getTargetTime(t, now, default_rally) {
+        if(t.state === 0) return null;
+        let offMs = Number(t.off || 0);
+        if(t.state === 4 && t.start_at) {
+            // start_at は固定時刻なので、now ベースで再計算しない（表示の揺れ防止）
+            return new Date(t.start_at).getTime() + offMs + (default_rally + (t.sub_set || 0)) * 1000;
+        } else if(t.state === 1 && t.end) {
+            // end は固定時刻なので、sec(now依存)ではなく end から算出する
+            return new Date(t.end).getTime() + offMs + (t.sub_set || 0) * 1000;
+        } else if(t.state === 2 && t.frozen_target) {
+            return new Date(t.frozen_target).getTime();
+        }
+        return null;
+    }
+
+    function getVirtualArrTime(sqId, data, now, depth=0) {
+        if(sqId < 0 || sqId > 5 || depth > 3) return null;
+        let start = 6 + sqId * 6;
+        let arrs = [];
+        let marches = [];
+        for(let i=start; i<start+6; i++) {
+            let t = data.timers[i];
+            if(t.name !== "") marches.push(t.sub_set);
+            let tgt = getTargetTime(t, now, data.default_rally);
+            if(tgt) arrs.push(tgt);
+        }
+        
+        if (arrs.length > 0) {
+            let maxArr = Math.max(...arrs);
+            cachedArrTimes[sqId] = { time: maxArr, updated: now };
+            return maxArr;
+        }
+        
+        let alnIdx = Math.floor(sqId / 2);
+        if (data.alliance_roles[alnIdx] === 'occupy') {
+            let tgtSq = data.swap_base_squad;
+            if (tgtSq >= 0 && tgtSq !== sqId) {
+                let baseArr = getVirtualArrTime(tgtSq, data, now, depth+1);
+                if (baseArr !== null) {
+                    let maxMarch = marches.length > 0 ? Math.max(...marches) : 0;
+                    let calcArr = baseArr + data.swap_extras[alnIdx] * 1000 + maxMarch * 1000;
+                    cachedArrTimes[sqId] = { time: calcArr, updated: now };
+                    return calcArr;
+                }
+            }
+        }
+        if (cachedArrTimes[sqId] && (now - cachedArrTimes[sqId].updated < 300000)) return cachedArrTimes[sqId].time;
+        return null;
+    }
+
+    function getInsTargetTime(data, now) {
+        let idx = data.insert_target_idx;
+        let res = null;
+        if (idx >= 0 && idx < 6 && data.timers[idx].state !== 0) {
+            res = getTargetTime(data.timers[idx], now, data.default_rally);
+        } else {
+            let arr = [];
+            for(let i=0; i<6; i++) { let t = getTargetTime(data.timers[i], now, data.default_rally); if(t) arr.push(t); }
+            if(arr.length > 0) res = Math.max(...arr);
+        }
+        if (res !== null) {
+            cachedInsTime = { time: res, updated: now };
+            return res;
+        }
+        // 解除後に古い差込ターゲットで再点灯しないよう、候補が無いときは即 null を返す
+        cachedInsTime = null;
+        return null;
+    }
+
+    setInterval(() => {
+        if (!localState || myRole === null || myAllianceIdx === -1) return;
+        let now = getSyncedNow().getTime();
+
+        if (localState.cancel_trigger !== lastCancelTrigger) {
+            lastCancelTrigger = localState.cancel_trigger;
+            cachedArrTimes = {};
+            cachedInsTime = null;
+            lastVoiceKeys = {};
+            lastActionState = "";
+        }
+
+        let startIdx = 6 + myAllianceIdx * 12;
+        let myTimers = localState.timers.slice(startIdx, startIdx + 12);
+        let myRoleType = localState.alliance_roles[myAllianceIdx];
+        
+        let leaderT = null;
+        if (myRole.startsWith('leader')) {
+            let foundIdx = myTimers.findIndex(x => x.name === myName);
+            if (foundIdx !== -1) {
+                registeredIdx = startIdx + foundIdx; 
+                leaderT = myTimers[foundIdx];
+            } else {
+                registeredIdx = -1;
+            }
+        }
+
+        // 参謀として表示しているときは「自分の出発」ではなく「差込時刻そのもの」をカウントダウンする
+        let leaderLeadTime = (!isStaffCommander && myRole.startsWith('leader')) ? (localState.default_rally + myMarchSec) * 1000 : 0;
+        let riderLeadTime = (!isStaffCommander && myRole === 'rider') ? myMarchSec * 1000 : 0;
+        let finalLeadTime = myRole.startsWith('leader') ? leaderLeadTime : riderLeadTime;
+
+        let displayBlocks = [];
+
+        let insT = getInsTargetTime(localState, now);
+        if (insT) {
+            const insOffsetMs = Number(localState.insert_offset_tenth ?? -1) * 100;
+            let actionTime = insT - 1000 + insOffsetMs - finalLeadTime;
+            let actionLbl = (isStaffCommander ? "差込" : (myRole.startsWith('leader') ? "差込(集結)" : "差込"));
+            displayBlocks.push({
+                type: 'ins', actionMs: actionTime, targetMs: insT - 1000 + insOffsetMs,
+                actionLabel: actionLbl, arrLabel: "差込", color: "#E06C75"
+            });
+        }
+
+        if (myRole.startsWith('leader') && leaderT && leaderT.state === 4) {
+            let startAt = new Date(leaderT.start_at).getTime();
+            displayBlocks.push({
+                type: 'gorei', actionMs: startAt, targetMs: startAt + (localState.default_rally + leaderT.sub_set) * 1000,
+                actionLabel: "集結開始", arrLabel: "着弾", color: "#E5C07B"
+            });
+        }
+
+        if (myRoleType === 'occupy') {
+            if (localState.manual_swap_trigger_time) {
+                let targetMs = localState.manual_swap_trigger_time * 1000;
+                let actionTime = targetMs - (myMarchSec * 1000); 
+                displayBlocks.push({
+                    type: 'swap', actionMs: actionTime, targetMs: targetMs,
+                    actionLabel: myRole.startsWith('leader') ? "占領入替" : "入替", arrLabel: "入替着弾", color: "#98C379"
+                });
+            }
+        }
+
+        if (myRoleType === 'attack') {
+            if (localState.manual_wd_trigger_time) {
+                let targetMs = localState.manual_wd_trigger_time * 1000;
+                let actionTime = targetMs - (myMarchSec * 1000); 
+                displayBlocks.push({
+                    type: 'wd_manual', actionMs: actionTime, targetMs: targetMs, 
+                    actionLabel: "占領抜き (一斉撤退)", arrLabel: "撤退完了", color: "#C678DD"
+                });
+            }
+        }
+
+        displayBlocks = displayBlocks.filter(b => {
+            if (b.type === 'swap' || b.type === 'wd_manual' || b.type === 'ins') return true;
+            return (b.targetMs - now) > -5000;
+        });
+        
+        displayBlocks.sort((a,b) => a.actionMs - b.actionMs);
+
+        let newStateStr = displayBlocks.map(b => `${b.type}_${b.actionMs}`).join('|') || "waiting";
+        if (appMode === "drill" && newStateStr === "waiting") {
+            const nm = (drillStaffLive.name || "").replace(/\|/g, " ");
+            newStateStr = `waiting|drill|${isStaffCommander ? "staff" : "pl"}|${drillStaffLive.present ? "1" : "0"}|${nm}`;
+        }
+
+        if (newStateStr !== lastActionState) {
+            lastActionState = newStateStr;
+            let depBox = document.getElementById('departureBox');
+            
+            if (newStateStr.startsWith("waiting")) {
+                if (appMode === "drill") {
+                    if (isStaffCommander) {
+                        depBox.innerHTML = `<div style="background:#2A2E37; color:#ABB2BF; padding: 30px; border-radius: 8px; border: 2px dashed #61AFEF; font-size: 17px; font-weight: bold; margin-bottom: 15px;"><div style="color:#61AFEF; margin-bottom:10px;">📋 参謀として参加中</div><div style="font-size:15px; font-weight:normal; line-height:1.55; color:#ABB2BF;">下部の<strong style="color:#E5C07B;">「参謀用」パネル</strong>から、第1班・第2班へ集結指示を出してください。</div></div>`;
+                    } else if (drillStaffLive.present) {
+                        const dn = drillStaffLive.name ? escapeHtml(drillStaffLive.name) : "参謀";
+                        depBox.innerHTML = `<div style="background:#2A2E37; color:#ABB2BF; padding: 30px; border-radius: 8px; border: 2px dashed #3E4451; font-size: 18px; font-weight: bold; margin-bottom: 15px;">💡 参謀：${dn}からの指示を待機中…</div>`;
+                    } else {
+                        depBox.innerHTML = `<div style="background:#2A2E37; color:#ABB2BF; padding: 30px; border-radius: 8px; border: 2px dashed #E06C75; font-size: 17px; font-weight: bold; margin-bottom: 15px;"><div style="color:#E06C75; margin-bottom:10px;">参謀がルーム内にいません。</div><div style="font-size:15px; font-weight:normal; line-height:1.55; color:#ABB2BF;">参加コードを共有し、参謀の方にも<strong style="color:#E5C07B;">【訓練】から同じ訓練ルームへ入って</strong>もらってください。入ったら<strong style="color:#E5C07B;">役割で「参謀」</strong>を選び、<strong style="color:#E5C07B;">名前を入力して「登録して開始」</strong>すると、参加者画面に名前が反映されます。</div></div>`;
+                    }
+                } else {
+                    depBox.innerHTML = `<div style="background:#2A2E37; color:#ABB2BF; padding: 30px; border-radius: 8px; border: 2px dashed #3E4451; font-size: 18px; font-weight: bold; margin-bottom: 15px;">💡 総指揮からの指示を待機中...</div>`;
+                }
+            } else {
+                let html = "";
+                displayBlocks.forEach(b => { html += buildBoxHTML(b, now); });
+                depBox.innerHTML = html;
+
+                if (deviceMode === '1device') {
+                    displayBlocks.forEach(b => {
+                        if (b.actionMs > now) {
+                            drawStaticClock(`clock_${b.type}`, new Date(b.actionMs + 9*3600000));
+                        }
+                    });
+                }
+            }
+        }
+
+        if (!newStateStr.startsWith("waiting")) {
+            displayBlocks.forEach(b => { 
+                updateBoxDynamic(b, now); 
+                if (deviceMode === '2device') {
+                    let wait = (b.actionMs - now) / 1000;
+                    handleVoice(wait, b.type);
+                }
+            });
+        }
+
+        let html = "";
+        myTimers.forEach((t, index) => {
+            if(myRole.startsWith('leader') && t.name !== myName) return;
+            if(myRole === 'rider' && t.name === "") return;
+            
+            let rem = 0, status = "待機中";
+            let arrStr = "--:--:--";
+            let adjUTC = now + t.off;
+            const landMs = staffStableLandingMs(t, localState.default_rally);
+            if (landMs != null) arrStr = staffFormatImpactUtcHhMmSs(landMs);
+
+            if(t.state === 4) { 
+                rem = (new Date(t.start_at).getTime() - now)/1000; status = "集結ボタンまで"; 
+            }
+            else if(t.state === 1) { 
+                rem = (new Date(t.end).getTime() - now)/1000; status = "集結中"; 
+            }
+            else if(t.state === 2) { 
+                rem = (new Date(t.end).getTime() - now)/1000; status = "行軍中"; 
+            }
+            
+            let badgeHtml = index < 6 ? `<span class="squad-badge badge-1">第1班</span>` : `<span class="squad-badge badge-2">第2班</span>`;
+            
+            html += `
+            <div class="card">
+                ${badgeHtml}<h2 style="color:#61AFEF;margin:0; margin-top:5px; font-size:22px;">${t.name}部隊</h2>
+                <div style="font-size:18px;margin-top:10px; font-weight:bold;">${status}</div>
+                <div class="countdown" style="font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 2px;">${formatSec(rem)}</div>
+                <div style="background:#1E2227; border:1px solid #3E4451; border-radius:6px; padding:10px; margin-top:12px;">
+                    <div style="font-size:13px; color:#ABB2BF;">🎯 着弾時間 (UTC)</div>
+                    <div style="font-size:26px; color:#98C379; font-weight:bold; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin-top:5px;">${arrStr}</div>
+                </div>
+            </div>`;
+        });
+        document.getElementById('cardsArea').innerHTML = html;
+    }, 50); 
+
+    function handleVoice(remSec, fullType) {
+        let r = Math.floor(remSec);
+        if (r < 0 || r > 20) {
+            lastVoiceKeys[fullType] = -1;
+            return;
+        }
+
+        let lastVar = lastVoiceKeys[fullType] === undefined ? -1 : lastVoiceKeys[fullType];
+        if (r === lastVar) return; 
+
+        if (lastVar !== -1 && r > lastVar && (r - lastVar) <= 2) return;
+
+        let baseType = fullType.split('_')[0]; 
+        let text = "";
+        
+        if (r === 18) {
+            if (baseType === 'gorei') text = "集結開始の準備をお願いします";
+            else if (baseType === 'ins') text = "差込の準備をお願いします";
+            else if (baseType === 'swap') text = "占領入替の準備をお願いします";
+            else if (baseType === 'wd') text = "占領から抜く準備をして下さい";
+        } else if (r <= 10 && r > 0) {
+            text = r.toString();
+        } else if (r === 0) {
+            text = baseType === 'wd' ? "抜いてください" : "スタート";
+        }
+        
+        if (text) {
+            let nowTs = Date.now();
+            if (nowTs - globalVoiceLockTime < 800) {
+                return; 
+            }
+
+            globalVoiceLockTime = nowTs;
+            lastVoiceKeys[fullType] = r;
+            playVoiceDynamic(text);
+        }
+    }
+
+    function formatSec(s){ if(s<0)s=0; return `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;}
+    function toggleAudio() { 
+        audioEnabled = !audioEnabled; 
+        let b = document.getElementById('audioBtn'); b.innerText = audioEnabled ? "🔊 音声モード ON" : "🔇 音声ミュート中"; b.className = audioEnabled ? "btn-audio audio-on" : "btn-audio audio-off"; 
+        if(audioEnabled && 'speechSynthesis' in window) window.speechSynthesis.speak(new SpeechSynthesisUtterance("")); 
+    }
+    connect();
+</script>
+</body>
+</html>

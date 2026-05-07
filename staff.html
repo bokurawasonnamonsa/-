@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>参謀本部 (集結指示専用)</title>
+    <style>
+        body { background-color: #1e1e1e; color: #ABB2BF; font-family: 'Consolas', sans-serif; margin: 0; padding: 0; font-size: 13px; overflow-x: hidden; }
+        .container { width: 100%; max-width: 1900px; padding: 15px; box-sizing: border-box; margin: auto; }
+        .sticky-header { position: sticky; top: 0; left: 0; width: 100%; background: #1e1e1e; z-index: 100; padding: 15px 25px; border-bottom: 2px solid #3E4451; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box;}
+        .utc-main { font-size: 32px; color: white; font-weight: bold; display: flex; align-items: baseline; gap: 15px; }
+        
+        .status-bar { display: flex; align-items: center; background: #1E2227; padding: 6px 15px; border-radius: 6px; border: 1px solid #3E4451; gap: 15px; font-size: 13px; }
+        .status-divider { width: 1px; height: 20px; background-color: #3E4451; }
+        .status-val { font-size: 16px; font-weight: bold; margin: 0 4px; }
+
+        /* 同盟選択画面のスタイル */
+        .selection-card { background: #282C34; border: 2px solid #61AFEF; border-radius: 12px; padding: 40px; margin: 50px auto; width: 50%; max-width: 600px; min-width: 300px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);}
+        .role-btn { padding: 15px 30px; font-size: 20px; width: 80%; margin: 15px auto; border-radius: 8px; border:none; font-weight:bold; cursor: pointer; display:block; transition: filter 0.2s;}
+        .role-btn:hover { filter: brightness(1.1); }
+        .btn-aln0 { background: #E5C07B; color: #282C34; }
+        .btn-aln1 { background: #C678DD; color: white; }
+        .btn-aln2 { background: #56B6C2; color: #282C34; }
+        
+        .pair-panel { background: #2A2E37; padding: 10px 15px; margin-bottom: 25px; border: 2px solid #E5C07B; border-radius: 8px; max-width: 800px; margin-left: auto; margin-right: auto;}
+        .pair-cb-box { background: #1E2227; padding: 5px 10px; border-radius: 4px; border: 1px solid #3E4451; }
+
+        .alliances-container { display: flex; gap: 15px; width: 100%; justify-content: center; }
+        .alliance-col { width: 100%; max-width: 800px; background: #282C34; border: 1px solid #3E4451; border-radius: 8px; padding: 15px; display: flex; flex-direction: column; box-sizing: border-box;}
+        .squads-flex { display: flex; flex-direction: column; gap: 15px; flex: 1; }
+        
+        .header-bar { display: flex; align-items: center; background: #2A2E37; padding: 8px 12px; border-radius: 6px; margin-bottom: 10px; border-left: 6px solid #61AFEF;}
+        
+        .row { display: flex; align-items: center; background: #21252B; margin-bottom: 5px; padding: 7px 9px; border-radius: 7px; gap: 7px; }
+        
+        .name-wrapper { position: relative; display: inline-block; }
+        .online-dot { width: 8px; height: 8px; border-radius: 50%; background-color: #5C6370; position: absolute; top: -3px; left: -3px; border: 2px solid #21252B; z-index: 10; transition: background-color 0.3s; }
+        .online-dot.active { background-color: #98C379; box-shadow: 0 0 4px #98C379; } 
+        .online-dot.away { background-color: #E5C07B; box-shadow: 0 0 4px #E5C07B; } 
+        
+        .player-name-disp { width: 140px; background: transparent; border: none; color: #D7DEE9; font-weight: bold; padding: 6px 6px 6px 12px; font-size: 16px; pointer-events: none;}
+        
+        button { cursor: pointer; border: none; border-radius: 3px; font-weight: bold; color: white; }
+        .btn-gray { background: #3E4451; } .btn-red { background: #E06C75; } .btn-green { background: #98C379; color: #282C34; }
+        
+        .timer-box { background: #1E2227; padding: 3px 5px; display: flex; align-items: center; border: 1px solid #3E4451; border-radius: 4px;}
+        .val-txt { font-size: 19px; color: #E5C07B; font-weight: bold; margin: 0 2px; width: 15px; text-align: center;}
+        .colon { color: #E5C07B; font-size: 16px; font-weight: bold; width: 6px; text-align: center; }
+        
+        .sub-box { background: #1E2227; padding: 3px 5px; display: flex; align-items: center; border: 1px solid #3E4451; border-left:none; border-radius: 0 4px 4px 0;}
+        .sub-disp { font-size: 15px; color: #D08EF2; font-weight: bold; width: 48px; text-align: right; margin-right:4px;}
+        .sub-val-txt { font-size: 12px; color: #ABB2BF; font-weight: bold; width: 10px; text-align: center;}
+        .updown-col { display: flex; flex-direction: column; align-items: center; gap: 1px;}
+        .sub-updown-btn { width: 12px; height: 10px; font-size: 7px; padding: 0;}
+        
+        .target-box { color: #C8D1DE; font-size: 12px; padding-left: 8px; width: 165px; display: flex; flex-direction: column; line-height: 1.25; }
+        
+        .gorei-panel { background: #2A2E37; border: 1px solid #56B6C2; padding: 8px 12px; border-radius: 0 4px 4px 4px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; border-top: none;}
+        .squad-title { font-size: 14px; font-weight: bold; padding: 6px 12px; border-radius: 4px 4px 0 0; display: inline-block; background: #3E4451; color: white; margin-top: 10px; display: flex; justify-content: space-between; align-items: center;}
+
+        /* ★ チャットトレイのスタイル */
+        .chat-tray { position: fixed; bottom: 20px; right: 20px; width: 350px; background: #282C34; border: 2px solid #E06C75; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 1000; }
+        .chat-tray-header { background: #E06C75; color: white; padding: 8px 12px; font-weight: bold; border-radius: 5px 5px 0 0; display: flex; justify-content: space-between; align-items: center; font-size: 14px;}
+        .chat-tray-body { max-height: 250px; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .chat-msg { background: #1E2227; border-left: 3px solid #61AFEF; padding: 8px; border-radius: 4px; font-size: 13px; }
+        .chat-msg-time { color: #ABB2BF; font-size: 11px; margin-right: 5px; }
+        .chat-msg-name { color: #E5C07B; font-weight: bold; }
+        .chat-msg-text { color: white; margin-top: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="sticky-header">
+    <div class="utc-main">
+        <span id="utc">UTC --:--:--</span>
+        <span id="offsetDisp" style="font-size: 14px; font-weight: normal; color: #98C379;">(同期中...)</span>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 20px;">
+        <button class="btn-gray" style="padding: 8px 16px; font-size: 13px; border-radius: 6px;" onclick="send('toggle_rally')" id="rallyToggleBtn">⏱ 5分(切替)</button>
+        <div class="status-bar">
+            <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
+                <span style="color:#ffffff; margin-right:8px;">[全同盟]</span>
+                👑集結主:<span class="status-val" style="color:#E5C07B;" id="countLeader_total">0</span> 
+                🏇乗り手:<span class="status-val" style="color:#C678DD;" id="countRider_total">0</span>
+            </div>
+            <div class="status-divider"></div>
+            <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
+                <span id="lbl_count_aln0" style="color:#61AFEF; margin-right:5px; width:30px;">APL</span>
+                👑<span class="status-val" style="color:#E5C07B;" id="countLeader_aln0">0</span> 
+                🏇<span class="status-val" style="color:#C678DD;" id="countRider_aln0">0</span>
+            </div>
+            <div class="status-divider"></div>
+            <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
+                <span id="lbl_count_aln1" style="color:#61AFEF; margin-right:5px; width:30px;">PKD</span>
+                👑<span class="status-val" style="color:#E5C07B;" id="countLeader_aln1">0</span> 
+                🏇<span class="status-val" style="color:#C678DD;" id="countRider_aln1">0</span>
+            </div>
+            <div class="status-divider"></div>
+            <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
+                <span id="lbl_count_aln2" style="color:#61AFEF; margin-right:5px; width:30px;">MTC</span>
+                👑<span class="status-val" style="color:#E5C07B;" id="countLeader_aln2">0</span> 
+                🏇<span class="status-val" style="color:#C678DD;" id="countRider_aln2">0</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 同盟選択画面 -->
+<div class="container" id="selection_container">
+    <div class="selection-card">
+        <h2 style="color: #61AFEF; font-size: 24px; margin-top: 0;">担当する同盟を選択</h2>
+        <p style="color: #ABB2BF; font-size: 14px; margin-bottom: 25px;">※選択した同盟の集結指示パネルのみが表示されます。</p>
+        <button class="role-btn btn-aln0" onclick="selectStaffAlliance(0)" id="btn_sel_0">APL 参謀</button>
+        <button class="role-btn btn-aln1" onclick="selectStaffAlliance(1)" id="btn_sel_1">PKD 参謀</button>
+        <button class="role-btn btn-aln2" onclick="selectStaffAlliance(2)" id="btn_sel_2">MTC 参謀</button>
+    </div>
+</div>
+
+<!-- メイン画面（選択後に表示） -->
+<div class="container" id="staff_main" style="display:none;">
+    <!-- 参謀用：ペアリングパネル -->
+    <div class="pair-panel" id="pairing_panel_content"></div>
+
+    <!-- 参謀用：同盟ごとの号令・状態確認パネル -->
+    <div id="alliances_container" class="alliances-container"></div>
+</div>
+
+<!-- ★ チャットトレイ -->
+<div class="chat-tray" id="chatTray" style="display:none;">
+    <div class="chat-tray-header">
+        <span>🚨 緊急報告・SOS トレイ</span>
+        <button style="background:transparent; color:white; border:none; cursor:pointer; font-size:16px;" onclick="document.getElementById('chatTray').style.display='none'">✖</button>
+    </div>
+    <div class="chat-tray-body" id="chatTrayBody"></div>
+</div>
+
+<script>
+    let ws; let isBuilt = false; let timeOffset = 0; 
+    let reconnectDelayMs = 1000;
+    let heartbeatTimer = null;
+    let globalLocalState = null; 
+    let myStaffAllianceIdx = -1; 
+    let lastChatCount = 0; // ★ チャット件数の管理
+
+    function getSyncedNow() { return new Date(Date.now() + timeOffset); }
+    function send(cmd, idx=null, val=null) { if(ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({cmd: cmd, idx: idx, val: val})); }
+    function startHeartbeat() {
+        stopHeartbeat();
+        heartbeatTimer = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({cmd: "ping"}));
+        }, 20000);
+    }
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
+
+    function selectStaffAlliance(idx) {
+        myStaffAllianceIdx = idx;
+        document.getElementById('selection_container').style.display = 'none';
+        document.getElementById('staff_main').style.display = 'block';
+        if(isBuilt && globalLocalState) {
+            buildDOM();
+            updateUI(globalLocalState, document.getElementById('utc').innerText.replace("UTC ", ""));
+        }
+    }
+
+    function buildRow(i) {
+        return `
+        <div class="row">
+            <div class="name-wrapper">
+                <div id="dot_${i}" class="online-dot" title="未登録"></div>
+                <div class="player-name-disp" id="name_disp_${i}">---</div>
+            </div>
+            
+            <div class="timer-box" style="margin-left:auto;">
+                <div class="val-txt" id="m10_${i}">0</div><div class="val-txt" id="m1_${i}">0</div>
+                <div class="colon">:</div>
+                <div class="val-txt" id="s10_${i}">0</div><div class="val-txt" id="s1_${i}">0</div>
+            </div>
+            <div class="sub-box">
+                <div class="sub-disp" id="subdisp_${i}">00:00</div>
+            </div>
+            <div class="target-box">
+                <span id="dispatch_${i}" style="color:#E5C07B; font-weight:bold;"></span>
+                <span id="tgt_${i}">▶--:--:--</span>
+            </div>
+        </div>`;
+    }
+
+    function buildGoreiPanel(squadId, color) {
+        return `
+        <div class="gorei-panel" style="border-color: ${color};">
+            <div style="display:flex; flex-direction:column; gap:6px; flex:1;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <span style="color:#ABB2BF; font-size:11px;">猶予+</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei', ${squadId}, 10)">▲</button><div class="sub-val-txt" id="goreiE10_${squadId}" style="color:#E5C07B;">1</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei', ${squadId}, -10)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei', ${squadId}, 1)">▲</button><div class="sub-val-txt" id="goreiE1_${squadId}" style="color:#E5C07B;">5</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei', ${squadId}, -1)">▼</button></div>
+                        <span style="color:#ABB2BF; font-size:11px;">秒</span>
+                    </div>
+                    <button style="background: ${color}; color: white; padding: 4px 10px; font-size:12px; border-radius:4px;" onclick="send('fire_gorei', ${squadId})">即時号令 (今のﾀｲﾐﾝｸﾞ)</button>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; background:#1E2227; padding:4px 6px; border-radius:4px; border:1px solid #3E4451;">
+                    <span style="color:#ABB2BF; font-size:11px;">着弾:</span>
+                    <div style="display:flex; align-items:center;">
+                        <span id="goreiTargetHH_${squadId}" style="font-size:16px; color:#61AFEF; font-weight:bold;">00</span><span style="color:#61AFEF; font-weight:bold; margin:0 2px;">:</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, 600)">▲</button><div class="sub-val-txt" id="goreiTargetM10_${squadId}" style="color:#61AFEF; font-size:16px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, -600)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, 60)">▲</button><div class="sub-val-txt" id="goreiTargetM1_${squadId}" style="color:#61AFEF; font-size:16px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, -60)">▼</button></div><span style="color:#61AFEF; font-weight:bold; margin:0 2px;">:</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, 10)">▲</button><div class="sub-val-txt" id="goreiTargetS10_${squadId}" style="color:#61AFEF; font-size:16px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, -10)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, 1)">▲</button><div class="sub-val-txt" id="goreiTargetS1_${squadId}" style="color:#61AFEF; font-size:16px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_gorei_target', ${squadId}, -1)">▼</button></div>
+                    </div>
+                    <button style="background: #98C379; color: #282C34; padding: 4px 6px; font-size:11px; border-radius:4px; font-weight:bold;" onclick="send('fire_gorei_fixed', ${squadId})">着弾指定号令</button>
+                </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; margin-left:5px; align-items:center;">
+                <button class="btn-red" style="padding: 6px 12px; font-size:12px; border-radius:4px;" onclick="send('cancel_gorei', ${squadId})">解除</button>
+                <div id="goreiState_${squadId}" style="color:#E5C07B; font-size:11px; width:45px; text-align:center;"></div>
+            </div>
+        </div>`;
+    }
+
+    function buildPairingPanel(a) {
+        let defaultNames = ["APL", "PKD", "MTC"];
+        let cbHtml = `
+            <div class="pair-cb-box">
+                <div style="color:#61AFEF; font-weight:bold; margin-bottom:5px; font-size:12px;" id="pair_aln_label_${a}">${defaultNames[a]}</div>
+                <label style="cursor:pointer; display:block; color:#C678DD;"><input type="checkbox" id="pair_cb_${a*2}" onclick="send('toggle_pair_squad', ${a*2})"> 第1班</label>
+                <label style="cursor:pointer; display:block; color:#56B6C2; margin-top:3px;"><input type="checkbox" id="pair_cb_${a*2+1}" onclick="send('toggle_pair_squad', ${a*2+1})"> 第2班</label>
+            </div>
+        `;
+        
+        let html = `
+        <h3 style="color:#E5C07B; margin-top:0; margin-bottom:10px;">🔗 担当同盟ペアリング号令（1班・2班 同時着弾）</h3>
+        <div style="display:flex; align-items:center; gap:20px;">
+            <div style="display:flex; gap:10px;">${cbHtml}</div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:10px; border-left:1px solid #3E4451; padding-left:20px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <div style="display:flex; align-items:center; gap:5px;">
+                        <span style="color:#ABB2BF; font-size:13px;">猶予+</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei', null, 10)">▲</button><div class="sub-val-txt" id="pairGoreiE10" style="color:#E5C07B; font-size:14px;">1</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei', null, -10)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei', null, 1)">▲</button><div class="sub-val-txt" id="pairGoreiE1" style="color:#E5C07B; font-size:14px;">5</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei', null, -1)">▼</button></div>
+                        <span style="color:#ABB2BF; font-size:13px;">秒</span>
+                    </div>
+                    <button style="background: #E5C07B; color: #282C34; padding: 6px 20px; font-size:15px; font-weight:bold; border-radius:4px;" onclick="send('fire_pair_gorei')">即時号令 (今のﾀｲﾐﾝｸﾞ)</button>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; background:#1E2227; padding:6px 10px; border-radius:4px; border:1px solid #3E4451;">
+                    <span style="color:#ABB2BF; font-size:13px;">ペア着弾(UTC):</span>
+                    <div style="display:flex; align-items:center;">
+                        <span id="pairGoreiTargetHH" style="font-size:18px; color:#E5C07B; font-weight:bold;">00</span><span style="color:#E5C07B; font-weight:bold; margin:0 3px;">:</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, 600)">▲</button><div class="sub-val-txt" id="pairGoreiTargetM10" style="color:#E5C07B; font-size:18px; width:12px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, -600)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, 60)">▲</button><div class="sub-val-txt" id="pairGoreiTargetM1" style="color:#E5C07B; font-size:18px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, -60)">▼</button></div><span style="color:#E5C07B; font-weight:bold; margin:0 3px;">:</span>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, 10)">▲</button><div class="sub-val-txt" id="pairGoreiTargetS10" style="color:#E5C07B; font-size:18px; width:12px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, -10)">▼</button></div>
+                        <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, 1)">▲</button><div class="sub-val-txt" id="pairGoreiTargetS1" style="color:#E5C07B; font-size:18px;">0</div><button class="btn-gray sub-updown-btn" onclick="send('mod_pair_gorei_target', null, -1)">▼</button></div>
+                    </div>
+                    <button style="background: #98C379; color: #282C34; padding: 6px 20px; font-size:14px; font-weight:bold; border-radius:4px;" onclick="send('fire_pair_gorei_fixed')">着弾指定号令</button>
+                </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px; align-items:center; margin-left:15px;">
+                <button class="btn-red" style="padding: 10px 20px; font-size:14px; border-radius:4px;" onclick="send('cancel_pair_gorei')">一斉解除</button>
+            </div>
+        </div>`;
+        document.getElementById('pairing_panel_content').innerHTML = html;
+    }
+
+    function buildAlliancePanel(a, role, data) {
+        let roleStr = role === 'occupy' ? '<span style="color:#98C379;">🟢 占領同盟</span>' : '<span style="color:#E06C75;">🔴 攻撃同盟</span>';
+        let panelHtml = `
+            <div class="header-bar">
+                <div style="display:flex; align-items:center; gap:10px; font-size:18px; font-weight:bold; color:white;">
+                    <span id="aln_name_disp_${a}">同盟名</span> 
+                    <span style="font-size:14px;">${roleStr}</span>
+                </div>
+            </div>
+        `;
+
+        panelHtml += `<div class="squads-flex">`;
+        
+        let s1Title = `
+            <div class="squad-title" style="border-bottom: 2px solid #C678DD; color: #C678DD; width: 100%; box-sizing: border-box; display:flex; justify-content:space-between; align-items:center;">
+                第1班 (連撃部隊)
+            </div>`;
+        panelHtml += `
+            <div class="squad-block">
+                ${s1Title}
+                ${buildGoreiPanel(a*2, '#C678DD')}
+                <div id="rows_squad_${a*2}"></div>
+            </div>`;
+
+        let s2Title = `
+            <div class="squad-title" style="border-bottom: 2px solid #56B6C2; color: #56B6C2; width: 100%; box-sizing: border-box; display:flex; justify-content:space-between; align-items:center;">
+                第2班 (連撃部隊)
+            </div>`;
+        panelHtml += `
+            <div class="squad-block">
+                ${s2Title}
+                ${buildGoreiPanel(a*2+1, '#56B6C2')}
+                <div id="rows_squad_${a*2+1}"></div>
+            </div>
+        </div>`;
+        return panelHtml;
+    }
+
+    function buildDOM() {
+        if(myStaffAllianceIdx === -1) return; 
+
+        buildPairingPanel(myStaffAllianceIdx);
+
+        let initRole = globalLocalState ? globalLocalState.alliance_roles[myStaffAllianceIdx] : (myStaffAllianceIdx === 0 ? 'occupy' : 'attack');
+        
+        let alnHtml = `<div class="alliance-col" style="width: 100%; max-width: 800px; margin: 0 auto;" id="alliance_container_${myStaffAllianceIdx}">${buildAlliancePanel(myStaffAllianceIdx, initRole, globalLocalState)}</div>`;
+        document.getElementById('alliances_container').innerHTML = alnHtml;
+
+        let sq1 = '', sq2 = '';
+        for(let i=0; i<6; i++) {
+            sq1 += buildRow(6 + myStaffAllianceIdx*12 + i);
+            sq2 += buildRow(12 + myStaffAllianceIdx*12 + i);
+        }
+        document.getElementById(`rows_squad_${myStaffAllianceIdx*2}`).innerHTML = sq1;
+        document.getElementById(`rows_squad_${myStaffAllianceIdx*2+1}`).innerHTML = sq2;
+    }
+
+    function connect() {
+        let ws_protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+        ws = new WebSocket(ws_protocol + window.location.host + "/ws");
+        ws.onopen = () => {
+            reconnectDelayMs = 1000;
+            startHeartbeat();
+        };
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data); const data = msg.data;
+                globalLocalState = data; 
+                if(msg.server_timestamp) {
+                    timeOffset = msg.server_timestamp - Date.now();
+                    let elOffset = document.getElementById('offsetDisp');
+                    if(elOffset) elOffset.innerText = `(補正: ${timeOffset > 0 ? "+" : ""}${(timeOffset/1000).toFixed(2)}秒)`;
+                }
+                if(msg.type === "init") { 
+                    isBuilt = true;
+                    document.getElementById('btn_sel_0').innerText = (data.alliance_names[0] || "APL") + " 参謀";
+                    document.getElementById('btn_sel_1').innerText = (data.alliance_names[1] || "PKD") + " 参謀";
+                    document.getElementById('btn_sel_2').innerText = (data.alliance_names[2] || "MTC") + " 参謀";
+                    if(myStaffAllianceIdx !== -1) buildDOM();
+                }
+                if(!isBuilt) return;
+                updateUI(data, msg.utc);
+            } catch (err) { console.error(err); }
+        };
+        ws.onclose = () => {
+            stopHeartbeat();
+            const wait = reconnectDelayMs + Math.floor(Math.random() * 400);
+            setTimeout(connect, wait);
+            reconnectDelayMs = Math.min(reconnectDelayMs * 2, 15000);
+        };
+    }
+    connect();
+
+    function stableLandingMs(t, defaultRally) {
+        if (!t || t.state === 0) return null;
+        const offMs = Number(t.off) || 0;
+        const marchSec = Number(t.sub_set) || 0;
+        const rallySec = Number(defaultRally) || 0;
+        if (t.state === 4 && t.start_at) return new Date(t.start_at).getTime() + offMs + (rallySec + marchSec) * 1000;
+        if (t.state === 1 && t.end) return new Date(t.end).getTime() + offMs + marchSec * 1000;
+        if (t.state === 2 && t.frozen_target) return new Date(t.frozen_target).getTime();
+        return null;
+    }
+
+    function updateUI(data, utcTime) {
+        document.getElementById('utc').innerText = "UTC " + utcTime;
+        
+        if (myStaffAllianceIdx === -1) {
+            document.getElementById('btn_sel_0').innerText = (data.alliance_names[0] || "APL") + " 参謀";
+            document.getElementById('btn_sel_1').innerText = (data.alliance_names[1] || "PKD") + " 参謀";
+            document.getElementById('btn_sel_2').innerText = (data.alliance_names[2] || "MTC") + " 参謀";
+        }
+        
+        document.getElementById('countLeader_total').innerText = data.online_counts.total.leader;
+        document.getElementById('countRider_total').innerText = data.online_counts.total.rider;
+        
+        for(let i=0; i<3; i++) {
+            let lbl = document.getElementById(`lbl_count_aln${i}`);
+            if(lbl) lbl.innerText = data.alliance_names[i] || ["APL", "PKD", "MTC"][i];
+            
+            let lCount = document.getElementById(`countLeader_aln${i}`);
+            if(lCount) lCount.innerText = data.online_counts[`aln${i}`].leader;
+            
+            let rCount = document.getElementById(`countRider_aln${i}`);
+            if(rCount) rCount.innerText = data.online_counts[`aln${i}`].rider;
+        }
+
+        let now = getSyncedNow().getTime();
+
+        if (myStaffAllianceIdx !== -1) {
+            let a = myStaffAllianceIdx;
+            let elNameDisp = document.getElementById(`aln_name_disp_${a}`);
+            if(elNameDisp) elNameDisp.innerText = data.alliance_names[a];
+
+            let alnLabel = document.getElementById(`pair_aln_label_${a}`);
+            if(alnLabel) alnLabel.innerText = data.alliance_names[a] || ["APL", "PKD", "MTC"][a];
+            
+            let cb = document.getElementById(`pair_cb_${a*2}`);
+            if(cb) cb.checked = data.pair_selected[a*2];
+            let cb2 = document.getElementById(`pair_cb_${a*2+1}`);
+            if(cb2) cb2.checked = data.pair_selected[a*2+1];
+            
+            document.getElementById('pairGoreiE10').innerText = Math.floor(data.pair_gorei_offset / 10);
+            document.getElementById('pairGoreiE1').innerText = data.pair_gorei_offset % 10;
+
+            let pairMarches = [];
+            for (let s = 0; s < 6; s++) {
+                if (data.pair_selected[s]) {
+                    let startIdx = 6 + s * 6;
+                    for (let i = startIdx; i < startIdx + 6; i++) {
+                        if (data.timers[i].name !== "") pairMarches.push(data.timers[i].sub_set);
+                    }
+                }
+            }
+            let pairMaxMarch = pairMarches.length > 0 ? Math.max(...pairMarches) : 0;
+            let minPairTgtTs = now + (data.pair_gorei_offset + data.default_rally + pairMaxMarch) * 1000;
+            let pairDispTs = data.pair_fixed_target ? data.pair_fixed_target * 1000 : minPairTgtTs;
+            let pairD = new Date(pairDispTs);
+            
+            let pgHH = document.getElementById('pairGoreiTargetHH');
+            if(pgHH) {
+                pgHH.innerText = String(pairD.getUTCHours()).padStart(2, '0');
+                document.getElementById('pairGoreiTargetM10').innerText = Math.floor(pairD.getUTCMinutes() / 10);
+                document.getElementById('pairGoreiTargetM1').innerText = pairD.getUTCMinutes() % 10;
+                document.getElementById('pairGoreiTargetS10').innerText = Math.floor(pairD.getUTCSeconds() / 10);
+                document.getElementById('pairGoreiTargetS1').innerText = pairD.getUTCSeconds() % 10;
+                
+                let pairColor = data.pair_fixed_target ? "#E5C07B" : "#61AFEF";
+                pgHH.style.color = pairColor;
+                document.getElementById('pairGoreiTargetM10').style.color = pairColor;
+                document.getElementById('pairGoreiTargetM1').style.color = pairColor;
+                document.getElementById('pairGoreiTargetS10').style.color = pairColor;
+                document.getElementById('pairGoreiTargetS1').style.color = pairColor;
+            }
+
+            for(let s = a*2; s <= a*2+1; s++) {
+                let gE10 = document.getElementById(`goreiE10_${s}`);
+                if(!gE10) continue;
+                gE10.innerText = Math.floor(data.gorei_offsets[s] / 10);
+                document.getElementById(`goreiE1_${s}`).innerText = data.gorei_offsets[s] % 10;
+                
+                let startIdx = 6 + s * 6;
+                let marches = [];
+                for(let i=startIdx; i<startIdx+6; i++) { if(data.timers[i].name !== "") marches.push(data.timers[i].sub_set); }
+                let maxMarch = marches.length > 0 ? Math.max(...marches) : 0;
+                
+                let minTgtTs = now + (data.gorei_offsets[s] + data.default_rally + maxMarch) * 1000;
+                let dispTs = data.gorei_fixed_targets[s] ? data.gorei_fixed_targets[s] * 1000 : minTgtTs;
+                let d = new Date(dispTs);
+                
+                document.getElementById(`goreiTargetHH_${s}`).innerText = String(d.getUTCHours()).padStart(2, '0');
+                document.getElementById(`goreiTargetM10_${s}`).innerText = Math.floor(d.getUTCMinutes() / 10);
+                document.getElementById(`goreiTargetM1_${s}`).innerText = d.getUTCMinutes() % 10;
+                document.getElementById(`goreiTargetS10_${s}`).innerText = Math.floor(d.getUTCSeconds() / 10);
+                document.getElementById(`goreiTargetS1_${s}`).innerText = d.getUTCSeconds() % 10;
+                
+                let color = data.gorei_fixed_targets[s] ? "#E5C07B" : "#61AFEF";
+                document.getElementById(`goreiTargetHH_${s}`).style.color = color;
+                document.getElementById(`goreiTargetM10_${s}`).style.color = color;
+                document.getElementById(`goreiTargetM1_${s}`).style.color = color;
+                document.getElementById(`goreiTargetS10_${s}`).style.color = color;
+                document.getElementById(`goreiTargetS1_${s}`).style.color = color;
+
+                let isGoreiActive = data.timers.slice(startIdx, startIdx+6).some(t => t.state === 4);
+                document.getElementById(`goreiState_${s}`).innerText = isGoreiActive ? "待機中" : "";
+            }
+
+            for(let i = 6 + a*12; i < 6 + a*12 + 12; i++) {
+                let t = data.timers[i]; 
+                
+                let elNameDisp = document.getElementById('name_disp_'+i);
+                if(!elNameDisp) continue;
+                elNameDisp.innerText = t.name !== "" ? t.name : "---";
+                
+                let dot = document.getElementById('dot_'+i);
+                if(dot) {
+                    dot.classList.remove('active', 'away');
+                    if(t.name !== "") {
+                        if (t.online) { dot.classList.add('active'); dot.title = "オンライン"; } 
+                        else if (t.device_mode === '1device') { dot.classList.add('away'); dot.title = "1端末(ゲーム中)"; } 
+                        else { dot.title = "オフライン"; }
+                    } else { dot.title = "未登録"; }
+                }
+
+                let rallyDispSec = 0;
+                if (t.state === 4 && t.start_at) {
+                    rallyDispSec = Math.max(0, Math.floor((new Date(t.start_at).getTime() - now) / 1000));
+                } else if (t.state === 1) {
+                    rallyDispSec = Math.max(0, Math.floor(Number(t.sec || 0)));
+                } else if (t.state === 2) {
+                    rallyDispSec = 0;
+                } else {
+                    rallyDispSec = Math.max(0, Math.floor(Number(t.sec || 0)));
+                }
+                document.getElementById('m10_'+i).innerText = Math.floor(rallyDispSec / 600);
+                document.getElementById('m1_'+i).innerText = Math.floor((rallyDispSec % 600) / 60);
+                document.getElementById('s10_'+i).innerText = Math.floor((rallyDispSec % 60) / 10);
+                document.getElementById('s1_'+i).innerText = rallyDispSec % 10;
+
+                document.getElementById('subdisp_'+i).innerText = formatSec(t.state === 2 ? t.sub_sec : t.sub_set);
+
+                let tgtStr = "▶--:--:--"; let dispatchStr = "";
+                const lm = stableLandingMs(t, data.default_rally);
+                if (lm != null) {
+                    const tgtD = new Date(lm);
+                    tgtStr = `▶${String(tgtD.getUTCHours()).padStart(2,'0')}:${String(tgtD.getUTCMinutes()).padStart(2,'0')}:${String(tgtD.getUTCSeconds()).padStart(2,'0')}`;
+                }
+                if(t.state === 4) {
+                    let waitSec = Math.max(0, (new Date(t.start_at).getTime() - now) / 1000);
+                    dispatchStr = `🚀出征まで:${formatSec(waitSec)}`;
+                }
+                document.getElementById('dispatch_'+i).innerText = dispatchStr;
+                document.getElementById('tgt_'+i).innerText = tgtStr;
+            }
+        }
+
+        // ★ チャットの更新処理
+        if (data.chat_messages) {
+            let chatTray = document.getElementById('chatTray');
+            let chatBody = document.getElementById('chatTrayBody');
+            
+            if (data.chat_messages.length > 0) {
+                // 新着メッセージがあればトレイを表示
+                if (data.chat_messages.length > lastChatCount) {
+                    chatTray.style.display = 'flex';
+                    lastChatCount = data.chat_messages.length;
+                }
+                
+                let chatHtml = "";
+                data.chat_messages.forEach(msg => {
+                    chatHtml += `
+                    <div class="chat-msg">
+                        <div>
+                            <span class="chat-msg-time">${msg.time}</span>
+                            <span class="chat-msg-name">${msg.name}</span>
+                        </div>
+                        <div class="chat-msg-text">${msg.msg}</div>
+                    </div>`;
+                });
+                
+                if (chatBody.innerHTML !== chatHtml) {
+                    chatBody.innerHTML = chatHtml;
+                    chatBody.scrollTop = chatBody.scrollHeight; // 一番下へスクロール
+                }
+            }
+        }
+    }
+
+    function formatSec(s) { 
+        if (s < 0) s = 0; const m = Math.floor(s/60), ss = Math.floor(s%60); 
+        return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`; 
+    }
+</script>
+</body>
+</html>

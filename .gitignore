@@ -1,0 +1,19 @@
+# Logs (runtime / tunnel)
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.Python
+venv/
+.venv/
+.env
+.env.*
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+*.swp
+.vscode/
+.idea/

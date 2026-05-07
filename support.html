@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>🚨 サポート＆AI報告センター</title>
+    <style>
+        body { background-color: #1e1e1e; color: #ABB2BF; font-family: 'Consolas', sans-serif; margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: #282C34; padding: 15px 25px; border-bottom: 2px solid #E06C75; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; flex-shrink: 0;}
+        .title { font-size: 24px; color: white; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        
+        .main-container { display: flex; flex: 1; overflow: hidden; }
+        
+        /* 左側のリスト */
+        .list-panel { width: 350px; background: #21252B; border-right: 1px solid #3E4451; display: flex; flex-direction: column; overflow-y: auto; }
+        .list-item { padding: 15px; border-bottom: 1px solid #3E4451; cursor: pointer; transition: background 0.2s; position: relative; min-height: 66px; box-sizing: border-box; }
+        .list-item:hover { background: #2A2E37; }
+        .list-item.active { background: #3E4451; border-left: 4px solid #61AFEF; }
+        .list-name { font-size: 16px; font-weight: bold; color: #E5C07B; margin-bottom: 5px; }
+        .list-preview { font-size: 13px; color: #ABB2BF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .unread-badge { background: #E06C75; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 10px; position: absolute; top: 15px; right: 15px; }
+
+        /* 右側のチャット画面 */
+        .chat-panel { flex: 1; background: #282C34; display: flex; flex-direction: column; }
+        .chat-header { padding: 15px 25px; background: #21252B; border-bottom: 1px solid #3E4451; font-size: 18px; font-weight: bold; color: white; flex-shrink: 0;}
+        
+        .chat-history { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; scroll-behavior: smooth; }
+        
+        .msg-row { display: flex; flex-direction: column; max-width: 70%; }
+        .msg-row.user { align-self: flex-start; }
+        .msg-row.admin { align-self: flex-end; align-items: flex-end; }
+        .msg-row.ai { align-self: flex-start; max-width: 85%; }
+        
+        .msg-info { font-size: 11px; color: #5C6370; margin-bottom: 3px; display: flex; gap: 8px; }
+        .msg-bubble { padding: 10px 15px; border-radius: 8px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
+        .msg-bubble img { max-width: 100%; max-height: 280px; border-radius: 8px; margin-top: 8px; display: block; }
+        
+        .msg-row.user .msg-bubble { background: #3E4451; color: white; border-top-left-radius: 0; }
+        .msg-row.admin .msg-bubble { background: #61AFEF; color: white; border-top-right-radius: 0; }
+        .msg-row.ai .msg-bubble { background: #1E2227; border: 1px solid #98C379; color: #98C379; border-top-left-radius: 0; }
+        .msg-row.ai .msg-info { color: #98C379; font-weight: bold; }
+
+        .chat-input-area { padding: 20px; background: #21252B; border-top: 1px solid #3E4451; display: flex; gap: 15px; flex-shrink: 0;}
+        .chat-input { flex: 1; padding: 12px; border-radius: 6px; border: 1px solid #3E4451; background: #181A1F; color: white; font-size: 15px; outline: none; resize: none; font-family: sans-serif; min-height: 52px; }
+        .chat-input:focus { border-color: #61AFEF; box-shadow: 0 0 0 2px rgba(97,175,239,0.25); }
+        .send-btn { padding: 0 25px; border-radius: 6px; background: #61AFEF; color: white; border: none; font-weight: bold; font-size: 16px; cursor: pointer; transition: filter 0.2s; }
+        .send-btn:hover { filter: brightness(1.1); }
+        .send-btn:disabled { background: #5C6370; cursor: not-allowed; }
+        
+        .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #5C6370; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="title">🚨 サポート＆AI報告センター</div>
+    <div style="font-size: 14px; color: #98C379;">※AIが一次対応を自動で行います。総指揮殿はここで確認・個別返信が可能です。</div>
+</div>
+
+<div class="main-container">
+    <div class="list-panel" id="userList">
+        <!-- ユーザーリストがここに入ります -->
+    </div>
+    
+    <div class="chat-panel" id="chatPanel" style="display: none;">
+        <div class="chat-header" id="chatHeaderName">選択してください</div>
+        <div class="chat-history" id="chatHistory">
+            <!-- チャット履歴がここに入ります -->
+        </div>
+        <div class="chat-input-area">
+            <textarea id="adminInput" class="chat-input" rows="2" placeholder="総指揮として直接返信する..."></textarea>
+            <button id="sendBtn" class="send-btn" onclick="sendAdminChat()">送信</button>
+        </div>
+    </div>
+    <div class="empty-state" id="emptyState">左側のリストから対応するプレイヤーを選択してください</div>
+</div>
+
+<script>
+    let ws;
+    let supportChats = {};
+    let activeClientId = null;
+    let reconnectDelayMs = 1000;
+    let heartbeatTimer = null;
+
+    function startHeartbeat() {
+        stopHeartbeat();
+        heartbeatTimer = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({cmd: "ping"}));
+            }
+        }, 20000);
+    }
+
+    function stopHeartbeat() {
+        if (heartbeatTimer) {
+            clearInterval(heartbeatTimer);
+            heartbeatTimer = null;
+        }
+    }
+
+    function connect() {
+        let ws_protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+        ws = new WebSocket(ws_protocol + window.location.host + "/ws");
+        ws.onopen = () => {
+            reconnectDelayMs = 1000;
+            startHeartbeat();
+        };
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                if(msg.type === "init" || msg.type === "tick") {
+                    supportChats = msg.data.support_chats || {};
+                    renderUserList();
+                    if(activeClientId) renderChatHistory(activeClientId, false);
+                }
+            } catch (err) { console.error(err); }
+        };
+        ws.onclose = () => {
+            stopHeartbeat();
+            const wait = reconnectDelayMs + Math.floor(Math.random() * 400);
+            setTimeout(connect, wait);
+            reconnectDelayMs = Math.min(reconnectDelayMs * 2, 15000);
+        };
+    }
+    connect();
+
+    function escapeHtml(s) {
+        return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function renderUserList() {
+        const listEl = document.getElementById('userList');
+        let html = '';
+        
+        // 未読を上に、最新のやり取り順に並び替え
+        let chatArray = Object.keys(supportChats).map(id => ({ id: id, ...supportChats[id] }));
+        chatArray.sort((a, b) => {
+            if (a.unread_admin !== b.unread_admin) return a.unread_admin ? -1 : 1;
+            const aLast = (a.messages && a.messages.length) ? (a.messages[a.messages.length - 1].time || "") : "";
+            const bLast = (b.messages && b.messages.length) ? (b.messages[b.messages.length - 1].time || "") : "";
+            return bLast.localeCompare(aLast); // 新しい時刻を上へ
+        });
+
+        if (chatArray.length === 0) {
+            listEl.innerHTML = `<div style="padding: 20px; color:#5C6370; text-align:center;">現在、質問やSOSはありません。</div>`;
+            return;
+        }
+
+        chatArray.forEach(chat => {
+            let lastMsg = "メッセージなし";
+            if (chat.messages && chat.messages.length > 0) {
+                const lm = chat.messages[chat.messages.length - 1];
+                lastMsg = (lm.text || "").trim() || "（画像など）";
+                if (lm.attachments && lm.attachments.length) {
+                    lastMsg = (lastMsg ? lastMsg + " " : "") + "[画像" + lm.attachments.length + "枚]";
+                }
+            }
+            let activeClass = chat.id === activeClientId ? "active" : "";
+            let unreadBadge = chat.unread_admin ? `<div class="unread-badge">新着・AI対応済</div>` : "";
+            
+            html += `
+            <div class="list-item ${activeClass}" onclick="selectUser('${chat.id}')">
+                ${unreadBadge}
+                <div class="list-name">${chat.name}</div>
+                <div class="list-preview">${lastMsg}</div>
+            </div>`;
+        });
+        listEl.innerHTML = html;
+    }
+
+    function selectUser(clientId) {
+        activeClientId = clientId;
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('chatPanel').style.display = 'flex';
+        
+        document.getElementById('chatHeaderName').innerText = supportChats[clientId].name + " 様からのSOS";
+        
+        // 既読にする
+        if (supportChats[clientId].unread_admin) {
+            ws.send(JSON.stringify({cmd: "mark_chat_read", client_id: clientId}));
+        }
+        
+        renderUserList();
+        renderChatHistory(clientId, true);
+    }
+
+    function renderChatHistory(clientId, forceScrollBottom) {
+        const histEl = document.getElementById('chatHistory');
+        const chat = supportChats[clientId];
+        if (!chat) return;
+
+        const nearBottomPx = 120;
+        let savedTop = histEl.scrollTop;
+        let stickBottom = !!forceScrollBottom;
+        if (!stickBottom && histEl.scrollHeight > histEl.clientHeight) {
+            const dist = histEl.scrollHeight - histEl.scrollTop - histEl.clientHeight;
+            stickBottom = dist <= nearBottomPx;
+        }
+
+        let html = '';
+        chat.messages.forEach(msg => {
+            let rowClass = msg.sender; // 'user', 'ai', 'admin'
+            let senderName = "";
+            if(msg.sender === 'user') senderName = chat.name;
+            if(msg.sender === 'ai') senderName = "🤖 AI副官の一次回答";
+            if(msg.sender === 'admin') senderName = "👑 総指揮（あなた）";
+
+            let imgHtml = "";
+            if (msg.attachments && msg.attachments.length) {
+                msg.attachments.forEach(att => {
+                    const mime = (att.mime && /^image\/(jpeg|png|gif|webp)$/i.test(att.mime)) ? att.mime : "image/jpeg";
+                    const d = String(att.data || "").replace(/\s/g, "");
+                    if (d) imgHtml += `<img src="data:${mime};base64,${d}" alt="画像" />`;
+                });
+            }
+
+            html += `
+            <div class="msg-row ${rowClass}">
+                <div class="msg-info"><span>${senderName}</span><span>${msg.time}</span></div>
+                <div class="msg-bubble">${escapeHtml(msg.text || "").replace(/\n/g, '<br>')}${imgHtml}</div>
+            </div>`;
+        });
+        
+        histEl.innerHTML = html;
+        if (stickBottom) {
+            histEl.scrollTop = histEl.scrollHeight;
+        } else {
+            histEl.scrollTop = Math.min(savedTop, Math.max(0, histEl.scrollHeight - histEl.clientHeight));
+        }
+    }
+
+    function sendAdminChat() {
+        const inputEl = document.getElementById('adminInput');
+        const text = inputEl.value.trim();
+        if (!text || !activeClientId || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+        ws.send(JSON.stringify({
+            cmd: "send_support_chat", 
+            client_id: activeClientId,
+            msg: text,
+            is_admin: true // 総指揮からの直接返信フラグ
+        }));
+        
+        inputEl.value = '';
+    }
+
+    document.getElementById('adminInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendAdminChat();
+        }
+    });
+</script>
+</body>
+</html>
