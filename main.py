@@ -13,7 +13,7 @@ import ssl
 import json
 import copy
 
-GEMINI_API_KEY = "AIzaSyDByueAtSHBhSzI5qLSLIdogmGWKDIlPp0"
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
 state = {
     "timers": [{"name": "", "sec": 300, "off": 0, "sub_set": 30, "sub_sec": 0, "state": 0, "end": None, "frozen_target": None, "start_at": None, "online": False, "device_mode": "2device"} for i in range(42)],
@@ -180,6 +180,24 @@ def clear_drill_staff_name_if_absent(state_obj, present):
 
 async def generate_ai_reply(client_id, user_msg, state_obj):
     global FORCE_SUPPORT_CHAT_BROADCAST
+    if not GEMINI_API_KEY:
+        ai_text = (
+            "【設定不足】環境変数 GEMINI_API_KEY を設定してください。"
+            "APIキーはコードやGitに含めないでください。"
+        )
+        now_dt = datetime.now(timezone.utc) + timedelta(hours=9)
+        time_str = now_dt.strftime("%H:%M")
+        if "support_chats" not in state_obj:
+            state_obj["support_chats"] = {}
+        if client_id in state_obj["support_chats"]:
+            state_obj["support_chats"][client_id]["messages"].append({"sender": "ai", "text": ai_text, "time": time_str})
+            state_obj["support_chats"][client_id]["unread_admin"] = True
+            FORCE_SUPPORT_CHAT_BROADCAST = True
+        try:
+            await broadcast_state()
+        except Exception:
+            pass
+        return
     try:
         # APIキーの空白や改行を確実に取り除く
         api_key = GEMINI_API_KEY.strip()

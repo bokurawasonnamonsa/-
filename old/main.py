@@ -11,11 +11,8 @@ import json
 import urllib.request
 import ssl
 
-# =====================================================================
-# 🔑 Gemini APIキー（ご指定の Pp0 キーに差し替えました！）
-# =====================================================================
-GEMINI_API_KEY = "AIzaSyDByueAtSHBhSzI5qLSLIdogmGWKDIlPp0"
-# =====================================================================
+# Gemini API: set GEMINI_API_KEY in environment (never commit keys)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
 state = {
     "support_chats": {},
@@ -25,34 +22,36 @@ connections = {}
 
 # ★ Google公式の標準通信方式（エラー回避特化）
 async def generate_ai_reply(client_id, user_msg):
-    try:
-        # 最も安定している gemini-1.5-flash を、最も標準的なURLで呼び出します
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        
-        prompt = f"あなたはホワサバの有能な副官です。天津飯（総指揮）をサポートしています。短く返信して。客: {user_msg}"
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        data_bytes = json.dumps(payload).encode('utf-8')
-        
-        def call_raw_api():
-            # SSLエラーを回避するための魔法の設定
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            headers = {'Content-Type': 'application/json'}
-            
-            req = urllib.request.Request(url, data=data_bytes, headers=headers, method='POST')
-            with urllib.request.urlopen(req, context=ctx, timeout=10) as res:
-                res_data = json.loads(res.read().decode('utf-8'))
-                # 返ってきた知能の言葉を抽出
-                return res_data['candidates'][0]['content']['parts'][0]['text']
+    if not GEMINI_API_KEY:
+        ai_text = (
+            "【設定不足】環境変数 GEMINI_API_KEY が未設定です。"
+            "キーはコードやGitに含めないでください。"
+        )
+    else:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 
-        loop = asyncio.get_running_loop()
-        ai_text = await loop.run_in_executor(None, call_raw_api)
-            
-    except Exception as e:
-        # 万が一エラーが出た場合も、原因がわかるように表示します
-        ai_text = f"【AI副官 起動待機中】Googleの準備を待っています。数分後に再度お試しください。詳細: {str(e)}"
-        
+            prompt = f"あなたはホワサバの有能な副官です。天津飯（総指揮）をサポートしています。短く返信して。客: {user_msg}"
+            payload = {"contents": [{"parts": [{"text": prompt}]}]}
+            data_bytes = json.dumps(payload).encode('utf-8')
+
+            def call_raw_api():
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                headers = {'Content-Type': 'application/json'}
+
+                req = urllib.request.Request(url, data=data_bytes, headers=headers, method='POST')
+                with urllib.request.urlopen(req, context=ctx, timeout=10) as res:
+                    res_data = json.loads(res.read().decode('utf-8'))
+                    return res_data['candidates'][0]['content']['parts'][0]['text']
+
+            loop = asyncio.get_running_loop()
+            ai_text = await loop.run_in_executor(None, call_raw_api)
+
+        except Exception as e:
+            ai_text = f"【AI副官 起動待機中】Googleの準備を待っています。数分後に再度お試しください。詳細: {str(e)}"
+
     now_dt = datetime.now(timezone.utc) + timedelta(hours=9)
     time_str = now_dt.strftime("%H:%M")
     if client_id in state["support_chats"]:
