@@ -21,12 +21,15 @@ state = {
     "alliance_roles": ["occupy", "attack", "attack"], 
     "gorei_offsets": [15] * 6,
     "gorei_fixed_targets": [None] * 6,
+    "gorei_last_target": [None] * 6,
     "default_rally": 300, 
     "swap_extras": [10, 10, 10], 
     "withdraw_margins": [1, 1, 1], 
     "swap_base_squad": -1,     
     "withdraw_base_squad": -1, 
     "insert_target_idx": -1, 
+    "insert_fixed_target": None,
+    "insert_fire_target": None,
     "insert_offset_tenth": -1,
     "delay_target_idxs": [-1] * 6,
     "cancel_trigger": 0, 
@@ -44,7 +47,8 @@ state = {
     "manual_wd_margin": 1,      
     "manual_swap_trigger_time": None,
     "manual_wd_trigger_time": None,
-    "staff_names": ["", "", ""]
+    "staff_names": ["", "", ""],
+    "support_chats": {},
 }
 drill_states = {
     0: copy.deepcopy(state),
@@ -66,12 +70,15 @@ def fresh_drill_state(alliance_primary: str):
         "alliance_roles": ["", "", ""],
         "gorei_offsets": [15] * 6,
         "gorei_fixed_targets": [None] * 6,
+        "gorei_last_target": [None] * 6,
         "default_rally": 300,
         "swap_extras": [10, 10, 10],
         "withdraw_margins": [1, 1, 1],
         "swap_base_squad": -1,
         "withdraw_base_squad": -1,
         "insert_target_idx": -1,
+        "insert_fixed_target": None,
+        "insert_fire_target": None,
         "insert_offset_tenth": -1,
         "delay_target_idxs": [-1] * 6,
         "cancel_trigger": 0,
@@ -97,6 +104,7 @@ connections = {}
 voice_cache = {}
 # サポートのみ更新された tick でも全クライアントへ data 載せ替え同期するためのフラグ
 FORCE_SUPPORT_CHAT_BROADCAST = False
+FORCE_STATE_BROADCAST = False
 voice_speakers_cache = None
 voice_speakers_cache_at = 0
 
@@ -106,6 +114,15 @@ AI_MODEL_CACHE = "gemini-2.0-flash-lite"
 AI_MODEL_CACHE_AT = 0
 AI_MODEL_CANDIDATES_CACHE = []
 AI_MODEL_CANDIDATES_CACHE_AT = 0
+GOREI_DEBUG_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gorei_debug.log")
+
+def gorei_debug_log(message: str):
+    try:
+        ts = datetime.now(timezone.utc).isoformat()
+        with open(GOREI_DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(f"{ts} {message}\n")
+    except Exception:
+        pass
 
 def get_state_for_conn(info):
     mode = (info or {}).get("mode", "prod")
@@ -177,6 +194,62 @@ def clear_drill_staff_name_if_absent(state_obj, present):
         sn[0] = ""
         return True
     return False
+
+def _timer_target_ts(t, default_rally):
+    if not isinstance(t, dict):
+        return None
+    st = int(t.get("state", 0) or 0)
+    off_s = float(t.get("off", 0) or 0) / 1000.0
+    sub = float(t.get("sub_set", 0) or 0)
+    try:
+        if st == 4 and t.get("start_at"):
+            base = datetime.fromisoformat(t["start_at"]).timestamp()
+            return base + off_s + float(default_rally or 0) + sub
+        if st == 1 and t.get("end"):
+            base = datetime.fromisoformat(t["end"]).timestamp()
+            return base + off_s + sub
+        if st == 2 and t.get("frozen_target"):
+            return datetime.fromisoformat(t["frozen_target"]).timestamp()
+    except Exception:
+        return None
+    return None
+
+def _compute_insert_auto_target_ts(state_obj):
+    if not isinstance(state_obj, dict):
+        return None
+    timers = state_obj.get("timers", [])
+    if not isinstance(timers, list) or len(timers) < 6:
+        return None
+    idx = int(state_obj.get("insert_target_idx", -1) or -1)
+    default_rally = state_obj.get("default_rally", 300)
+    if 0 <= idx < 6:
+        t = _timer_target_ts(timers[idx], default_rally)
+        if t is not None:
+            return t
+    arr = []
+    for i in range(6):
+        t = _timer_target_ts(timers[i], default_rally)
+        if t is not None:
+            arr.append(t)
+    return max(arr) if arr else None
+
+def _compute_squad_gorei_target_ts(state_obj, squad_idx):
+    if not isinstance(state_obj, dict):
+        return None
+    timers = state_obj.get("timers", [])
+    if not isinstance(timers, list) or len(timers) < 42:
+        return None
+    if squad_idx is None or squad_idx < 0 or squad_idx > 5:
+        return None
+    start_idx = 6 + squad_idx * 6
+    arr = []
+    default_rally = state_obj.get("default_rally", 300)
+    for i in range(start_idx, start_idx + 6):
+        t = timers[i]
+        ts = _timer_target_ts(t, default_rally)
+        if ts is not None:
+            arr.append(ts)
+    return min(arr) if arr else None
 
 async def generate_ai_reply(client_id, user_msg, state_obj):
     global FORCE_SUPPORT_CHAT_BROADCAST
@@ -661,17 +734,34 @@ async def broadcast_state():
     await broadcast()
 
 async def broadcast():
-    global state_version, tick_counter, FORCE_SUPPORT_CHAT_BROADCAST
+    global state_version, tick_counter, FORCE_SUPPORT_CHAT_BROADCAST, FORCE_STATE_BROADCAST
     if not connections:
         return
     force_support_reload = FORCE_SUPPORT_CHAT_BROADCAST
     FORCE_SUPPORT_CHAT_BROADCAST = False
+    force_state_reload = FORCE_STATE_BROADCAST
+    FORCE_STATE_BROADCAST = False
 
     async def broadcast_context(state_obj, conn_items, drill_key=None):
         global state_version, tick_counter
         now = datetime.now(timezone.utc)
         now_ts = now.timestamp()
-        changed = bool(force_support_reload)
+        changed = bool(force_support_reload or force_state_reload)
+        if "gorei_last_target" not in state_obj or not isinstance(state_obj.get("gorei_last_target"), list) or len(state_obj.get("gorei_last_target", [])) != 6:
+            state_obj["gorei_last_target"] = [None] * 6
+            changed = True
+        for s in range(6):
+            calc_t = _compute_squad_gorei_target_ts(state_obj, s)
+            cur_t = state_obj["gorei_last_target"][s]
+            if calc_t is None:
+                if cur_t is not None:
+                    state_obj["gorei_last_target"][s] = None
+                    changed = True
+            else:
+                # 小数点揺れで毎tick changed しないよう秒単位で比較
+                if cur_t is None or int(cur_t) != int(calc_t):
+                    state_obj["gorei_last_target"][s] = float(calc_t)
+                    changed = True
 
         if state_obj["manual_base_target"] is not None and state_obj["manual_base_target"] <= now_ts:
             state_obj["manual_base_target"] = None; changed = True
@@ -688,6 +778,8 @@ async def broadcast():
                 min_tgt = now_ts + state_obj["gorei_offsets"][s] + state_obj["default_rally"] + max_march
                 if state_obj["gorei_fixed_targets"][s] <= min_tgt:
                     state_obj["gorei_fixed_targets"][s] = None; changed = True
+            if state_obj["gorei_last_target"][s] is not None and state_obj["gorei_last_target"][s] <= (now_ts - 10):
+                state_obj["gorei_last_target"][s] = None; changed = True
 
         if state_obj["pair_fixed_target"] is not None:
             marches = []
@@ -701,6 +793,16 @@ async def broadcast():
             min_tgt = now_ts + state_obj["pair_gorei_offset"] + state_obj["default_rally"] + max_march
             if state_obj["pair_fixed_target"] <= min_tgt:
                 state_obj["pair_fixed_target"] = None; changed = True
+        if state_obj.get("insert_fixed_target") is not None:
+            auto_insert = _compute_insert_auto_target_ts(state_obj)
+            # 集結の着弾指定と同様: 未来固定で止め、自然時刻が追いついたら解除して自動へ戻す
+            if auto_insert is not None and float(state_obj["insert_fixed_target"]) <= float(auto_insert):
+                state_obj["insert_fixed_target"] = None
+                changed = True
+        if state_obj.get("insert_fire_target") is not None:
+            if float(state_obj["insert_fire_target"]) <= (now_ts - 1):
+                state_obj["insert_fire_target"] = None
+                changed = True
 
         for t in state_obj["timers"]:
             if t["state"] == 4 and t["start_at"]:
@@ -762,7 +864,7 @@ async def broadcast():
             state_version += 1
 
         # 訓練ルームの tick でも本番のサポート受信箱を渡す（クライアントは support_chats のみ上書き参照）
-        data_out = {**state_obj, "support_chats": state["support_chats"]} if drill_key is not None else state_obj
+        data_out = {**state_obj, "support_chats": state.get("support_chats", {})} if drill_key is not None else state_obj
 
         payload = {
             "type": "tick",
@@ -783,7 +885,10 @@ async def broadcast():
                 if info.get("role") is None:
                     await ws.send_json(payload)
                 else:
-                    if changed or force_player_sync:
+                    # 訓練モードは常時フル state を配信して端末差分同期ズレを防ぐ
+                    if info.get("mode") == "drill":
+                        await ws.send_json(payload)
+                    elif changed or force_player_sync:
                         await ws.send_json(payload)
                     else:
                         if tick_counter % 4 == 0:
@@ -818,6 +923,7 @@ async def broadcast_loop():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    gorei_debug_log("[GOREI_DEBUG] server startup")
     task = asyncio.create_task(broadcast_loop())
     try:
         yield
@@ -834,11 +940,19 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 
 @app.get("/")
 async def get_player():
-    with open("player.html", "r", encoding="utf-8") as f: return HTMLResponse(f.read())
+    with open("player.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(
+            f.read(),
+            headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+        )
 
 @app.get("/player")
 async def get_player_backup():
-    with open("player.html", "r", encoding="utf-8") as f: return HTMLResponse(f.read())
+    with open("player.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(
+            f.read(),
+            headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
+        )
 
 @app.get("/admin_hq_777")
 async def get_admin():
@@ -958,8 +1072,108 @@ async def websocket_endpoint(websocket: WebSocket):
         if websocket in connections:
             del connections[websocket]
 
+async def send_full_state_to_one(websocket: WebSocket):
+    """対象クライアント1本へフルstateを即送信（反映遅延時の救済）。"""
+    info = connections.get(websocket)
+    if not info:
+        return
+    now = datetime.now(timezone.utc)
+    payload = {
+        "type": "tick",
+        "data": get_state_for_conn(info),
+        "utc": now.strftime("%H:%M:%S"),
+        "server_timestamp": now.timestamp() * 1000,
+        "drill_rooms": get_public_drill_rooms()
+    }
+    if info.get("mode") == "drill":
+        dk = info.get("drill_key", "default")
+        payload["drill_staff"] = drill_staff_status_for_room(dk, get_state_for_conn(info))
+    try:
+        await websocket.send_json(payload)
+    except Exception:
+        pass
+
+async def send_full_state_to_context(conn):
+    now = datetime.now(timezone.utc)
+    dead_ws = []
+    for ws, info in list(connections.items()):
+        if not same_context(info, conn):
+            continue
+        payload = {
+            "type": "tick",
+            "data": get_state_for_conn(info),
+            "utc": now.strftime("%H:%M:%S"),
+            "server_timestamp": now.timestamp() * 1000,
+            "drill_rooms": get_public_drill_rooms()
+        }
+        if info.get("mode") == "drill":
+            dk = info.get("drill_key", "default")
+            payload["drill_staff"] = drill_staff_status_for_room(dk, get_state_for_conn(info))
+        try:
+            await ws.send_json(payload)
+        except Exception:
+            dead_ws.append(ws)
+    for ws in dead_ws:
+        if ws in connections:
+            del connections[ws]
+
+async def send_gorei_hint_to_context(conn, squad_idx, target_ts, cancel=False):
+    payload = {
+        "type": "gorei_hint",
+        "squad_idx": int(squad_idx),
+        "target_ts": (None if cancel else float(target_ts))
+    }
+    dead_ws = []
+    sent_cnt = 0
+    for ws, info in list(connections.items()):
+        if not same_context(info, conn):
+            continue
+        try:
+            await ws.send_json(payload)
+            sent_cnt += 1
+        except Exception:
+            dead_ws.append(ws)
+    for ws in dead_ws:
+        if ws in connections:
+            del connections[ws]
+    try:
+        gorei_debug_log(f"[GOREI_DEBUG] gorei_hint squad={squad_idx} target={target_ts} cancel={1 if cancel else 0} sent={sent_cnt}")
+    except Exception:
+        pass
+
+async def send_force_gorei_to_context(conn, squad_idx, target_ts, cancel=False):
+    """非参謀端末の表示取りこぼし対策: 号令着弾を即時プッシュ。"""
+    payload = {
+        "type": "force_gorei",
+        "squad_idx": int(squad_idx),
+        "target_ts": (None if cancel else float(target_ts)),
+        "cancel": bool(cancel),
+    }
+    dead_ws = []
+    sent_cnt = 0
+    for ws, info in list(connections.items()):
+        if not same_context(info, conn):
+            continue
+        try:
+            await ws.send_json(payload)
+            sent_cnt += 1
+        except Exception as e:
+            try:
+                msg = f"[GOREI_DEBUG] force_gorei send_error squad={squad_idx} err={e}"
+                print(msg)
+                gorei_debug_log(msg)
+            except Exception:
+                pass
+            dead_ws.append(ws)
+    for ws in dead_ws:
+        if ws in connections:
+            del connections[ws]
+    msg = f"[GOREI_DEBUG] force_gorei squad={squad_idx} target={target_ts} cancel={1 if cancel else 0} sent={sent_cnt}"
+    print(msg)
+    gorei_debug_log(msg)
+
 async def process_command(data, websocket):
-    global state_version, FORCE_SUPPORT_CHAT_BROADCAST
+    global state_version, FORCE_SUPPORT_CHAT_BROADCAST, FORCE_STATE_BROADCAST
     cmd, idx, val = data.get("cmd"), data.get("idx"), data.get("val")
     now_ts = datetime.now(timezone.utc).timestamp()
     conn = connections.get(websocket, {})
@@ -968,6 +1182,11 @@ async def process_command(data, websocket):
     prod_state = get_state_for_conn({})
     is_staff_limited = bool(conn.get("staff_enabled", False))
     staff_a_id = conn.get("a_id")
+    if cmd in ("set_staff_mode", "register_player", "fire_gorei", "fire_gorei_fixed", "cancel_gorei"):
+        gorei_debug_log(
+            f"[GOREI_DEBUG] recv cmd={cmd} idx={idx} role={conn.get('role')} "
+            f"staff_enabled={is_staff_limited} staff_a_id={staff_a_id} a_id={conn.get('a_id')} mode={conn.get('mode')}"
+        )
 
     def in_staff_scope(squad_idx):
         if not is_staff_limited:
@@ -1093,6 +1312,28 @@ async def process_command(data, websocket):
     elif cmd == "set_swap_base": state["swap_base_squad"] = idx
     elif cmd == "set_wd_base": state["withdraw_base_squad"] = idx
     elif cmd == "set_insert_target": state["insert_target_idx"] = -1 if state["insert_target_idx"] == idx else idx
+    elif cmd == "mod_insert_target":
+        if not bool(conn.get("staff_enabled", False)):
+            return
+        delta = int(val if isinstance(val, (int, float, str)) and str(val).strip() != "" else 0)
+        auto_base = _compute_insert_auto_target_ts(state)
+        current = state["insert_fixed_target"] if state.get("insert_fixed_target") else (auto_base if auto_base else now_ts + 1)
+        new_tgt = float(current) + delta
+        if new_tgt > now_ts + 1:
+            state["insert_fixed_target"] = new_tgt
+        else:
+            state["insert_fixed_target"] = None
+    elif cmd == "fire_insert_fixed_target":
+        if not bool(conn.get("staff_enabled", False)):
+            return
+        tgt = state.get("insert_fixed_target")
+        if tgt is not None and float(tgt) > now_ts + 1:
+            state["insert_fire_target"] = float(tgt)
+    elif cmd == "clear_insert_fixed_target":
+        if not bool(conn.get("staff_enabled", False)):
+            return
+        state["insert_fixed_target"] = None
+        state["insert_fire_target"] = None
     elif cmd == "mod_insert_offset_tenth":
         if not bool(conn.get("staff_enabled", False)):
             return
@@ -1196,39 +1437,121 @@ async def process_command(data, websocket):
             if t["state"] == 0: t["sec"] = state["default_rally"]
             
     elif cmd == "fire_gorei":
-        if not in_staff_scope(idx): return
+        if not is_staff_limited:
+            msg_dbg = f"[GOREI_DEBUG] fire_gorei rejected not staff idx={idx} role={conn.get('role')} a_id={conn.get('a_id')}"
+            print(msg_dbg)
+            gorei_debug_log(msg_dbg)
+            return
+        if not in_staff_scope(idx):
+            msg_dbg = f"[GOREI_DEBUG] fire_gorei rejected by staff scope idx={idx} staff_enabled={is_staff_limited} staff_a_id={staff_a_id}"
+            print(msg_dbg)
+            gorei_debug_log(msg_dbg)
+            return
         start_idx = 6 + idx * 6
+        names = [state["timers"][i]["name"] for i in range(start_idx, start_idx + 6)]
         marches = [state["timers"][i]["sub_set"] for i in range(start_idx, start_idx + 6) if state["timers"][i]["name"].strip() != ""]
-        if not marches: return
+        msg_dbg = f"[GOREI_DEBUG] fire_gorei idx={idx} names={names} marches={marches} delay_idx={state['delay_target_idxs'][idx]}"
+        print(msg_dbg)
+        gorei_debug_log(msg_dbg)
+        if not marches:
+            msg_dbg = f"[GOREI_DEBUG] fire_gorei no marches idx={idx} -> skipped"
+            print(msg_dbg)
+            gorei_debug_log(msg_dbg)
+            return
         sync_target = datetime.now(timezone.utc) + timedelta(seconds=state["gorei_offsets"][idx] + state["default_rally"] + max(marches))
+        state["gorei_last_target"][idx] = sync_target.timestamp()
         for i in range(start_idx, start_idx + 6):
             if state["timers"][i]["name"].strip() != "":
                 state["timers"][i]["state"] = 4
                 my_target = sync_target + timedelta(seconds=1 if i == state["delay_target_idxs"][idx] else 0)
                 state["timers"][i]["start_at"] = (my_target - timedelta(seconds=state["timers"][i]["sub_set"] + state["default_rally"])).isoformat()
+        started = [
+            {"idx": i, "name": state["timers"][i]["name"], "start_at": state["timers"][i]["start_at"]}
+            for i in range(start_idx, start_idx + 6)
+            if state["timers"][i]["name"].strip() != ""
+        ]
+        msg_dbg = f"[GOREI_DEBUG] fire_gorei started idx={idx} started={started}"
+        print(msg_dbg)
+        gorei_debug_log(msg_dbg)
+        FORCE_STATE_BROADCAST = True
+        try:
+            await broadcast_state()
+            await send_gorei_hint_to_context(conn, idx, sync_target.timestamp(), cancel=False)
+            msg_dbg = f"[GOREI_DEBUG] force_gorei call fire_gorei idx={idx} target={sync_target.timestamp()}"
+            print(msg_dbg)
+            gorei_debug_log(msg_dbg)
+            await send_force_gorei_to_context(conn, idx, sync_target.timestamp(), cancel=False)
+            await send_full_state_to_context(conn)
+            await send_full_state_to_one(websocket)
+        except Exception as e:
+            msg_err = f"[GOREI_DEBUG] fire_gorei post_send error idx={idx} err={e}"
+            print(msg_err)
+            gorei_debug_log(msg_err)
+            raise
 
     elif cmd == "fire_gorei_fixed":
+        if not is_staff_limited:
+            gorei_debug_log(f"[GOREI_DEBUG] fire_gorei_fixed rejected not staff idx={idx} role={conn.get('role')} a_id={conn.get('a_id')}")
+            return
         if not in_staff_scope(idx): return
         squad_id = idx; start_idx = 6 + squad_id * 6
         tgt_ts = state["gorei_fixed_targets"][squad_id]
         if not tgt_ts: return 
         sync_target = datetime.fromtimestamp(tgt_ts, tz=timezone.utc)
+        state["gorei_last_target"][squad_id] = sync_target.timestamp()
         for i in range(start_idx, start_idx + 6):
             if state["timers"][i]["name"].strip() != "":
                 state["timers"][i]["state"] = 4
                 my_target = sync_target + timedelta(seconds=1 if i == state["delay_target_idxs"][squad_id] else 0)
                 state["timers"][i]["start_at"] = (my_target - timedelta(seconds=state["timers"][i]["sub_set"] + state["default_rally"])).isoformat()
+        FORCE_STATE_BROADCAST = True
+        try:
+            await broadcast_state()
+            await send_gorei_hint_to_context(conn, squad_id, sync_target.timestamp(), cancel=False)
+            msg_dbg = f"[GOREI_DEBUG] force_gorei call fire_gorei_fixed idx={squad_id} target={sync_target.timestamp()}"
+            print(msg_dbg)
+            gorei_debug_log(msg_dbg)
+            await send_force_gorei_to_context(conn, squad_id, sync_target.timestamp(), cancel=False)
+            await send_full_state_to_context(conn)
+            await send_full_state_to_one(websocket)
+        except Exception as e:
+            msg_err = f"[GOREI_DEBUG] fire_gorei_fixed post_send error idx={squad_id} err={e}"
+            print(msg_err)
+            gorei_debug_log(msg_err)
+            raise
 
     elif cmd == "cancel_gorei":
+        if not is_staff_limited:
+            gorei_debug_log(f"[GOREI_DEBUG] cancel_gorei rejected not staff idx={idx} role={conn.get('role')} a_id={conn.get('a_id')}")
+            return
         if not in_staff_scope(idx): return
         state["cancel_trigger"] = datetime.now(timezone.utc).timestamp() 
         state["gorei_fixed_targets"][idx] = None
+        state["gorei_last_target"][idx] = None
         start_idx = 6 + idx * 6
         for i in range(start_idx, start_idx + 6): state["timers"][i]["state"] = 0; state["timers"][i]["sec"] = state["default_rally"]
+        FORCE_STATE_BROADCAST = True
+        try:
+            await broadcast_state()
+            await send_gorei_hint_to_context(conn, idx, None, cancel=True)
+            msg_dbg = f"[GOREI_DEBUG] force_gorei call cancel_gorei idx={idx}"
+            print(msg_dbg)
+            gorei_debug_log(msg_dbg)
+            await send_force_gorei_to_context(conn, idx, None, cancel=True)
+            await send_full_state_to_context(conn)
+            await send_full_state_to_one(websocket)
+        except Exception as e:
+            msg_err = f"[GOREI_DEBUG] cancel_gorei post_send error idx={idx} err={e}"
+            print(msg_err)
+            gorei_debug_log(msg_err)
+            raise
 
     elif cmd == "register_player":
         role = val.get("role"); a_id = val.get("alliance_id", 0); d_mode = val.get("device_mode", "2device")
         name = val.get("name", ""); total_sec = int(val.get("march_min", 0)) * 60 + int(val.get("march_sec", 0))
+        msg_dbg = f"[GOREI_DEBUG] register_player role={role} a_id={a_id} name={name} total_sec={total_sec} mode={(conn or {}).get('mode','prod')}"
+        print(msg_dbg)
+        gorei_debug_log(msg_dbg)
         
         if websocket in connections:
             connections[websocket]["march_sec"] = total_sec
@@ -1248,6 +1571,7 @@ async def process_command(data, websocket):
             if websocket in connections:
                 connections[websocket]["role"] = "rider"
                 connections[websocket]["a_id"] = a_id 
+        await send_full_state_to_one(websocket)
     elif cmd == "send_support_chat":
         if "support_chats" not in prod_state:
             prod_state["support_chats"] = {}
@@ -1309,7 +1633,15 @@ async def process_command(data, websocket):
         if "support_chats" in prod_state and cid in prod_state["support_chats"]:
             prod_state["support_chats"][cid]["unread_admin"] = False
             FORCE_SUPPORT_CHAT_BROADCAST = True
+    elif cmd == "client_debug":
+        try:
+            txt = str(val if val is not None else "").strip()
+            if txt:
+                gorei_debug_log(f"[CLIENT_DEBUG] {txt}")
+        except Exception:
+            pass
 
+    FORCE_STATE_BROADCAST = True
     state_version += 1
 
 if __name__ == "__main__":

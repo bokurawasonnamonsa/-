@@ -528,6 +528,7 @@
     let audioEnabled = true;
     let audioCtx = null; 
     let ws, myRole=null, myName="", myMarchSec=0, timeOffset=0;
+    let lastRegisteredRole = localStorage.getItem("utc_last_role") || null;
     let supportUserName = "";
     let supportPendingImages = [];
     let isStaffCommander = false;
@@ -557,7 +558,12 @@
     let lastStaffPanelSig = "";
     let staffPanelRafScheduled = false;
     let staffPanelRafHandle = null;
+    let lastClientDebugSig = "";
+    const clientBuildTag = "player-gorei-fallback-20260508-0010";
+    let lastStaffGoreiHint = {};
+    let pendingGoreiHints = {};
     let drillStaffLive = { present: false, name: "" };
+    let voicevoxAvailable = true;
 
     function staffPanelStructuralSig() {
         if (!localState || myAllianceIdx < 0) return "_";
@@ -566,7 +572,10 @@
             String(localState.default_rally),
             String(localState.cancel_trigger),
             `ins=${localState.insert_target_idx ?? -1}`,
-            `insoff=${localState.insert_offset_tenth ?? -1}`
+            `insfix=${localState.insert_fixed_target ?? "x"}`,
+            `insfire=${localState.insert_fire_target ?? "x"}`,
+            `insoff=${localState.insert_offset_tenth ?? -1}`,
+            `glast=${(localState.gorei_last_target || []).join(",")}`
         ];
         for (let i = 0; i < 3; i++) {
             const e = localState.timers[i];
@@ -646,6 +655,21 @@
         if (t.state === 2 && t.frozen_target) return new Date(t.frozen_target).getTime();
         return null;
     }
+    function staffLandingMsForUi(t, defaultRally, nowTs) {
+        const st = staffStableLandingMs(t, defaultRally);
+        if (st != null) return st;
+        if (!t || Number(t.state || 0) === 0) return null;
+        const marchSec = Number(t.sub_set || 0);
+        if (Number(t.state || 0) === 1) {
+            const sec = Math.max(0, Number(t.sec || 0));
+            return nowTs + (sec + marchSec) * 1000;
+        }
+        if (Number(t.state || 0) === 2) {
+            const sub = Math.max(0, Number(t.sub_sec || 0));
+            return nowTs + sub * 1000;
+        }
+        return null;
+    }
     function staffFormatImpactUtcMmSs(landingMs) {
         const dt = new Date(landingMs);
         return `${String(dt.getUTCMinutes()).padStart(2, "0")}:${String(dt.getUTCSeconds()).padStart(2, "0")}`;
@@ -660,9 +684,14 @@
         const base = 6 + myAllianceIdx * 12;
         for (let k = 0; k < 12; k++) {
             const i = base + k;
+            const nameEl = document.getElementById("staffMiniName_" + i);
+            const t = localState.timers[i];
+            if (nameEl) {
+                const nm = (t && t.name && t.name.trim() !== "") ? t.name : "---";
+                if (nameEl.textContent !== nm) nameEl.textContent = nm;
+            }
             const mainEl = document.getElementById("staffMiniMain_" + i);
             if (!mainEl) continue;
-            const t = localState.timers[i];
             const mainTxt = staffFormatMmSs(computeMainSecForStaffRow(i, t));
             if (mainEl.textContent !== mainTxt) mainEl.textContent = mainTxt;
             const subEl = document.getElementById("staffMiniSub_" + i);
@@ -679,12 +708,41 @@
             if (tgtEl.textContent !== tgtLine) tgtEl.textContent = tgtLine;
         }
     }
+    function updateStaffGoreiTargetsOnly() {
+        if (!localState || myAllianceIdx < 0) return;
+        const nowTs = getSyncedNow().getTime();
+        for (let offset = 0; offset < 2; offset++) {
+            const squadId = myAllianceIdx * 2 + offset;
+            const goreiOffset = Number(localState.gorei_offsets[squadId] || 0);
+            const startIdx = 6 + squadId * 6;
+            const marches = [];
+            for (let i = startIdx; i < startIdx + 6; i++) {
+                const t = localState.timers[i];
+                if (t && (t.name || "").trim() !== "") marches.push(Number(t.sub_set || 0));
+            }
+            const maxMarch = marches.length ? Math.max(...marches) : 0;
+            const minTargetTs = nowTs + (goreiOffset + Number(localState.default_rally || 0) + maxMarch) * 1000;
+            const dispTargetTs = localState.gorei_fixed_targets[squadId] ? Number(localState.gorei_fixed_targets[squadId]) * 1000 : minTargetTs;
+            const d = new Date(dispTargetTs);
+            const mm = String(d.getUTCMinutes()).padStart(2, "0");
+            const ss = String(d.getUTCSeconds()).padStart(2, "0");
+            const mm10 = document.getElementById(`staffGoreiMM10_${offset}`);
+            const mm1 = document.getElementById(`staffGoreiMM1_${offset}`);
+            const ss10 = document.getElementById(`staffGoreiSS10_${offset}`);
+            const ss1 = document.getElementById(`staffGoreiSS1_${offset}`);
+            if (mm10) mm10.textContent = String(Math.floor(parseInt(mm, 10) / 10));
+            if (mm1) mm1.textContent = String(parseInt(mm, 10) % 10);
+            if (ss10) ss10.textContent = String(Math.floor(parseInt(ss, 10) / 10));
+            if (ss1) ss1.textContent = String(parseInt(ss, 10) % 10);
+        }
+    }
     function maybeRefreshStaffPanelAfterTick() {
         if (!isStaffCommander || myAllianceIdx === -1 || !localState) return;
         const sig = staffPanelStructuralSig();
         if (sig !== lastStaffPanelSig) renderStaffCommandPanel();
         else {
             syncStaffRowAnchors();
+            updateStaffGoreiTargetsOnly();
             updateStaffMiniTimersOnly();
             updateStaffInsertTimersOnly();
         }
@@ -699,6 +757,33 @@
             const cur = Number(localState.insert_offset_tenth ?? -1);
             const next = Math.max(-50, Math.min(0, cur + Number(val || 0)));
             localState.insert_offset_tenth = next;
+            cachedInsTime = null;
+            renderStaffInsertPanel();
+            return;
+        }
+        if (cmd === "mod_insert_target") {
+            const d = Number(val || 0);
+            const nowTs = getSyncedNow().getTime() / 1000;
+            const sumMs = getStaffInsertSummaryTargetMs(getSyncedNow().getTime());
+            const autoBase = (sumMs != null) ? (sumMs / 1000) : null;
+            const base = Number(localState.insert_fixed_target || autoBase || (nowTs + 1));
+            const next = base + d;
+            localState.insert_fixed_target = (next > nowTs + 1) ? next : null;
+            cachedInsTime = null;
+            renderStaffInsertPanel();
+            return;
+        }
+        if (cmd === "clear_insert_fixed_target") {
+            localState.insert_fixed_target = null;
+            localState.insert_fire_target = null;
+            cachedInsTime = null;
+            renderStaffInsertPanel();
+            return;
+        }
+        if (cmd === "fire_insert_fixed_target") {
+            const nowTs = getSyncedNow().getTime() / 1000;
+            const tgt = Number(localState.insert_fixed_target || 0);
+            if (tgt > nowTs + 1) localState.insert_fire_target = tgt;
             cachedInsTime = null;
             renderStaffInsertPanel();
             return;
@@ -735,7 +820,7 @@
         if (t.state === 1 && t.end) return Math.max(0, Math.floor((new Date(t.end).getTime() - nowTs) / 1000));
         return Math.max(0, Math.floor(Number(t.sec || 0)));
     }
-    function getStaffInsertSummaryTargetMs(nowTs) {
+    function getStaffInsertAutoTargetMs(nowTs) {
         if (!localState) return null;
         const marked = Number(localState.insert_target_idx);
         if (marked >= 0 && marked < 3) {
@@ -753,6 +838,20 @@
             if (tgt) candidates.push(tgt - 1000);
         }
         return candidates.length ? Math.max(...candidates) : null;
+    }
+    function getStaffInsertSummaryTargetMs(nowTs) {
+        if (!localState) return null;
+        const autoMs = getStaffInsertAutoTargetMs(nowTs);
+        const fireMs = localState.insert_fire_target ? Number(localState.insert_fire_target) * 1000 : null;
+        // 上段差込表示は「号令中」だけ固定を使う。▲▼調整中(未号令)は自動値のまま。
+        if (fireMs && fireMs > nowTs) {
+            if (autoMs != null && fireMs <= autoMs) {
+                localState.insert_fire_target = null;
+            } else {
+                return fireMs;
+            }
+        }
+        return autoMs;
     }
     function updateStaffInsertTimersOnly() {
         if (!localState) return;
@@ -774,6 +873,26 @@
         const sumRemEl = document.getElementById("staffInsRemainMain");
         if (sumTimeEl) sumTimeEl.textContent = sumTgt ? staffFormatImpactUtcHhMmSs(sumTgt) : "--:--:--";
         if (sumRemEl) sumRemEl.textContent = sumTgt ? staffFormatMmSs(Math.max(0, Math.floor((sumTgt - nowTs) / 1000))) : "--:--";
+        const autoMs = getStaffInsertAutoTargetMs(nowTs);
+        const fixMs = localState.insert_fixed_target ? Number(localState.insert_fixed_target) * 1000 : null;
+        const fireMs = localState.insert_fire_target ? Number(localState.insert_fire_target) * 1000 : null;
+        const isFired = !!(fireMs && fireMs > nowTs && !(autoMs != null && fireMs <= autoMs));
+        const isFixed = !!(fixMs && fixMs > nowTs && !(autoMs != null && fixMs <= autoMs));
+        const digitRefMs = (isFixed ? fixMs : (sumTgt || nowTs));
+        const d = new Date(digitRefMs);
+        const mm = String(d.getUTCMinutes()).padStart(2, "0");
+        const ss = String(d.getUTCSeconds()).padStart(2, "0");
+        const mm10 = document.getElementById("staffInsFixMM10");
+        const mm1 = document.getElementById("staffInsFixMM1");
+        const ss10 = document.getElementById("staffInsFixSS10");
+        const ss1 = document.getElementById("staffInsFixSS1");
+        if (mm10) mm10.textContent = String(Math.floor(parseInt(mm, 10) / 10));
+        if (mm1) mm1.textContent = String(parseInt(mm, 10) % 10);
+        if (ss10) ss10.textContent = String(Math.floor(parseInt(ss, 10) / 10));
+        if (ss1) ss1.textContent = String(parseInt(ss, 10) % 10);
+        if (autoMs != null && fixMs != null && fixMs <= autoMs) {
+            localState.insert_fixed_target = null;
+        }
     }
 
     function renderStaffInsertPanel() {
@@ -785,6 +904,17 @@
         const summaryTgt = getStaffInsertSummaryTargetMs(nowTs);
         const summaryTgtTxt = summaryTgt ? staffFormatImpactUtcHhMmSs(summaryTgt) : "--:--:--";
         const summaryRemTxt = summaryTgt ? staffFormatMmSs(Math.max(0, Math.floor((summaryTgt - nowTs) / 1000))) : "--:--";
+        const fixedRefMs = (localState.insert_fixed_target && Number(localState.insert_fixed_target) * 1000 > nowTs)
+            ? Number(localState.insert_fixed_target) * 1000
+            : (summaryTgt || nowTs);
+        const summaryD = new Date(fixedRefMs);
+        const sumMM = summaryD ? String(summaryD.getUTCMinutes()).padStart(2, "0") : "00";
+        const sumSS = summaryD ? String(summaryD.getUTCSeconds()).padStart(2, "0") : "00";
+        const autoMs = getStaffInsertAutoTargetMs(nowTs);
+        const fixMs = localState.insert_fixed_target ? Number(localState.insert_fixed_target) * 1000 : null;
+        const fireMs = localState.insert_fire_target ? Number(localState.insert_fire_target) * 1000 : null;
+        const sumFired = !!(fireMs && fireMs > nowTs && !(autoMs != null && fireMs <= autoMs));
+        const sumFixed = !!(fixMs && fixMs > nowTs && !(autoMs != null && fixMs <= autoMs));
         const insOffTenth = Number(localState.insert_offset_tenth ?? -1);
         const insOffText = `${(insOffTenth / 10).toFixed(1)}秒`;
 
@@ -827,6 +957,20 @@
                         <div id="staffInsRemainMain" style="font-size:20px; color:#98C379; font-weight:bold; font-family:var(--utc-number-font); text-align:right;">${summaryRemTxt}</div>
                     </div>
                 </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; background:#1E2227; border:1px solid #3E4451; border-radius:4px; padding:6px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:12px; color:#ABB2BF;">着弾指定:</span>
+                        <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_insert_target', null, 600)">▲</button><div class="staff-digit" id="staffInsFixMM10" style="color:${sumFixed ? "#E5C07B" : "#61AFEF"};">${Math.floor(parseInt(sumMM,10)/10)}</div><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_insert_target', null, -600)">▼</button></div>
+                        <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_insert_target', null, 60)">▲</button><div class="staff-digit" id="staffInsFixMM1" style="color:${sumFixed ? "#E5C07B" : "#61AFEF"};">${parseInt(sumMM,10)%10}</div><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_insert_target', null, -60)">▼</button></div>
+                        <span style="color:#ABB2BF; font-weight:bold; margin:0 2px;">:</span>
+                        <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_insert_target', null, 10)">▲</button><div class="staff-digit" id="staffInsFixSS10" style="color:${sumFixed ? "#E5C07B" : "#61AFEF"};">${Math.floor(parseInt(sumSS,10)/10)}</div><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_insert_target', null, -10)">▼</button></div>
+                        <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_insert_target', null, 1)">▲</button><div class="staff-digit" id="staffInsFixSS1" style="color:${sumFixed ? "#E5C07B" : "#61AFEF"};">${parseInt(sumSS,10)%10}</div><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_insert_target', null, -1)">▼</button></div>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button class="staff-btn staff-btn-green" style="padding:4px 8px; font-size:11px;" onclick="sendStaffEnemyCommand('fire_insert_fixed_target', null)">着弾指定号令</button>
+                        <button class="staff-btn staff-btn-red" style="padding:4px 8px; font-size:11px;" onclick="sendStaffEnemyCommand('clear_insert_fixed_target', null)">指定解除</button>
+                    </div>
+                </div>
                 <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:8px;">
                     <span style="font-size:12px; color:#ABB2BF;">到着-1秒 補正</span>
                     <button class="staff-updown-btn" style="width:22px; height:20px; font-size:12px;" onclick="sendStaffEnemyCommand('mod_insert_offset_tenth', null, 1)">▲</button>
@@ -860,6 +1004,59 @@
                 present: !!msg.drill_staff.present,
                 name: String(msg.drill_staff.name || "").trim()
             };
+        }
+    }
+    function applyPendingGoreiHintsToLocalState() {
+        if (!localState) return;
+        if (!Array.isArray(localState.gorei_last_target) || localState.gorei_last_target.length !== 6) {
+            localState.gorei_last_target = [null, null, null, null, null, null];
+        }
+        for (const k of Object.keys(pendingGoreiHints)) {
+            const sq = Number(k);
+            if (!Number.isInteger(sq) || sq < 0 || sq >= 6) continue;
+            const hinted = pendingGoreiHints[k];
+            const cur = Number(localState.gorei_last_target[sq] || 0);
+            if (hinted == null) {
+                // 取消しヒントは「まだ値が無い時だけ」反映。tick実値を潰さない。
+                if (cur <= 0) localState.gorei_last_target[sq] = null;
+                continue;
+            }
+            const hintedNum = Number(hinted);
+            if (!Number.isFinite(hintedNum) || hintedNum <= 0) continue;
+            // ヒントは補助情報。tick に有効値がある場合は上書きしない。
+            if (cur <= 0) {
+                localState.gorei_last_target[sq] = hintedNum;
+            }
+        }
+    }
+    function rebuildGoreiLastTargetsFromTimers(stateObj, nowTs) {
+        if (!stateObj || !Array.isArray(stateObj.timers)) return [null, null, null, null, null, null];
+        const out = [null, null, null, null, null, null];
+        const base = 6;
+        const dr = Number(stateObj.default_rally || 0);
+        for (let sq = 0; sq < 6; sq++) {
+            const s0 = base + sq * 6;
+            const arr = [];
+            for (let i = s0; i < s0 + 6; i++) {
+                const t = stateObj.timers[i];
+                if (!t || Number(t.state || 0) === 0) continue;
+                const targetMs = staffLandingMsForUi(t, dr, nowTs);
+                if (targetMs) arr.push(Number(targetMs));
+            }
+            if (arr.length > 0) out[sq] = Math.min(...arr) / 1000;
+        }
+        return out;
+    }
+    function ensureGoreiLastTargets(stateObj, nowTs) {
+        if (!stateObj) return;
+        const hasArray = Array.isArray(stateObj.gorei_last_target) && stateObj.gorei_last_target.length === 6;
+        const hasAny = hasArray && stateObj.gorei_last_target.some(v => Number(v || 0) > 0);
+        if (hasAny) return;
+        const rebuilt = rebuildGoreiLastTargetsFromTimers(stateObj, nowTs);
+        const rebuiltAny = rebuilt.some(v => Number(v || 0) > 0);
+        if (!hasArray) stateObj.gorei_last_target = [null, null, null, null, null, null];
+        if (rebuiltAny) {
+            stateObj.gorei_last_target = rebuilt;
         }
     }
 
@@ -914,6 +1111,21 @@
         if (ja) ja.style.display = drillTab === "join" ? "block" : "none";
     }
 
+    function sendWsCommandWithRetry(payload, failMessage) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(payload));
+            return;
+        }
+        connect();
+        setTimeout(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(payload));
+            } else if (failMessage) {
+                alert(failMessage);
+            }
+        }, 700);
+    }
+
     function renderDrillRooms(rooms) {
         const sel = document.getElementById("drillRoomSelect");
         if (!sel) return;
@@ -925,7 +1137,7 @@
         sel.innerHTML = "";
         const first = document.createElement("option");
         first.value = "";
-        first.textContent = arr.length ? "ルームを選択" : "作成済みルームなし";
+        first.textContent = "ルームを選択";
         sel.appendChild(first);
         arr.forEach(r => {
             const opt = document.createElement("option");
@@ -938,7 +1150,6 @@
             selectedDrillRoomId = sel.value || "";
         }
     }
-
     function createDrillRoom() {
         const dn = (document.getElementById("drillAllianceNameInput").value || "").trim();
         const rk = (document.getElementById("drillRoomKeyInput").value || "").trim();
@@ -948,14 +1159,15 @@
         drillJoinCode = rk;
         localStorage.setItem("utc_drill_alliance_name", drillAllianceName);
         localStorage.setItem("utc_drill_join_code", drillJoinCode);
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: "drill", alliance_id: 0, room_action: "create", room_code: rk, alliance_name: drillAllianceName}}));
-        }
+        sendWsCommandWithRetry(
+            {cmd: "set_mode", val: {mode: "drill", alliance_id: 0, room_action: "create", room_code: rk, alliance_name: drillAllianceName}},
+            "接続中です。数秒後にもう一度作成してください。"
+        );
     }
 
     function joinDrillRoom() {
         const rk = (document.getElementById("drillJoinCodeInput").value || "").trim();
-        const roomId = (document.getElementById("drillRoomSelect").value || "").trim();
+        const roomId = (document.getElementById("drillRoomSelect").value || "").trim() || (drillRoomKey !== "default" ? drillRoomKey : "");
         if (!roomId) return alert("参加するルームを選択してください");
         if (!rk) return alert("参加コードを入力してください");
         selectedDrillRoomId = roomId;
@@ -963,9 +1175,10 @@
         drillJoinCode = rk;
         localStorage.setItem("utc_drill_room_key", drillRoomKey);
         localStorage.setItem("utc_drill_join_code", drillJoinCode);
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: "drill", alliance_id: 0, room_action: "join", room_id: roomId, room_code: rk}}));
-        }
+        sendWsCommandWithRetry(
+            {cmd: "set_mode", val: {mode: "drill", alliance_id: 0, room_action: "join", room_id: roomId, room_code: rk}},
+            "接続中です。数秒後にもう一度参加してください。"
+        );
     }
     function getVoiceCacheKey(text) {
         return `${selectedVoiceStyleId}:${text}`;
@@ -999,6 +1212,22 @@
     }
 
     function getSyncedNow() { return new Date(Date.now() + timeOffset + manualTimeOffset); }
+    function refreshUtcDisplay() {
+        const utcEl = document.getElementById('utc');
+        if (utcEl) {
+            const displayD = getSyncedNow();
+            const dHH = String(displayD.getUTCHours()).padStart(2, '0');
+            const dMM = String(displayD.getUTCMinutes()).padStart(2, '0');
+            const dSS = String(displayD.getUTCSeconds()).padStart(2, '0');
+            utcEl.innerText = `UTC ${dHH}:${dMM}:${dSS}`;
+        }
+        const offEl = document.getElementById('offsetDisp');
+        if (offEl) {
+            const autoSec = (timeOffset / 1000).toFixed(2);
+            const autoSign = Number(autoSec) >= 0 ? "+" : "";
+            offEl.innerText = `(ネットの通信遅延は自動補正しています: ${autoSign}${autoSec}秒)`;
+        }
+    }
 
     /** サーバー時刻の追従を急に変えず、集結カウントの「1秒戻る」チラつきを抑える */
     function applyServerTimeOffset(rawServerMs) {
@@ -1169,6 +1398,15 @@
     function sendStaffGorei(action, squadOffset) {
         if (!isStaffCommander || myAllianceIdx === -1 || !ws || ws.readyState !== WebSocket.OPEN) return;
         const squadId = myAllianceIdx * 2 + squadOffset;
+        const startIdx = 6 + squadId * 6;
+        const hasNamedMember = !!(localState && localState.timers && localState.timers.slice(startIdx, startIdx + 6).some(t => t && (t.name || "").trim() !== ""));
+        if ((action === 'fire' || action === 'fire_fixed') && !hasNamedMember) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({cmd: "client_debug", val: `build=${clientBuildTag} fire_blocked_no_member squad=${squadId}`}));
+            }
+            alert("この班に登録済みメンバーがいないため、号令できません。先に集結主を登録してください。");
+            return;
+        }
         if (action === 'fire') ws.send(JSON.stringify({cmd:"fire_gorei", idx:squadId}));
         if (action === 'fire_fixed') ws.send(JSON.stringify({cmd:"fire_gorei_fixed", idx:squadId}));
         if (action === 'cancel') ws.send(JSON.stringify({cmd:"cancel_gorei", idx:squadId}));
@@ -1184,7 +1422,6 @@
             } else if (action === 'mod_target') {
                 const d = parseInt(arguments[2] || 0);
                 const nowTs = getSyncedNow().getTime() / 1000;
-                const startIdx = 6 + squadId * 6;
                 const marches = [];
                 for (let i = startIdx; i < startIdx + 6; i++) {
                     const t = localState.timers[i];
@@ -1197,6 +1434,49 @@
                 localState.gorei_fixed_targets[squadId] = (next > minTgt) ? next : null;
             } else if (action === 'cancel') {
                 localState.gorei_fixed_targets[squadId] = null;
+                const startIdx = 6 + squadId * 6;
+                for (let i = startIdx; i < startIdx + 6; i++) {
+                    localState.timers[i].state = 0;
+                    localState.timers[i].start_at = null;
+                    localState.timers[i].end = null;
+                    localState.timers[i].sec = Number(localState.default_rally || 300);
+                }
+                delete lastStaffGoreiHint[squadId];
+            } else if (action === 'fire' || action === 'fire_fixed') {
+                const marches = [];
+                for (let i = startIdx; i < startIdx + 6; i++) {
+                    const t = localState.timers[i];
+                    if ((t.name || "").trim() !== "") marches.push(Number(t.sub_set || 0));
+                }
+                const fallbackMarch = Math.max(0, Number(myMarchSec || 0));
+                const maxMarch = marches.length > 0 ? Math.max(...marches) : fallbackMarch;
+                let syncTargetMs = 0;
+                if (action === 'fire_fixed' && localState.gorei_fixed_targets[squadId]) {
+                    syncTargetMs = Number(localState.gorei_fixed_targets[squadId]) * 1000;
+                } else {
+                    syncTargetMs = getSyncedNow().getTime() + (Number(localState.gorei_offsets[squadId] || 0) + Number(localState.default_rally || 0) + maxMarch) * 1000;
+                }
+                let wroteAny = false;
+                for (let i = startIdx; i < startIdx + 6; i++) {
+                    const t = localState.timers[i];
+                    if ((t.name || "").trim() === "") continue;
+                    wroteAny = true;
+                    t.state = 4;
+                    const delayMs = (i === localState.delay_target_idxs[squadId]) ? 1000 : 0;
+                    const myTargetMs = syncTargetMs + delayMs;
+                    t.start_at = new Date(myTargetMs - (Number(t.sub_set || 0) + Number(localState.default_rally || 0)) * 1000).toISOString();
+                }
+                if (!wroteAny) return;
+                // サーバー同期が遅れたり欠落しても、参謀上段だけは直近の号令を表示できるよう保持
+                const minSub = marches.length > 0 ? Math.min(...marches) : fallbackMarch;
+                lastStaffGoreiHint[squadId] = {
+                    targetMs: syncTargetMs,
+                    actionMs: syncTargetMs - (Number(localState.default_rally || 0) + Number(minSub || 0)) * 1000,
+                    expiresAt: syncTargetMs + 10000
+                };
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({cmd: "client_debug", val: `build=${clientBuildTag} hint_set squad=${squadId} maxMarch=${maxMarch} wroteAny=${wroteAny ? 1 : 0}`}));
+                }
             }
             renderStaffCommandPanel();
             startStaffPanelTicker();
@@ -1211,6 +1491,7 @@
             const p = document.getElementById("staffCommandPanel");
             if (!p || p.style.display === "none") return;
             syncStaffRowAnchors();
+            updateStaffGoreiTargetsOnly();
             updateStaffMiniTimersOnly();
             updateStaffInsertTimersOnly();
         }, 200);
@@ -1283,7 +1564,7 @@
                 rowsHtml += `
                     <div class="staff-mini-row">
                         <div style="color:#7f8796;">●</div>
-                        <div class="staff-mini-name">${nm}</div>
+                        <div class="staff-mini-name" id="staffMiniName_${i}">${nm}</div>
                         <div class="staff-mini-timer" id="staffMiniMain_${i}">${mainTxt}</div>
                         <div class="staff-mini-sub" id="staffMiniSub_${i}">${subTxt}</div>
                         <div class="staff-mini-target" id="staffMiniTgt_${i}">▶${tgtTxt}</div>
@@ -1308,15 +1589,17 @@
                     <div style="display:flex; align-items:center; justify-content:space-between; background:#1E2227; border:1px solid #3E4451; border-radius:4px; padding:6px; margin-bottom:8px;">
                         <div style="display:flex; align-items:center;">
                             <span style="font-size:12px; color:#ABB2BF; margin-right:6px;">着弾:</span>
-                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 600)">▲</button><div class="staff-digit" style="color:${targetColor};">${Math.floor(parseInt(mm,10)/10)}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -600)">▼</button></div>
-                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 60)">▲</button><div class="staff-digit" style="color:${targetColor};">${parseInt(mm,10)%10}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -60)">▼</button></div>
+                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 600)">▲</button><div class="staff-digit" id="staffGoreiMM10_${offset}" style="color:${targetColor};">${Math.floor(parseInt(mm,10)/10)}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -600)">▼</button></div>
+                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 60)">▲</button><div class="staff-digit" id="staffGoreiMM1_${offset}" style="color:${targetColor};">${parseInt(mm,10)%10}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -60)">▼</button></div>
                             <span style="color:${targetColor}; font-weight:bold; margin:0 2px;">:</span>
-                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 10)">▲</button><div class="staff-digit" style="color:${targetColor};">${Math.floor(parseInt(ss,10)/10)}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -10)">▼</button></div>
-                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 1)">▲</button><div class="staff-digit" style="color:${targetColor};">${parseInt(ss,10)%10}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -1)">▼</button></div>
+                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 10)">▲</button><div class="staff-digit" id="staffGoreiSS10_${offset}" style="color:${targetColor};">${Math.floor(parseInt(ss,10)/10)}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -10)">▼</button></div>
+                            <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 1)">▲</button><div class="staff-digit" id="staffGoreiSS1_${offset}" style="color:${targetColor};">${parseInt(ss,10)%10}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -1)">▼</button></div>
                         </div>
-                        <button class="staff-btn staff-btn-green" onclick="sendStaffGorei('fire_fixed', ${offset})">着弾指定号令</button>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button class="staff-btn staff-btn-green" onclick="sendStaffGorei('fire_fixed', ${offset})">着弾指定号令</button>
+                            <button class="staff-btn staff-btn-red" onclick="sendStaffGorei('cancel', ${offset})">解除</button>
+                        </div>
                     </div>
-                    <button class="staff-btn staff-btn-red" onclick="sendStaffGorei('cancel', ${offset})">解除</button>
                     <div style="margin-top:8px;">
                         <div class="staff-mini-head">
                             <div></div>
@@ -1430,8 +1713,7 @@
             currentAudioSource = source;
             source.start(0);
         } else {
-            // カウントダウン等の重要音声はVOICEVOX優先。未準備時にOS読み上げへ落とさない。
-            if (!isCriticalVoiceText(text)) {
+            if (!voicevoxAvailable || !isCriticalVoiceText(text)) {
                 fallbackTTS(text);
             }
             fetchAndCacheVoice(text);
@@ -1450,10 +1732,14 @@
                 let arrayBuffer = await res.arrayBuffer();
                 await new Promise((resolve) => audioCtx.decodeAudioData(arrayBuffer, (buffer) => {
                     voiceBufferCache[cacheKey] = buffer;
+                    voicevoxAvailable = true;
                     resolve();
                 }));
+            } else {
+                voicevoxAvailable = false;
             }
             } catch(e) {
+                voicevoxAvailable = false;
                 console.warn("音声の取得に失敗しました:", text);
             } finally {
                 delete voiceFetchPromises[cacheKey];
@@ -1524,9 +1810,11 @@
             setVoiceReadyStatus("VOICEVOX音声を準備中...\n音声ダウンロード中。数秒～数十秒お待ちください。", false);
             await preloadCommonVoices();
             if (voiceBufferCache[getVoiceCacheKey("10")]) {
+                voicevoxAvailable = true;
                 setVoiceReadyStatus("VOICEVOX音声の準備完了", true);
             } else {
-                setVoiceReadyStatus("VOICEVOX音声を準備中...\n音声ダウンロード中。数秒～数十秒お待ちください。", false);
+                voicevoxAvailable = false;
+                setVoiceReadyStatus("VOICEVOX未接続: 端末音声で動作中", true);
             }
         })();
         await voiceWarmupPromise;
@@ -1964,6 +2252,8 @@
 
         const effectiveRole = isStaffCommander ? staffPlayerRole : myRole;
         if (!effectiveRole) return alert("役割を選択してください");
+        lastRegisteredRole = effectiveRole;
+        localStorage.setItem("utc_last_role", effectiveRole);
         ws.send(JSON.stringify({cmd:"set_staff_mode", val:{enabled: isStaffCommander, alliance_id: myAllianceIdx}}));
         myRole = effectiveRole;
 
@@ -2026,16 +2316,14 @@
                     applyDrillStaffFromMsg(msg);
                     if(msg.server_timestamp) {
                         applyServerTimeOffset(msg.server_timestamp);
-                        let displayD = new Date(Date.now() + timeOffset + manualTimeOffset);
-                        let dHH = String(displayD.getUTCHours()).padStart(2, '0');
-                        let dMM = String(displayD.getUTCMinutes()).padStart(2, '0');
-                        let dSS = String(displayD.getUTCSeconds()).padStart(2, '0');
-                        document.getElementById('utc').innerText = `UTC ${dHH}:${dMM}:${dSS}`;
+                        refreshUtcDisplay();
                     }
                     return; 
                 }
                 if (msg.type === "mode_error") {
-                    alert(msg.message || "訓練モードの参加に失敗しました。");
+                    const m = String(msg.message || "");
+                    if (m.includes("訓練ルームが見つかりません")) alert("参加に失敗しました。ルーム一覧を選び直して再参加してください。");
+                    else alert(m || "訓練モードの参加に失敗しました。");
                     return;
                 }
                 if (msg.type === "mode_ok") {
@@ -2043,33 +2331,68 @@
                         selectedDrillRoomId = msg.room_id;
                         drillRoomKey = msg.room_id;
                         localStorage.setItem("utc_drill_room_key", drillRoomKey);
+                        const sel = document.getElementById("drillRoomSelect");
+                        if (sel) sel.value = msg.room_id;
+                        const joinCodeEl = document.getElementById("drillJoinCodeInput");
+                        if (joinCodeEl && drillJoinCode) joinCodeEl.value = drillJoinCode;
+                        if (msg.action === "create") setDrillTab("join");
                     }
                     lastActionState = "";
                     cachedArrTimes = {};
                     cachedInsTime = null;
                     lastVoiceKeys = {};
-                    if (appMode === "drill") selectAlliance(0);
+                    // 再接続時に役割選択画面へ強制遷移しない
+                    return;
+                }
+                if (msg.type === "error") {
+                    const m = String(msg.message || "通信エラーが発生しました。");
+                    alert(m);
                     return;
                 }
                 if (msg.type === "drill_rooms") {
                     renderDrillRooms(msg.rooms || []);
                     return;
                 }
+                if (msg.type === "gorei_hint") {
+                    const sq = Number(msg.squad_idx);
+                    const ts = msg.target_ts;
+                    if (sq >= 0 && sq < 6) pendingGoreiHints[sq] = (ts == null ? null : Number(ts));
+                    applyPendingGoreiHintsToLocalState();
+                    // 即時再評価させる（tick待ちで取りこぼさない）
+                    lastActionState = "";
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({cmd: "client_debug", val: `build=${clientBuildTag} hint_recv sq=${sq} ts=${ts}`}));
+                    }
+                    return;
+                }
+                if (msg.type === "force_gorei") {
+                    const sq = Number(msg.squad_idx);
+                    const ts = msg.target_ts;
+                    const isCancel = !!msg.cancel || ts == null;
+                    if (sq >= 0 && sq < 6) {
+                        pendingGoreiHints[sq] = isCancel ? null : Number(ts);
+                        if (localState) {
+                            if (!Array.isArray(localState.gorei_last_target) || localState.gorei_last_target.length !== 6) {
+                                localState.gorei_last_target = [null, null, null, null, null, null];
+                            }
+                            localState.gorei_last_target[sq] = isCancel ? null : Number(ts);
+                        }
+                    }
+                    lastActionState = "";
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({cmd: "client_debug", val: `build=${clientBuildTag} force_recv sq=${sq} ts=${ts} cancel=${isCancel ? 1 : 0}`}));
+                    }
+                    return;
+                }
 
                 if(msg.server_timestamp) applyServerTimeOffset(msg.server_timestamp);
                 if (!msg.data) return;
 
-                let displayD = new Date(Date.now() + timeOffset + manualTimeOffset);
-                let dHH = String(displayD.getUTCHours()).padStart(2, '0');
-                let dMM = String(displayD.getUTCMinutes()).padStart(2, '0');
-                let dSS = String(displayD.getUTCSeconds()).padStart(2, '0');
-                document.getElementById('utc').innerText = `UTC ${dHH}:${dMM}:${dSS}`;
-                
-                let autoSec = (timeOffset / 1000).toFixed(2);
-                let autoSign = autoSec >= 0 ? "+" : "";
-                document.getElementById('offsetDisp').innerText = `(ネットの通信遅延は自動補正しています: ${autoSign}${autoSec}秒)`;
+                refreshUtcDisplay();
                 
                 localState = msg.data;
+                applyPendingGoreiHintsToLocalState();
+                ensureGoreiLastTargets(localState, getSyncedNow().getTime());
                 applyDrillStaffFromMsg(msg);
                 if (msg.drill_rooms) {
                     renderDrillRooms(msg.drill_rooms);
@@ -2117,11 +2440,16 @@
 
     function buildBoxHTML(b, now) {
         let isActionDone = (b.actionMs <= now);
+        let isInsFlight = (b.type === 'ins' && isActionDone && now < b.targetMs);
         let boxBg = isActionDone ? "#3E4451" : "#2A2E37";
         let bdColor = isActionDone ? "#3E4451" : b.color;
         let txtColor = isActionDone ? "#ABB2BF" : b.color;
-        let cdText = isActionDone ? "00:00" : formatSec((b.actionMs - now)/1000);
-        let actionLabel = isActionDone ? `✅ ${b.actionLabel} 完了` : `⏳ ${b.actionLabel} まで`;
+        let cdText = isActionDone
+            ? (isInsFlight ? formatSec((b.targetMs - now) / 1000) : "00:00")
+            : formatSec((b.actionMs - now)/1000);
+        let actionLabel = isActionDone
+            ? (isInsFlight ? "⏳ 差込着弾まで" : `✅ ${b.actionLabel} 完了`)
+            : `⏳ ${b.actionLabel} まで`;
 
         if (deviceMode === '1device') {
             return `
@@ -2157,8 +2485,13 @@
 
     function updateBoxDynamic(b, now) {
         let isActionDone = (b.actionMs <= now);
+        let isInsFlight = (b.type === 'ins' && isActionDone && now < b.targetMs);
         let cdEl = document.getElementById(`cd_${b.type}`);
-        if (cdEl && !isActionDone) cdEl.innerText = formatSec((b.actionMs - now) / 1000);
+        if (cdEl) {
+            if (!isActionDone) cdEl.innerText = formatSec((b.actionMs - now) / 1000);
+            else if (isInsFlight) cdEl.innerText = formatSec((b.targetMs - now) / 1000);
+            else cdEl.innerText = "00:00";
+        }
 
         let arrEl = document.getElementById(`arr_${b.type}`);
         if (arrEl) {
@@ -2226,6 +2559,9 @@
     }
 
     function getInsTargetTime(data, now) {
+        if (data.insert_fire_target && Number(data.insert_fire_target) * 1000 > now) {
+            return Number(data.insert_fire_target) * 1000;
+        }
         let idx = data.insert_target_idx;
         let res = null;
         if (idx >= 0 && idx < 6 && data.timers[idx].state !== 0) {
@@ -2239,14 +2575,19 @@
             cachedInsTime = { time: res, updated: now };
             return res;
         }
-        // 解除後に古い差込ターゲットで再点灯しないよう、候補が無いときは即 null を返す
-        cachedInsTime = null;
+        if (cachedInsTime && (now - cachedInsTime.updated < 300000)) return cachedInsTime.time;
         return null;
     }
 
     setInterval(() => {
-        if (!localState || myRole === null || myAllianceIdx === -1) return;
+        refreshUtcDisplay();
+    }, 250);
+
+    setInterval(() => {
+        const effectiveRoleForUi = (myRole || (isStaffCommander ? staffPlayerRole : null) || lastRegisteredRole);
+        if (!localState || !effectiveRoleForUi || myAllianceIdx === -1) return;
         let now = getSyncedNow().getTime();
+        ensureGoreiLastTargets(localState, now);
 
         if (localState.cancel_trigger !== lastCancelTrigger) {
             lastCancelTrigger = localState.cancel_trigger;
@@ -2261,40 +2602,143 @@
         let myRoleType = localState.alliance_roles[myAllianceIdx];
         
         let leaderT = null;
-        if (myRole.startsWith('leader')) {
+        if (effectiveRoleForUi.startsWith('leader')) {
             let foundIdx = myTimers.findIndex(x => x.name === myName);
             if (foundIdx !== -1) {
                 registeredIdx = startIdx + foundIdx; 
                 leaderT = myTimers[foundIdx];
             } else {
                 registeredIdx = -1;
+                // 名前一致に失敗しても、担当班の active 集結を拾って上段指示を出す
+                if ((effectiveRoleForUi === 'leader1' || effectiveRoleForUi === 'leader2')) {
+                    const off = effectiveRoleForUi === 'leader2' ? 1 : 0;
+                    const squadId = myAllianceIdx * 2 + off;
+                    const s0 = 6 + squadId * 6;
+                    const squadTimers = localState.timers.slice(s0, s0 + 6);
+                    const active = squadTimers.find(t => t && Number(t.state || 0) !== 0);
+                    if (active) leaderT = active;
+                }
             }
         }
 
-        // 参謀として表示しているときは「自分の出発」ではなく「差込時刻そのもの」をカウントダウンする
-        let leaderLeadTime = (!isStaffCommander && myRole.startsWith('leader')) ? (localState.default_rally + myMarchSec) * 1000 : 0;
-        let riderLeadTime = (!isStaffCommander && myRole === 'rider') ? myMarchSec * 1000 : 0;
-        let finalLeadTime = myRole.startsWith('leader') ? leaderLeadTime : riderLeadTime;
+        let leaderLeadTime = effectiveRoleForUi.startsWith('leader') ? (localState.default_rally + myMarchSec) * 1000 : 0;
+        let riderLeadTime = effectiveRoleForUi === 'rider' ? myMarchSec * 1000 : 0;
+        let finalLeadTime = effectiveRoleForUi.startsWith('leader') ? leaderLeadTime : riderLeadTime;
 
         let displayBlocks = [];
 
         let insT = getInsTargetTime(localState, now);
         if (insT) {
-            const insOffsetMs = Number(localState.insert_offset_tenth ?? -1) * 100;
-            let actionTime = insT - 1000 + insOffsetMs - finalLeadTime;
-            let actionLbl = (isStaffCommander ? "差込" : (myRole.startsWith('leader') ? "差込(集結)" : "差込"));
+            let actionTime = insT - 1000 - finalLeadTime;
+            let actionLbl = effectiveRoleForUi.startsWith('leader') ? "差込スタート(集結)" : "差込スタート";
             displayBlocks.push({
-                type: 'ins', actionMs: actionTime, targetMs: insT - 1000 + insOffsetMs,
+                type: 'ins', actionMs: actionTime, targetMs: insT - 1000,
                 actionLabel: actionLbl, arrLabel: "差込", color: "#E06C75"
             });
         }
 
-        if (myRole.startsWith('leader') && leaderT && leaderT.state === 4) {
-            let startAt = new Date(leaderT.start_at).getTime();
-            displayBlocks.push({
-                type: 'gorei', actionMs: startAt, targetMs: startAt + (localState.default_rally + leaderT.sub_set) * 1000,
-                actionLabel: "集結開始", arrLabel: "着弾", color: "#E5C07B"
-            });
+        if (isStaffCommander) {
+            const ownTimers = localState.timers.slice(startIdx, startIdx + 12);
+            const activeGorei = ownTimers
+                .map(t => {
+                    if (!t || Number(t.state || 0) === 0) return null;
+                    const targetMs = staffStableLandingMs(t, localState.default_rally);
+                    if (!targetMs) return null;
+                    const actionMs = (t.start_at ? new Date(t.start_at).getTime() : (targetMs - (localState.default_rally + Number(t.sub_set || 0)) * 1000));
+                    return { t, actionMs, targetMs };
+                })
+                .filter(Boolean)
+                .sort((a, b) => a.targetMs - b.targetMs)[0];
+            if (activeGorei) {
+                displayBlocks.push({
+                    type: 'gorei', actionMs: activeGorei.actionMs, targetMs: activeGorei.targetMs,
+                    actionLabel: "集結開始", arrLabel: "着弾", color: "#E5C07B"
+                });
+            }
+            if (!activeGorei) {
+                const nowMs = now;
+                const hinted = [];
+                const s1 = myAllianceIdx * 2;
+                const s2 = s1 + 1;
+                if (lastStaffGoreiHint[s1] && Number(lastStaffGoreiHint[s1].expiresAt || 0) > nowMs) hinted.push(lastStaffGoreiHint[s1]);
+                if (lastStaffGoreiHint[s2] && Number(lastStaffGoreiHint[s2].expiresAt || 0) > nowMs) hinted.push(lastStaffGoreiHint[s2]);
+                if (hinted.length > 0) {
+                    hinted.sort((a, b) => a.targetMs - b.targetMs);
+                    const h = hinted[0];
+                    displayBlocks.push({
+                        type: 'gorei', actionMs: Number(h.actionMs), targetMs: Number(h.targetMs),
+                        actionLabel: "集結開始", arrLabel: "着弾", color: "#E5C07B"
+                    });
+                }
+            }
+        } else {
+            // 非参謀は役割情報が一時欠落しても、同盟内アクティブ号令を直接拾って表示する
+            const ownTimers = localState.timers.slice(startIdx, startIdx + 12);
+            let ownActive = ownTimers
+                .map(t => {
+                    if (!t || Number(t.state || 0) === 0) return null;
+                    const targetMs = staffLandingMsForUi(t, localState.default_rally, now);
+                    if (!targetMs) return null;
+                    const startAt = (t.start_at ? new Date(t.start_at).getTime() : (targetMs - (localState.default_rally + Number(t.sub_set || 0)) * 1000));
+                    return { t, targetMs, startAt };
+                })
+                .filter(Boolean)
+                .sort((a, b) => a.targetMs - b.targetMs)[0];
+            if (!ownActive) {
+                // 端末側同盟状態が崩れても表示を落とさない最終フォールバック
+                ownActive = localState.timers.slice(6)
+                    .map(t => {
+                        if (!t || Number(t.state || 0) === 0) return null;
+                        const targetMs = staffLandingMsForUi(t, localState.default_rally, now);
+                        if (!targetMs) return null;
+                        const startAt = (t.start_at ? new Date(t.start_at).getTime() : (targetMs - (localState.default_rally + Number(t.sub_set || 0)) * 1000));
+                        return { t, targetMs, startAt };
+                    })
+                    .filter(Boolean)
+                    .sort((a, b) => a.targetMs - b.targetMs)[0];
+            }
+            if (!ownActive && Array.isArray(localState.gorei_last_target)) {
+                const baseSquad = myAllianceIdx * 2;
+                const t1 = Number(localState.gorei_last_target[baseSquad] || 0);
+                const t2 = Number(localState.gorei_last_target[baseSquad + 1] || 0);
+                let chosen = 0;
+                if (effectiveRoleForUi === 'leader1') chosen = t1;
+                else if (effectiveRoleForUi === 'leader2') chosen = t2;
+                else chosen = [t1, t2].filter(x => x > 0).sort((a, b) => a - b)[0] || 0;
+                if (chosen > 0) {
+                    const targetMs = chosen * 1000;
+                    const isRider = (effectiveRoleForUi === 'rider');
+                    const actionMs = isRider
+                        ? (targetMs - Number(myMarchSec || 0) * 1000)
+                        : (targetMs - (Number(localState.default_rally || 0) + Number(myMarchSec || 0)) * 1000);
+                    ownActive = { targetMs, startAt: actionMs };
+                }
+            }
+            if (!ownActive) {
+                const baseSquad = myAllianceIdx * 2;
+                const p1 = Number(pendingGoreiHints[baseSquad] || 0);
+                const p2 = Number(pendingGoreiHints[baseSquad + 1] || 0);
+                let chosenP = 0;
+                if (effectiveRoleForUi === 'leader1') chosenP = p1;
+                else if (effectiveRoleForUi === 'leader2') chosenP = p2;
+                else chosenP = [p1, p2].filter(x => x > 0).sort((a, b) => a - b)[0] || 0;
+                if (chosenP > 0) {
+                    const targetMs = chosenP * 1000;
+                    const isRider = (effectiveRoleForUi === 'rider');
+                    const actionMs = isRider
+                        ? (targetMs - Number(myMarchSec || 0) * 1000)
+                        : (targetMs - (Number(localState.default_rally || 0) + Number(myMarchSec || 0)) * 1000);
+                    ownActive = { targetMs, startAt: actionMs };
+                }
+            }
+            if (ownActive) {
+                const isRider = (effectiveRoleForUi === 'rider');
+                const actionMs = isRider ? (ownActive.targetMs - (Number(myMarchSec || 0) * 1000)) : ownActive.startAt;
+                displayBlocks.push({
+                    type: 'gorei', actionMs: actionMs, targetMs: ownActive.targetMs,
+                    actionLabel: isRider ? "出発" : "集結開始", arrLabel: "着弾", color: "#E5C07B"
+                });
+            }
         }
 
         if (myRoleType === 'occupy') {
@@ -2303,7 +2747,7 @@
                 let actionTime = targetMs - (myMarchSec * 1000); 
                 displayBlocks.push({
                     type: 'swap', actionMs: actionTime, targetMs: targetMs,
-                    actionLabel: myRole.startsWith('leader') ? "占領入替" : "入替", arrLabel: "入替着弾", color: "#98C379"
+                    actionLabel: effectiveRoleForUi.startsWith('leader') ? "占領入替" : "入替", arrLabel: "入替着弾", color: "#98C379"
                 });
             }
         }
@@ -2320,7 +2764,7 @@
         }
 
         displayBlocks = displayBlocks.filter(b => {
-            if (b.type === 'swap' || b.type === 'wd_manual' || b.type === 'ins') return true;
+            if (b.type === 'swap' || b.type === 'wd_manual' || b.type === 'gorei') return true;
             return (b.targetMs - now) > -5000;
         });
         
@@ -2330,6 +2774,17 @@
         if (appMode === "drill" && newStateStr === "waiting") {
             const nm = (drillStaffLive.name || "").replace(/\|/g, " ");
             newStateStr = `waiting|drill|${isStaffCommander ? "staff" : "pl"}|${drillStaffLive.present ? "1" : "0"}|${nm}`;
+        }
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            const ownTimers = localState.timers.slice(startIdx, startIdx + 12);
+            const activeCnt = ownTimers.filter(t => t && Number(t.state || 0) !== 0).length;
+            const ownStates = ownTimers.map(t => (t ? Number(t.state || 0) : -1)).join("");
+            const glast = Array.isArray(localState.gorei_last_target) ? localState.gorei_last_target.map(x => x == null ? "x" : Math.floor(Number(x))).join(",") : "none";
+            const dbg = `build=${clientBuildTag} state=${newStateStr} myRole=${myRole} effRole=${effectiveRoleForUi} staffRole=${staffPlayerRole} staff=${isStaffCommander ? 1 : 0} leaderT=${leaderT ? 1 : 0} active=${activeCnt} ownStates=${ownStates} glast=${glast} staffLive=${drillStaffLive.present ? 1 : 0} blocks=${displayBlocks.map(b => b.type).join(",")}`;
+            if (dbg !== lastClientDebugSig) {
+                lastClientDebugSig = dbg;
+                ws.send(JSON.stringify({cmd: "client_debug", val: dbg}));
+            }
         }
 
         if (newStateStr !== lastActionState) {
@@ -2376,8 +2831,8 @@
 
         let html = "";
         myTimers.forEach((t, index) => {
-            if(myRole.startsWith('leader') && t.name !== myName) return;
-            if(myRole === 'rider' && t.name === "") return;
+            if(effectiveRoleForUi.startsWith('leader') && t.name !== myName) return;
+            if(effectiveRoleForUi === 'rider' && t.name === "") return;
             
             let rem = 0, status = "待機中";
             let arrStr = "--:--:--";
