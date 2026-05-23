@@ -1,0 +1,6 @@
+---
+description: 占領抜きは operator-logic-guard に統合済み（参照用）
+alwaysApply: false
+---
+
+占領抜き（一斉撤退）の固定仕様・毎回QAは **`.cursor/rules/operator-logic-guard.mdc`** に統合されています。

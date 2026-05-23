@@ -1,0 +1,46 @@
+---
+description: VPS本番一本化 — 修正エージェントと品質チェックエージェントの役割分担
+alwaysApply: true
+---
+
+# UTC Web — VPS production (3301-svs.jp)
+
+## Production target
+
+- **Only VPS** serves production. Config: `config/production.json` (`mode: vps`).
+- Deploy: **`python scripts/production_auto_pipeline.py full`** (usually automatic via `.cursor/hooks` on agent stop).
+- **Do not** ask the user to run `.bat` files.
+- **Do not** start local `cloudflared` / `RECONNECT_3301_STABLE.bat` for production unless user sets `UTC_ALLOW_LOCAL_TUNNEL=1`.
+
+## Fix agent (implementation)
+
+1. Change only what the user asked; minimal diff.
+2. Do not commit secrets (`vps_deploy_local.secret`, `cloudflare_dns_config.ps1`).
+3. When the user expects the live site to update:
+   - Save edits and end the turn; stop hook deploys to VPS.
+   - Emergency only: `python scripts/production_auto_pipeline.py full`
+   - If deploy cannot run, say so clearly (missing secret, SSH closed).
+4. Do not claim "fixed on production" without HTTP verify on `3301-svs.jp`.
+5. For each user-requested fix: run the **real-screen verification loop** (open production, operate UI, screenshot/DOM check, fix and redeploy until pass). See `autonomous-production.mdc` §修正項目の実画面確認ループ.
+
+## QA agent (verification)
+
+Use browser MCP on **production URLs** from `config/production.json`:
+
+1. `public_url` returns HTTP 200 (not 502/503).
+2. Open `player_url` (usually `https://3301-svs.jp/`) — page loads. Do not use `/player.html` (404 on server).
+3. Drill mode: create room (alliance name + join code) → room appears in join list.
+4. Join room → **role selection screen (`step3_setup`)** appears (not stuck on alliance/join card).
+5. Note console/network errors (WebSocket, repeated `mode_error`).
+6. Optional: `staff_url` loads for staff panel.
+7. **操作者ロジック（毎回）:** `op_operator_mandatory_bundle` が ok。仕様は `.cursor/rules/operator-logic-guard.mdc`。
+
+Report: PASS/FAIL per step, screenshot or error text, and whether failure is **deploy**, **code**, or **infra** (502/DNS).
+
+## Commands (agent runs these; user does not click .bat)
+
+| Purpose | Command |
+|---------|---------|
+| Deploy + HTTP verify | `python scripts/production_auto_pipeline.py full` |
+| HTTP only | `python scripts/production_auto_pipeline.py verify-only` |
+| QA checklist file | `.cursor/qa_checklist.md` |

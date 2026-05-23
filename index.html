@@ -93,19 +93,19 @@
             </div>
             <div class="status-divider"></div>
             <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
-                <span id="lbl_count_aln0" style="color:#61AFEF; margin-right:5px; width:30px;">APL</span>
+                <span id="lbl_count_aln0" style="color:#61AFEF; margin-right:5px; width:30px;">XYZ</span>
                 👑<span class="status-val" style="color:#E5C07B;" id="countLeader_aln0">0</span> 
                 🏇<span class="status-val" style="color:#C678DD;" id="countRider_aln0">0</span>
             </div>
             <div class="status-divider"></div>
             <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
-                <span id="lbl_count_aln1" style="color:#61AFEF; margin-right:5px; width:30px;">PKD</span>
+                <span id="lbl_count_aln1" style="color:#61AFEF; margin-right:5px; width:30px;">MTC</span>
                 👑<span class="status-val" style="color:#E5C07B;" id="countLeader_aln1">0</span> 
                 🏇<span class="status-val" style="color:#C678DD;" id="countRider_aln1">0</span>
             </div>
             <div class="status-divider"></div>
             <div style="color: #ABB2BF; font-weight: bold; display: flex; align-items: center;">
-                <span id="lbl_count_aln2" style="color:#61AFEF; margin-right:5px; width:30px;">MTC</span>
+                <span id="lbl_count_aln2" style="color:#61AFEF; margin-right:5px; width:30px;">APL</span>
                 👑<span class="status-val" style="color:#E5C07B;" id="countLeader_aln2">0</span> 
                 🏇<span class="status-val" style="color:#C678DD;" id="countRider_aln2">0</span>
             </div>
@@ -120,10 +120,16 @@
     <div class="enemy-card">
         <div class="header-bar header-bar-enemy">
             <div style="color: white; font-weight: bold; font-size: 16px; margin-right: 30px;">◆ 敵国 (ターゲット)</div>
-            <div class="inline-calc">
-                <div style="color: #C678DD; font-weight: bold; font-size: 14px;">【 マーク (1秒前 UTC) 】</div>
+            <div class="inline-calc" style="flex-wrap:wrap; gap:8px;">
+                <div style="color: #C678DD; font-weight: bold; font-size: 14px;">【 差込着弾(0) UTC 】</div>
                 <div id="insTarget" style="font-size: 20px; color: #E5C07B; font-weight: bold;">--:--:--</div>
                 <div id="insRemain" style="font-size: 20px; color: #98C379; font-weight: bold;">--:--</div>
+                <span style="color:#ABB2BF; font-size:12px;">最終着弾の</span>
+                <div class="updown-col"><button class="btn-gray sub-updown-btn" onclick="send('mod_insert_margin', null, 1)">▲</button><div class="sub-val-txt" id="insMarginVal" style="color:#E5C07B; min-width:18px;">1</div><button class="btn-gray sub-updown-btn" onclick="send('mod_insert_margin', null, -1)">▼</button></div>
+                <span style="color:#ABB2BF; font-size:12px;">秒前（0〜5）</span>
+                <button style="background:#E06C75; color:#fff; padding:4px 10px; font-size:12px; border-radius:4px; font-weight:bold;" onclick="send('fire_insert_fixed_target')">差込号令</button>
+                <button class="btn-red" style="padding:4px 10px; font-size:12px; border-radius:4px;" onclick="send('clear_insert_fixed_target')">解除</button>
+                <span id="insFireState" style="color:#98C379; font-size:12px; font-weight:bold;"></span>
             </div>
         </div>
         <div id="enemy_rows" class="enemy-grid"></div>
@@ -136,6 +142,8 @@
     let ws; let isBuilt = false; let timeOffset = 0; 
     let reconnectDelayMs = 1000;
     let heartbeatTimer = null;
+    let wsLastMessageAt = 0;
+    let wsWatchdogTimer = null;
     let insertTargetIdx = -1; let delayTargetIdxs = [-1,-1,-1,-1,-1,-1];
     let currentRoles = ["", "", ""];
     let cachedArrTimes = {};
@@ -143,17 +151,51 @@
     let globalLocalState = null; 
 
     function getSyncedNow() { return new Date(Date.now() + timeOffset); }
-    function send(cmd, idx=null, val=null) { if(ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({cmd: cmd, idx: idx, val: val})); }
+    function send(cmd, idx=null, val=null) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        // 管理画面から号令系コマンドを送る前に、対象同盟の staff スコープを明示して拒否を防ぐ。
+        if ((cmd === 'fire_gorei' || cmd === 'fire_gorei_fixed' || cmd === 'cancel_gorei') && Number.isInteger(idx)) {
+            const allianceId = Math.floor(idx / 2);
+            ws.send(JSON.stringify({cmd: 'set_staff_mode', val: {enabled: true, alliance_id: allianceId}}));
+        }
+        // 差込（margin・号令・解除）はサーバー側で staff_enabled 必須（参謀画面と同じ）
+        if (cmd === 'mod_insert_margin' || cmd === 'mod_insert_offset_tenth' || cmd === 'mod_insert_target'
+            || cmd === 'fire_insert_fixed_target' || cmd === 'clear_insert_fixed_target') {
+            ws.send(JSON.stringify({cmd: 'set_staff_mode', val: {enabled: true, alliance_id: 0}}));
+        }
+        ws.send(JSON.stringify({cmd: cmd, idx: idx, val: val}));
+    }
     function startHeartbeat() {
         stopHeartbeat();
         heartbeatTimer = setInterval(() => {
             if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({cmd: "ping"}));
-        }, 20000);
+        }, 10000);
     }
     function stopHeartbeat() {
         if (heartbeatTimer) {
             clearInterval(heartbeatTimer);
             heartbeatTimer = null;
+        }
+    }
+    function startWsWatchdog() {
+        stopWsWatchdog();
+        wsWatchdogTimer = setInterval(() => {
+            if (!ws || ws.readyState === WebSocket.CLOSED) {
+                connect();
+                return;
+            }
+            if (ws.readyState !== WebSocket.OPEN) return;
+            const now = Date.now();
+            if (wsLastMessageAt > 0 && (now - wsLastMessageAt) > 90000) {
+                try { ws.close(); } catch (e) {}
+                setTimeout(connect, 300);
+            }
+        }, 3000);
+    }
+    function stopWsWatchdog() {
+        if (wsWatchdogTimer) {
+            clearInterval(wsWatchdogTimer);
+            wsWatchdogTimer = null;
         }
     }
 
@@ -307,7 +349,7 @@
 
     function buildPairingPanel() {
         let cbHtml = "";
-        let defaultNames = ["APL", "PKD", "MTC"];
+        let defaultNames = ["XYZ", "MTC", "APL"];
         for(let a=0; a<3; a++) {
             cbHtml += `
                 <div class="pair-cb-box">
@@ -364,6 +406,10 @@
                 <div id="staff_name_disp_${a}" style="font-size:12px; color:#E5C07B; font-weight:bold;">
                     ${staffName ? `参謀: ${staffName}` : "参謀: 未登録"}
                 </div>
+                <div style="display:flex; gap:6px;">
+                    <button style="background:#C678DD; color:white; padding:6px 10px; font-size:11px; border-radius:4px;" onclick="fireAllianceGoreiNow(${a})">同盟 即時号令</button>
+                    <button style="background:#98C379; color:#282C34; padding:6px 10px; font-size:11px; border-radius:4px;" onclick="fireAllianceGoreiFixed(${a})">同盟 着弾指定号令</button>
+                </div>
             </div>
         `;
 
@@ -419,16 +465,43 @@
         }
     }
 
+    function fireAllianceGoreiNow(allianceIdx) {
+        const sq1 = allianceIdx * 2;
+        const sq2 = sq1 + 1;
+        send('fire_gorei', sq1);
+        send('fire_gorei', sq2);
+    }
+
+    function fireAllianceGoreiFixed(allianceIdx) {
+        const sq1 = allianceIdx * 2;
+        const sq2 = sq1 + 1;
+        send('fire_gorei_fixed', sq1);
+        send('fire_gorei_fixed', sq2);
+    }
+
     function connect() {
+        if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
         let ws_protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
         ws = new WebSocket(ws_protocol + window.location.host + "/ws");
         ws.onopen = () => {
             reconnectDelayMs = 1000;
+            wsLastMessageAt = Date.now();
             startHeartbeat();
+            startWsWatchdog();
         };
         ws.onmessage = (e) => {
             try {
-                const msg = JSON.parse(e.data); const data = msg.data;
+                const msg = JSON.parse(e.data);
+                wsLastMessageAt = Date.now();
+                if (msg.type === "pong") {
+                    if (msg.server_timestamp) {
+                        timeOffset = msg.server_timestamp - Date.now();
+                        let elOffset = document.getElementById('offsetDisp');
+                        if (elOffset) elOffset.innerText = `(補正: ${timeOffset > 0 ? "+" : ""}${(timeOffset/1000).toFixed(2)}秒)`;
+                    }
+                    return;
+                }
+                const data = msg.data;
                 globalLocalState = data; 
                 if(msg.server_timestamp) {
                     timeOffset = msg.server_timestamp - Date.now();
@@ -442,12 +515,19 @@
         };
         ws.onclose = () => {
             stopHeartbeat();
+            stopWsWatchdog();
             const wait = reconnectDelayMs + Math.floor(Math.random() * 400);
             setTimeout(connect, wait);
             reconnectDelayMs = Math.min(reconnectDelayMs * 2, 15000);
         };
+        ws.onerror = () => { try { ws.close(); } catch (e) {} };
     }
     connect();
+    window.addEventListener("online", () => { try { if (!ws || ws.readyState !== WebSocket.OPEN) connect(); } catch (e) {} });
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState !== "visible") return;
+        try { if (!ws || ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) connect(); } catch (e) {}
+    });
 
     function updateUI(data, utcTime) {
         document.getElementById('utc').innerText = "UTC " + utcTime;
@@ -458,7 +538,7 @@
         
         for(let i=0; i<3; i++) {
             let lbl = document.getElementById(`lbl_count_aln${i}`);
-            if(lbl) lbl.innerText = data.alliance_names[i] || ["APL", "PKD", "MTC"][i];
+            if(lbl) lbl.innerText = data.alliance_names[i] || ["XYZ", "MTC", "APL"][i];
             
             let lCount = document.getElementById(`countLeader_aln${i}`);
             if(lCount) lCount.innerText = data.online_counts[`aln${i}`].leader;
@@ -519,7 +599,7 @@
             if(elName && document.activeElement !== elName) elName.value = data.alliance_names[a];
 
             let alnLabel = document.getElementById(`pair_aln_label_${a}`);
-            if(alnLabel) alnLabel.innerText = data.alliance_names[a] || ["APL", "PKD", "MTC"][a];
+            if(alnLabel) alnLabel.innerText = data.alliance_names[a] || ["XYZ", "MTC", "APL"][a];
             let staffDisp = document.getElementById(`staff_name_disp_${a}`);
             if (staffDisp) {
                 const sName = (data.staff_names && data.staff_names[a]) ? data.staff_names[a] : "";
@@ -685,19 +765,36 @@
         return null;
     }
 
+    function getInsertMarginSec(data) {
+        if (data.insert_margin_sec != null) return Math.max(0, Math.min(5, Number(data.insert_margin_sec)));
+        const tenth = Number(data.insert_offset_tenth ?? -10);
+        return Math.max(0, Math.min(5, Math.round(-tenth / 10) || 1));
+    }
+    function computeInsertLandingMs(data, now) {
+        const marginMs = getInsertMarginSec(data) * 1000;
+        const marked = Number(data.insert_target_idx);
+        if (marked >= 0 && marked < 6 && data.timers[marked].state !== 0) {
+            const tgt = getTargetTime(data.timers[marked], now, data.default_rally);
+            if (tgt) return tgt - marginMs;
+        }
+        const candidates = [];
+        for (let i = 0; i < 6; i++) {
+            const t = data.timers[i];
+            if (!t || t.state === 0) continue;
+            const tgt = getTargetTime(t, now, data.default_rally);
+            if (tgt) candidates.push(tgt - marginMs);
+        }
+        return candidates.length ? Math.max(...candidates) : null;
+    }
     function calcExtras(data, now) {
         let elInsTgt = document.getElementById('insTarget');
         let elInsRem = document.getElementById('insRemain');
+        const insMarginEl = document.getElementById('insMarginVal');
+        const insFireEl = document.getElementById('insFireState');
+        if (insMarginEl) insMarginEl.innerText = String(getInsertMarginSec(data));
+        if (insFireEl) insFireEl.innerText = data.insert_fire_target ? "号令中" : "";
 
-        let insTargetTime = null;
-        if (insertTargetIdx >= 0 && insertTargetIdx < 6 && data.timers[insertTargetIdx].state !== 0) {
-            let tgt = getTargetTime(data.timers[insertTargetIdx], now, data.default_rally);
-            if (tgt) insTargetTime = tgt - 1000;
-        } else {
-            let tArrA = [];
-            for(let i=0; i<6; i++) { let t = getTargetTime(data.timers[i], now, data.default_rally); if(t) tArrA.push(t); }
-            if(tArrA.length > 0) insTargetTime = Math.max(...tArrA) - 1000; 
-        }
+        let insTargetTime = computeInsertLandingMs(data, now);
 
         if(insTargetTime) {
             let d = new Date(insTargetTime);

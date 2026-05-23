@@ -18,3 +18,7 @@ Desktop.ini
 *.swp
 .vscode/
 .idea/
+
+# Local VPS deploy secret (never commit)
+vps_deploy_local.secret
+cloudflare_dns_config.ps1

@@ -1,0 +1,59 @@
+---
+description: コード修正のたびに docs/operation_spec_summary.md を現状に合わせて必ず更新する
+alwaysApply: true
+---
+
+# 操作仕様書の常時同期（必須）
+
+## 対象ファイル
+
+`docs/operation_spec_summary.md` — 人間・Agent 双方の**現状仕様の単一の正**。
+
+## いつ更新するか
+
+**アプリ本体を編集したターンでは、返答を終える前に必ず1回更新して保存する。**
+
+次のいずれかを編集した場合は **必須**:
+
+- `player.html` / `index.html` / `staff.html` / `support.html`
+- `main.py` / `voices.js`
+- `scripts/qa_*.py` / `scripts/operator_spec_guard.py` / `scripts/wd_manual_spec_guard.py`
+- `.cursor/rules/operator-logic-guard.mdc`（操作者ロジックの文言変更時）
+
+次のみの変更では、仕様書の**更新履歴に1行追記**するだけでよい（図の全面書き換え不要）:
+
+- `.bat` / デプロイスクリプトのみ
+- ドキュメントのみ・ルールのみ（本ファイル自身の編集を除く重複更新は避ける）
+
+**コードを1行も触らないターン**（説明のみ・QA結果報告のみ）では更新不要。
+
+## 何を書くか（最小）
+
+1. 文頭の **「現状スナップショット」** 表を更新（最終更新日・直近変更・影響章）
+2. 末尾の **「更新履歴」** に1行追加（日付・概要・編集したコードファイル）
+3. 挙動・画面・操作フローが変わった章の本文 or 図を**依頼範囲に限り**修正
+
+仕様を勝手に広げない。ユーザー依頼で変えた部分だけ反映する。
+
+## 作業完了サマリー
+
+`workflow-status.mdc` の **保存したファイル** に、実際に保存したパスを列挙する。  
+仕様書を更新したターンでは **必ず** `docs/operation_spec_summary.md` を含める。
+
+例:
+
+```text
+- **保存したファイル:** player.html, docs/operation_spec_summary.md
+```
+
+編集していないのに `operation_spec_summary.md` を載せない。
+
+## 指示の出し方（ユーザー向け）
+
+修正依頼時に次を添えると Agent が同じ資料を更新する:
+
+```text
+docs/operation_spec_summary.md も現状に合わせて更新してください。
+```
+
+（ルールで既に必須のため、省略してもよい。）

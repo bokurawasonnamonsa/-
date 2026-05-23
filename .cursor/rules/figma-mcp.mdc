@@ -1,0 +1,46 @@
+---
+description: Figma MCP 利用時のデザイン統一・実装手順（UTC Web）
+globs:
+  - player.html
+  - staff.html
+  - support.html
+  - index.html
+  - "**/*.css"
+---
+
+# Figma MCP（見た目の統一・手戻り削減）
+
+## 前提
+
+- プロジェクトに `.cursor/mcp.json` で **Figma リモート MCP**（`https://mcp.figma.com/mcp`）を定義済み
+- 初回は Cursor で **Connect → Figma ログイン → Allow** が必要（OAuth はローカルのみ・コミット不要）
+
+## UI 修正の進め方（推奨）
+
+1. **Figma を正とする** — 色・余白・タイポ・コンポーネントは Figma の Variables / コンポーネントを優先
+2. **実装前にコンテキスト取得** — 対象フレームの Figma URL（`?node-id=...` 付き）をチャットに貼り、「このデザインに合わせて `player.html` の○○を修正」と指示
+3. **既存コードとの突合** — 生成結果は本リポジトリのダークテーマ・▲▼ 桁操作・参謀パネル表示順など **既に直した挙動を壊さない**（`scope-only-user-requests` 参照）
+4. **差分は HTML/CSS のみ** — 依頼範囲外のリファクタ・文言変更はしない
+
+## 本プロジェクトのデザイントークン（Figma 未整備時のフォールバック）
+
+| 用途 | 値 |
+|------|-----|
+| 背景 | `#282C34` / カード `#21252B` |
+| 本文 | `#ABB2BF` |
+| アクセント | `#61AFEF` |
+| 警告・差込 | `#E06C75` |
+| 成功・着弾 | `#98C379` / `#E5C07B` |
+| 練習モード | `#C678DD` |
+| 数字フォント | `Arial Black`, `Verdana`（`--utc-number-font`） |
+
+## 依頼文の例
+
+```
+Figma: https://www.figma.com/design/XXXX/UTC-Web?node-id=123-456
+参謀パネル（差込指示）をこのフレームどおりに。表示順は変更しない。本番は player.html のみ。
+```
+
+## プラグイン（任意・推奨）
+
+Cursor のエージェントチャットで `/add-plugin figma` を実行すると、Figma 公式の MCP 設定・Skills・ルールがまとめて入る場合がある。未導入なら手動で MCP を Connect する。

@@ -1,0 +1,14 @@
+{
+  "mode": "vps",
+  "public_url": "https://3301-svs.jp/",
+  "player_url": "https://3301-svs.jp/",
+  "player_alt_url": "https://3301-svs.jp/player",
+  "staff_url": "https://3301-svs.jp/staff_hq_3301",
+  "support_url": "https://3301-svs.jp/support_hq_3301",
+  "vps_host": "160.251.140.31",
+  "vps_ssh_port": 22,
+  "domain": "3301-svs.jp",
+  "app_dir_on_vps": "/opt/utc_web",
+  "local_tunnel_allowed": false,
+  "notes": "本番は VPS のみ。PC の cloudflared / ローカル python 本番起動は使わない。"
+}

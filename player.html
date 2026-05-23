@@ -1,25 +1,227 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3301みんなで戦う為のツール</title>
     <style>
-        :root { --utc-number-font: 'Arial Black', 'Verdana', sans-serif; }
-        body { background-color: #1e1e1e; color: #ABB2BF; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; overflow-x: hidden; }
+        :root {
+            --utc-number-font: 'Arial Black', 'Verdana', sans-serif;
+            --utc-bg-base: #1a1b1f;
+            --utc-panel: rgba(28, 30, 36, 0.94);
+            --gold: #D4AF37;
+            --gold-bright: #F0D78C;
+            --gold-mid: #E5C07B;
+            --gold-dim: rgba(212, 175, 55, 0.38);
+            --gold-line: rgba(240, 215, 140, 0.55);
+            --gold-glow: rgba(212, 175, 55, 0.18);
+            --utc-radius: 14px;
+            --lux-border: linear-gradient(
+                145deg,
+                rgba(240, 215, 140, 0.85) 0%,
+                rgba(212, 175, 55, 0.55) 22%,
+                rgba(160, 130, 70, 0.28) 50%,
+                rgba(212, 175, 55, 0.5) 78%,
+                rgba(240, 215, 140, 0.75) 100%
+            );
+        }
+        /* 超高級感 — 金の細装飾枠（背景の暗さは維持） */
+        .utc-framed,
+        .card,
+        .utc-main-wrapper,
+        .clock-container,
+        .quick-start-panel,
+        .drill-config-panel,
+        #countdownDemoBox,
+        #multiDeviceWarning {
+            position: relative;
+            border: 1px solid transparent !important;
+            border-radius: var(--utc-radius);
+            background:
+                linear-gradient(var(--utc-panel), var(--utc-panel)) padding-box,
+                var(--lux-border) border-box !important;
+            box-shadow:
+                0 16px 48px rgba(0, 0, 0, 0.45),
+                0 0 0 1px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 var(--gold-line),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.28);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+        /* 四隅の金飾り（上辺の金線は inset シャドウで表現） */
+        .utc-main-wrapper::before,
+        .clock-container::before,
+        .card:not(#step1_intro)::before {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            width: 20px;
+            height: 20px;
+            border-top: 1px solid var(--gold-bright);
+            border-left: 1px solid var(--gold-mid);
+            box-shadow: -1px -1px 10px var(--gold-glow);
+            pointer-events: none;
+            z-index: 3;
+        }
+        .utc-main-wrapper::after,
+        .clock-container::after,
+        .card:not(#step1_intro):not(.lux-instruction-frame)::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            border-bottom: 1px solid var(--gold-bright);
+            border-right: 1px solid var(--gold-mid);
+            box-shadow: 1px 1px 10px var(--gold-glow);
+            pointer-events: none;
+            z-index: 3;
+        }
+        #step1_intro.onboarding-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 6%;
+            right: 6%;
+            width: auto;
+            height: 2px;
+            bottom: auto;
+            border: none;
+            box-shadow: none;
+            background: linear-gradient(90deg, transparent, var(--gold-dim), var(--gold-bright), var(--gold-dim), transparent);
+            pointer-events: none;
+            z-index: 4;
+        }
+        .quick-start-panel {
+            box-shadow:
+                0 16px 48px rgba(0, 0, 0, 0.42),
+                0 0 28px var(--gold-glow),
+                inset 0 1px 0 rgba(255, 248, 220, 0.1);
+        }
+        #multiDeviceWarning {
+            color: #E8B4B9;
+            font-size: 14px;
+            margin-bottom: 15px;
+            padding: 12px 14px;
+            text-align: left;
+            background:
+                linear-gradient(rgba(28, 30, 36, 0.96), rgba(28, 30, 36, 0.96)) padding-box,
+                linear-gradient(145deg, rgba(224, 108, 117, 0.5), rgba(212, 175, 55, 0.35), rgba(224, 108, 117, 0.45)) border-box !important;
+        }
+        .chrome-notice-full {
+            background:
+                linear-gradient(rgba(28, 30, 36, 0.96), rgba(28, 30, 36, 0.96)) padding-box,
+                linear-gradient(145deg, rgba(224, 108, 117, 0.45), rgba(212, 175, 55, 0.4), rgba(224, 108, 117, 0.35)) border-box !important;
+        }
+        .staff-panel.card {
+            background:
+                linear-gradient(var(--utc-panel), var(--utc-panel)) padding-box,
+                var(--lux-border) border-box !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(86, 182, 194, 0.06);
+        }
+        #step1_intro.onboarding-card {
+            box-shadow:
+                0 16px 48px rgba(0, 0, 0, 0.45),
+                0 0 32px var(--gold-glow),
+                inset 0 1px 0 rgba(255, 248, 220, 0.08);
+        }
+        /* 指示枠 — ゲーム中の号令カード */
+        .lux-instruction-frame {
+            position: relative;
+            overflow: hidden;
+            outline: 1px solid rgba(212, 175, 55, 0.22) !important;
+            outline-offset: 4px;
+            box-shadow:
+                0 20px 56px rgba(0, 0, 0, 0.55),
+                0 0 36px var(--gold-glow),
+                inset 0 1px 0 rgba(255, 248, 220, 0.14),
+                inset 0 0 24px rgba(0, 0, 0, 0.15) !important;
+        }
+        .lux-instruction-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent 0%, var(--gold-dim) 15%, var(--gold-bright) 50%, var(--gold-dim) 85%, transparent 100%);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .lux-instruction-frame::after {
+            content: '';
+            position: absolute;
+            bottom: 8px;
+            left: 12%;
+            right: 12%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.45), transparent);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .lux-instruction-frame > div[style*="border-top"] {
+            border-top-color: rgba(212, 175, 55, 0.35) !important;
+        }
+        .lux-instruction-frame .lux-arr-panel {
+            border: 1px solid rgba(212, 175, 55, 0.32) !important;
+            border-radius: 10px !important;
+            box-shadow: inset 0 1px 0 rgba(255, 248, 220, 0.06);
+        }
+        #display .player-action-countdown {
+            text-shadow:
+                0 2px 8px rgba(0, 0, 0, 0.45),
+                0 0 20px var(--gold-glow) !important;
+        }
+        body {
+            background-color: var(--utc-bg-base);
+            background-image:
+                linear-gradient(180deg, rgba(30, 34, 39, 0.88) 0%, rgba(30, 34, 39, 0.94) 35%, rgba(30, 34, 39, 0.97) 100%),
+                url('/assets/bg-utc-atmosphere.webp');
+            background-size: cover;
+            background-position: center top;
+            background-attachment: fixed;
+            color: #ABB2BF;
+            font-family: sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+            overflow-x: hidden;
+        }
         
         button { touch-action: manipulation; user-select: none; -webkit-user-select: none; }
         
-        .utc-main-wrapper { display: flex; flex-direction: column; align-items: center; margin-bottom: 10px; background: #21252B; padding: 10px; border-radius: 8px; border: 1px solid #3E4451; width: 100%; box-sizing: border-box;}
-        .utc-main { font-size: 28px; color: white; font-weight: bold; margin-bottom: 5px; font-family: var(--utc-number-font); letter-spacing: 2px;}
+        .utc-main-wrapper {
+            display: flex; flex-direction: column; align-items: center; margin-bottom: 10px;
+            padding: 12px 10px;
+            width: 100%; box-sizing: border-box;
+        }
+        .utc-main {
+            font-size: 28px;
+            color: #FAF6EE;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-family: var(--utc-number-font);
+            letter-spacing: 3px;
+            text-shadow: 0 0 24px var(--gold-glow), 0 1px 0 rgba(0, 0, 0, 0.5);
+        }
         .sync-info { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 100%;}
         .sync-row { display: flex; align-items: flex-end; justify-content: center; gap: 10px; width: 100%; }
         
-        .card { background: #282C34; border: 1px solid #3E4451; border-radius: 12px; padding: 20px; margin-bottom: 15px; width: 100%; box-sizing: border-box; }
+        .card {
+            padding: 20px;
+            margin-bottom: 15px;
+            width: 100%;
+            box-sizing: border-box;
+        }
         .role-btn { padding: 12px; font-size: 16px; width: 80%; margin: 5px auto; border-radius: 8px; border:none; font-weight:bold; cursor: pointer; display:block;}
         .active { background: #61AFEF; color: white; } .inactive { background: #3E4451; color: #ABB2BF; }
         
-        .clock-container { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 15px; background: #21252B; padding: 10px; border-radius: 12px; }
+        .clock-container {
+            display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 15px;
+            padding: 12px 10px;
+        }
         #analogClock { background: transparent; border-radius: 50%; }
         .digital-jst { font-size: 34px; color: #98C379; font-weight: 900; font-family: var(--utc-number-font); font-variant-numeric: tabular-nums; letter-spacing: 2px; }
         
@@ -48,7 +250,207 @@
         .badge-1 { background: #C678DD; color: white; }
         .badge-2 { background: #56B6C2; color: #282C34; }
 
-        .btn-back { background: #3E4451; color: #ABB2BF; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; margin-top: 10px; width: 80%; display:block; margin: 10px auto 0 auto; }
+
+        .mode-pick-wrap { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; width: 100%; }
+        .mode-pick-hint { font-size: 12px; color: #ABB2BF; margin: 0 0 6px 0; line-height: 1.5; text-align: center; }
+        .mode-card {
+            width: 100%; box-sizing: border-box;
+            position: relative;
+            border: 1px solid rgba(212, 175, 55, 0.22);
+            border-radius: 12px;
+            padding: 14px 16px;
+            background: linear-gradient(180deg, rgba(32, 34, 40, 0.98) 0%, rgba(22, 24, 28, 0.99) 100%);
+            cursor: pointer; text-align: left;
+            min-height: 48px; font-family: inherit;
+            box-shadow: inset 0 1px 0 rgba(240, 215, 140, 0.08), 0 6px 18px rgba(0, 0, 0, 0.32);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .mode-card::before {
+            content: '';
+            position: absolute;
+            top: 6px;
+            left: 8px;
+            right: 8px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.25), transparent);
+            pointer-events: none;
+        }
+        .mode-card-prod.selected {
+            border-color: rgba(240, 215, 140, 0.75);
+            background: linear-gradient(180deg, rgba(212, 175, 55, 0.12) 0%, rgba(28, 30, 36, 0.98) 100%);
+            box-shadow: 0 0 0 1px rgba(240, 215, 140, 0.25), 0 0 28px var(--gold-glow), inset 0 1px 0 rgba(255, 248, 220, 0.1);
+        }
+        .mode-card-drill.selected {
+            border-color: rgba(240, 215, 140, 0.55);
+            background: linear-gradient(180deg, rgba(198, 120, 221, 0.1) 0%, rgba(28, 30, 36, 0.98) 100%);
+            box-shadow: 0 0 0 1px rgba(198, 120, 221, 0.2), 0 0 24px rgba(198, 120, 221, 0.08), inset 0 1px 0 rgba(240, 215, 140, 0.06);
+        }
+        .mode-card-title {
+            font-size: 17px;
+            font-weight: bold;
+            margin: 0 0 6px 0;
+            display: block;
+            letter-spacing: 0.04em;
+            background: linear-gradient(180deg, #FFFAF0 0%, var(--gold-bright) 55%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 12px var(--gold-glow));
+        }
+        .mode-card-drill .mode-card-title {
+            background: linear-gradient(180deg, #F8F0FF 0%, #E5C07B 45%, #C678DD 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+        }
+        .mode-card-sub { font-size: 13px; color: #ABB2BF; line-height: 1.45; margin: 0; }
+        .env-btn-selected { box-shadow: 0 0 0 2px #61AFEF; }
+        .one-device-banner { background: #1E2227; border: 1px solid #E06C75; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; font-size: 13px; line-height: 1.5; text-align: left; color: #ABB2BF; }
+        .field-error { color: #E06C75; font-size: 12px; margin: 2px 0 6px 0; text-align: left; min-height: 14px; }
+        .field-error-global { color: #E06C75; font-size: 13px; margin: 8px 0; padding: 8px; background: rgba(224,108,117,0.1); border-radius: 6px; text-align: left; display: none; }
+        .input-error { border: 1px solid #E06C75 !important; }
+        .quick-start-panel {
+            padding: 14px;
+            margin-bottom: 14px;
+            text-align: left;
+        }
+        .quick-start-panel .qs-title { color: var(--gold-bright); font-weight: bold; font-size: 15px; margin-bottom: 8px; letter-spacing: 0.05em; }
+        .quick-start-panel .qs-summary { color: #ABB2BF; font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
+        .quick-start-actions { display: flex; flex-direction: column; gap: 8px; }
+        .btn-quick-start { background: #98C379; color: #1E2227; padding: 14px; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; width: 100%; }
+        .btn-quick-change { background: #3E4451; color: #ABB2BF; padding: 10px; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; width: 100%; }
+        .chrome-notice-collapsed { display: none !important; }
+        .chrome-notice-mini { font-size: 12px; color: #ABB2BF; margin-bottom: 12px; text-align: center; }
+        .chrome-notice-mini button { background: transparent; border: none; color: #61AFEF; text-decoration: underline; cursor: pointer; font-size: 12px; }
+        #drillTabCreate, #drillTabJoin { min-height: 48px; font-size: 15px; }
+
+        /* オンボーディング（docs/design_onboarding.md） */
+        #step1_intro.onboarding-card,
+        #step2_5_alliance.onboarding-card {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        #step1_intro.onboarding-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 88px;
+            background:
+                linear-gradient(180deg, rgba(40, 44, 52, 0.15) 0%, rgba(40, 44, 52, 0.92) 100%),
+                url('/assets/bg-onboarding-header.webp') center top / cover no-repeat;
+            pointer-events: none;
+            z-index: 0;
+        }
+        #step1_intro.onboarding-card > * {
+            position: relative;
+            z-index: 1;
+        }
+        .onboarding-env-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--gold-bright);
+            letter-spacing: 0.06em;
+            text-shadow: 0 0 16px var(--gold-glow);
+        }
+        .onboarding-step-title {
+            margin: 0;
+            font-size: 17px;
+            font-weight: bold;
+            color: #F5F0E6;
+            text-align: center;
+            letter-spacing: 0.04em;
+            text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+        }
+        .onboarding-env-body { font-size: 16px; margin: 0; line-height: 1.5; }
+        .env-btn {
+            width: 80%;
+            min-height: 48px;
+            margin: 5px auto;
+            display: block;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .env-btn-2device { background: #4CAF50; color: #fff; }
+        .env-btn-1device { background: #E06C75; color: #fff; }
+        .alliance-list { display: flex; flex-direction: column; gap: 6px; width: 100%; margin-bottom: 4px; }
+        .alliance-row {
+            width: 100%;
+            min-height: 48px;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+            box-sizing: border-box;
+            background: #3E4451;
+            color: #ABB2BF;
+        }
+        .alliance-row.active { background: #61AFEF; color: #fff; }
+        .role-setup-section { margin-top: 0; padding-top: 14px; border-top: 1px solid #3E4451; text-align: center; }
+        .role-setup-section .role-btn { width: 80%; min-height: 48px; margin: 5px auto; }
+        #roleSetupSection .onboarding-step-title { margin-bottom: 8px; }
+        .btn-primary-cta {
+            width: 80%;
+            min-height: 48px;
+            margin: 8px auto 0;
+            display: block;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            background: #61AFEF;
+            color: #fff;
+            cursor: pointer;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        .btn-quick-start { min-height: 48px; box-sizing: border-box; }
+        .btn-quick-change { min-height: 40px; box-sizing: border-box; }
+        .drill-config-panel {
+            padding: 10px;
+            margin-bottom: 4px;
+            text-align: left;
+            box-sizing: border-box;
+        }
+        .drill-config-panel .onboarding-input,
+        .drill-config-panel select {
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 6px;
+            padding: 10px 8px;
+            min-height: 40px;
+            border-radius: 6px;
+            border: 1px solid #3E4451;
+            background: #181A1F;
+            color: #fff;
+            font-size: 14px;
+        }
+        .drill-config-label { font-size: 12px; color: #ABB2BF; margin-bottom: 6px; }
+        .chrome-notice-full {
+            padding: 15px;
+            margin-bottom: 4px;
+            text-align: left;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        #countdownDemoBox.utc-framed { max-width: 420px; margin-left: auto; margin-right: auto; }
+        .staff-panel.utc-framed { text-align: left; }
+
+        .btn-back { background: #3E4451; color: #ABB2BF; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; margin-top: 10px; width: 80%; min-height: 40px; display:block; margin: 10px auto 0 auto; box-sizing: border-box; }
         .btn-edit { background: #E5C07B; color: #282C34; padding: 8px 15px; border-radius: 6px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; margin-top: 20px; width: 100%; box-sizing: border-box; }
         
         /* ★ サポートチャット関連のスタイル */
@@ -85,6 +487,8 @@
         @media (max-width: 520px) {
             #audioControlsArea .btn-audio { width: 100%; border-radius: 10px; }
             #audioControlsArea select { max-width: 140px !important; }
+            .voice-volume-panel { max-width: 100% !important; }
+            .voice-volume-slider { height: 96px; }
         }
         .voice-ready-status {
             display: none;
@@ -112,6 +516,61 @@
         .voice-ready-status .loading-dots i:nth-child(2) { animation-delay: 0.18s; }
         .voice-ready-status .loading-dots i:nth-child(3) { animation-delay: 0.36s; }
         .voice-ready-status.ready .loading-dots { display: none; }
+        .voice-volume-panel {
+            display: none;
+            justify-content: center;
+            align-items: stretch;
+            gap: 12px;
+            margin: 0 auto 12px;
+            padding: 10px 14px;
+            max-width: 320px;
+            width: 100%;
+            box-sizing: border-box;
+            background: #1E2227;
+            border: 1px solid #3E4451;
+            border-radius: 10px;
+        }
+        .voice-volume-slider-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .voice-volume-slider {
+            -webkit-appearance: slider-vertical;
+            appearance: slider-vertical;
+            width: 28px;
+            height: 112px;
+            margin: 0;
+            accent-color: #E5C07B;
+        }
+        .voice-volume-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 6px;
+            text-align: left;
+            min-width: 0;
+        }
+        .voice-volume-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #E5C07B;
+        }
+        .voice-volume-value {
+            font-size: 22px;
+            font-weight: 900;
+            color: #98C379;
+            font-variant-numeric: tabular-nums;
+        }
+        .voice-volume-hint {
+            font-size: 11px;
+            color: #ABB2BF;
+            line-height: 1.45;
+        }
         @keyframes voiceDots {
             0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
             40% { opacity: 1; transform: translateY(-2px); }
@@ -162,9 +621,78 @@
             border-left: 6px solid #61AFEF;
             margin-bottom: 10px;
         }
+        .alliance-presence-line {
+            display: none;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 8px 14px;
+            width: 100%;
+            margin: 0 0 6px 0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #21252B;
+            border: 1px solid #3E4451;
+            font-size: 14px;
+            line-height: 1.45;
+            color: #ABB2BF;
+            box-sizing: border-box;
+        }
+        .alliance-presence-line .roster-chip {
+            display: inline-flex;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        .alliance-presence-line .roster-role {
+            color: #61AFEF;
+            font-weight: bold;
+        }
+        .alliance-presence-line .roster-num {
+            color: #E5C07B;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+        .alliance-presence-line .roster-names {
+            color: #98C379;
+            font-size: 13px;
+        }
+        .occupy-duty-line {
+            display: none;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 8px 14px;
+            margin-top: 8px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #1E2227;
+            border: 1px solid #3E4451;
+            font-size: 13px;
+            color: #ABB2BF;
+            line-height: 1.45;
+        }
+        .occupy-duty-line .duty-you {
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 2px solid;
+        }
+        .occupy-duty-line .duty-you.ins { color: #E06C75; border-color: #E06C75; background: rgba(224, 108, 117, 0.12); }
+        .occupy-duty-line .duty-you.swap { color: #98C379; border-color: #98C379; background: rgba(152, 195, 121, 0.12); }
+        .occupy-duty-line .duty-counts { color: #D7DEE9; }
+        .occupy-duty-line .duty-hint { color: #E5C07B; font-size: 12px; }
+        .duty-block-primary { box-shadow: 0 0 0 2px rgba(229, 192, 123, 0.35), 0 6px 16px rgba(0,0,0,0.45) !important; opacity: 1; }
+        .duty-block-secondary { opacity: 0.88; border-style: dashed !important; margin-top: 10px !important; padding: 16px 12px !important; }
+        .duty-block-secondary .player-action-countdown { font-size: 52px !important; }
+        .duty-block-secondary .departure-time { font-size: 58px !important; }
+        .duty-role-badge { font-size: 13px; font-weight: bold; letter-spacing: 0.5px; margin-bottom: 8px; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+        .duty-role-badge.primary-ins { color: #E06C75; background: rgba(224,108,117,0.15); }
+        .duty-role-badge.primary-swap { color: #98C379; background: rgba(152,195,121,0.15); }
+        .duty-role-badge.secondary { color: #ABB2BF; background: rgba(62,68,81,0.5); font-weight: normal; }
         .staff-mini-row {
             display: grid;
-            grid-template-columns: 18px minmax(70px, 1fr) 66px 50px 86px;
+            grid-template-columns: 18px minmax(70px, 1fr) 58px 58px 50px 86px;
             align-items: center;
             column-gap: 8px;
             background: #21252B;
@@ -180,6 +708,12 @@
             overflow: hidden;
             text-overflow: ellipsis;
             word-break: keep-all;
+        }
+        .staff-mini-dispatch {
+            text-align: center;
+            color: #61AFEF;
+            font-weight: bold;
+            font-family: var(--utc-number-font);
         }
         .staff-mini-timer {
             text-align: center;
@@ -201,7 +735,7 @@
         }
         .staff-mini-head {
             display: grid;
-            grid-template-columns: 18px minmax(70px, 1fr) 66px 50px 86px;
+            grid-template-columns: 18px minmax(70px, 1fr) 58px 58px 50px 86px;
             align-items: center;
             column-gap: 8px;
             padding: 2px 8px 6px 8px;
@@ -215,8 +749,57 @@
             text-overflow: ellipsis;
             word-break: keep-all;
         }
-        .staff-updown-col { display:flex; flex-direction:column; align-items:center; gap:1px; }
-        .staff-updown-btn { width:14px; height:11px; font-size:7px; padding:0; border:none; border-radius:3px; background:#3E4451; color:white; cursor:pointer; }
+        .staff-rally-pick-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-left: 8px;
+            padding-left: 10px;
+            border-left: 1px solid #3E4451;
+        }
+        .staff-rally-pick-label {
+            font-size: 12px;
+            color: #ABB2BF;
+            margin-right: 2px;
+        }
+        .staff-rally-choice {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            color: #D7DEE9;
+            font-weight: bold;
+            user-select: none;
+        }
+        .staff-rally-choice input {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            border: 2px solid #5C6370;
+            border-radius: 4px;
+            background: #282C34;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .staff-rally-choice input:checked {
+            border-color: #98C379;
+            background: #98C379;
+            box-shadow: inset 0 0 0 2px #282C34;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'%3E%3Cpath fill='none' stroke='%23282C34' stroke-width='1.6' d='M1 5.2L4.2 8.4 11 1.6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: 12px 10px;
+        }
+        .staff-updown-col { display:flex; flex-direction:column; align-items:center; gap:2px; flex-shrink:0; }
+        .staff-updown-btn {
+            width: 22px; height: 18px; font-size: 10px; line-height: 1;
+            padding: 0; border: none; border-radius: 4px;
+            background: #3E4451; color: white; cursor: pointer;
+            touch-action: manipulation;
+        }
         .staff-digit { width:12px; text-align:center; font-size:16px; font-weight:bold; color:#61AFEF; font-family: var(--utc-number-font); }
         .staff-insert-panel {
             background: #2A2E37;
@@ -238,7 +821,7 @@
         }
         .staff-ins-row {
             display: grid;
-            grid-template-columns: 44px minmax(70px, 1fr) 132px 96px 86px;
+            grid-template-columns: 44px minmax(70px, 1fr) minmax(168px, 1.2fr) 72px 58px;
             column-gap: 6px;
             align-items: center;
             background: #21252B;
@@ -264,6 +847,22 @@
         }
         .staff-ins-main { color: #E5C07B; }
         .staff-ins-sub { color: #D08EF2; }
+        .staff-ins-duration-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+        .staff-ins-duration-group {
+            display: flex;
+            align-items: center;
+            gap: 1px;
+            flex-shrink: 0;
+        }
+        .staff-ins-duration-group .staff-digit { font-size: 14px; width: 11px; }
+        .staff-ins-colon { color: #ABB2BF; font-weight: bold; margin: 0 1px; font-size: 13px; }
         .staff-ins-arr { color: #C8D1DE; text-align: right; font-family: var(--utc-number-font); }
         .staff-ins-mark {
             display: flex;
@@ -285,16 +884,110 @@
                 touch-action: manipulation;
             }
             .staff-digit { width: 18px; font-size: 20px; }
-            .staff-mini-row, .staff-mini-head { grid-template-columns: 14px minmax(44px, 1fr) 56px 56px 56px; column-gap: 4px; }
+            .staff-mini-row, .staff-mini-head { grid-template-columns: 14px minmax(40px, 1fr) 50px 50px 46px 56px; column-gap: 4px; }
             .staff-mini-row { padding: 7px 8px; }
             .staff-mini-head { font-size: 10px; padding: 2px 6px 6px 6px; }
-            .staff-ins-row { grid-template-columns: 42px minmax(50px, 1fr) 124px 62px 58px; column-gap: 4px; }
+            .staff-ins-row { grid-template-columns: 42px minmax(50px, 1fr) minmax(150px, 1.2fr) 56px 52px; column-gap: 4px; }
             .staff-ins-name { font-size: 11px; padding: 4px; }
             .staff-mini-name {
                 font-size: 14px;
             }
-            .staff-mini-timer, .staff-mini-sub { font-size: 16px; }
+            .staff-mini-dispatch, .staff-mini-timer, .staff-mini-sub { font-size: 16px; }
             .staff-mini-target { font-size: 12px; letter-spacing: 0; }
+        }
+
+        /* プレーヤー — スマホ向け（操作・カウントダウン視認性） */
+        @media (max-width: 520px) {
+            body {
+                padding: 8px;
+                padding-left: max(8px, env(safe-area-inset-left));
+                padding-right: max(8px, env(safe-area-inset-right));
+                padding-bottom: max(12px, env(safe-area-inset-bottom));
+            }
+            .utc-main-wrapper { padding: 12px 10px; }
+            .utc-main { font-size: 22px; letter-spacing: 1px; }
+            .digital-jst { font-size: 30px; letter-spacing: 1px; }
+            .clock-container { width: 100%; padding: 12px 8px; }
+            #analogClock { width: 132px; height: 132px; }
+            .card { padding: 16px 14px; margin-bottom: 12px; border-radius: 10px; }
+            .mode-pick-wrap { gap: 12px; }
+            .mode-card { padding: 16px; min-height: 52px; }
+            .mode-card-title { font-size: 18px; }
+            .mode-card-sub { font-size: 14px; }
+            .env-btn, .alliance-row, .role-btn, .btn-primary-cta, .btn-quick-start {
+                width: 100%;
+                min-height: 48px;
+                font-size: 17px;
+            }
+            .btn-back, .btn-quick-change { width: 100%; min-height: 44px; }
+            .onboarding-step-title { font-size: 18px; }
+            .onboarding-env-body { font-size: 15px; }
+            .drill-config-panel .onboarding-input,
+            .drill-config-panel select { min-height: 48px; font-size: 16px; }
+            #drillTabCreate, #drillTabJoin { min-height: 48px; font-size: 16px; }
+            .countdown { font-size: clamp(40px, 12vw, 52px); letter-spacing: 2px; }
+            .departure-time { font-size: clamp(32px, 10vw, 38px); }
+            #displayHeaderBlock > div:first-of-type {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 10px !important;
+            }
+            #displayHeaderBlock {
+                padding-bottom: 12px !important;
+            }
+            #displayAllianceName { font-size: 20px !important; text-align: center; width: 100%; }
+            .alliance-presence-line { font-size: 13px !important; gap: 6px !important; padding: 8px 10px !important; }
+            #modeBadge { align-self: center; font-size: 13px !important; padding: 8px 12px !important; }
+            #btnLayoutMap {
+                width: 100% !important;
+                min-height: 48px !important;
+                font-size: 16px !important;
+                padding: 12px !important;
+                box-sizing: border-box;
+            }
+            #display .departure-info {
+                padding: 18px 14px !important;
+                margin-bottom: 14px !important;
+                border-radius: 10px !important;
+            }
+            #display .departure-info > div:first-child {
+                font-size: clamp(18px, 5vw, 24px) !important;
+                line-height: 1.35 !important;
+                margin-bottom: 12px !important;
+            }
+            #display .player-action-countdown,
+            #display [id^="cd_"] {
+                font-size: clamp(52px, 16vw, 76px) !important;
+                letter-spacing: 2px !important;
+                line-height: 1.05 !important;
+                margin: 14px 0 !important;
+                word-break: keep-all;
+            }
+            #display [id^="arr_"] {
+                font-size: clamp(28px, 8vw, 40px) !important;
+                letter-spacing: 1px !important;
+            }
+            #display .departure-info div[style*="font-size: 16px"] {
+                font-size: 15px !important;
+            }
+            #display .departure-info div[style*="font-size:15px"] {
+                font-size: 14px !important;
+            }
+            .btn-edit, .btn-support {
+                min-height: 48px;
+                font-size: 16px;
+                padding: 14px 12px;
+                border-radius: 10px;
+            }
+            .btn-support { margin-top: 12px; }
+            #cardsArea { width: 100%; }
+            .player-action-card div[style*="display:flex"] {
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+            .player-action-card .departure-time { font-size: clamp(28px, 9vw, 38px) !important; }
+            .sync-row { flex-wrap: wrap; justify-content: center; gap: 8px; }
+            .sync-info label, .sync-info button { font-size: 14px; min-height: 40px; }
         }
     </style>
 </head>
@@ -328,7 +1021,7 @@
 
     <div id="topClockArea"></div>
 
-    <div id="multiDeviceWarning" style="display:none; color: #E06C75; font-size: 14px; margin-bottom: 15px; border: 1px dashed #E06C75; padding: 10px; border-radius: 8px; background: rgba(224, 108, 117, 0.1); text-align: left;">
+    <div id="multiDeviceWarning" style="display:none;">
         ⚠️ <b>【重要: 複数端末の方へ】</b><br>
         カウントダウンを正確に聞くため、<b>この画面は、常にゲームで使用する端末とは別の端末で開いたまま</b> にしておいて下さい。
     </div>
@@ -344,21 +1037,50 @@
         <button id="voiceTestBtn" class="btn-audio" style="background: #56B6C2; color: #282C34; margin-bottom: 0;" onclick="playTestAudio()">📢 音声テスト</button>
         <button id="countdownDemoBtn" class="btn-audio" style="background: #E5C07B; color: #282C34; margin-bottom: 0;" onclick="startCountdownDemo()">⏱ カウントダウンテスト</button>
     </div>
+    <div id="voiceVolumePanel" class="voice-volume-panel">
+        <div class="voice-volume-slider-wrap">
+            <input type="range" id="voiceVolumeSlider" class="voice-volume-slider" min="50" max="300" step="5" value="150" orient="vertical"
+                aria-label="号令音量" oninput="onVoiceVolumeSliderInput()" onchange="onVoiceVolumeSliderChange()">
+            <span style="font-size:10px; color:#5C6370;">小</span>
+        </div>
+        <div class="voice-volume-body">
+            <div class="voice-volume-title">🔊 号令音量</div>
+            <div id="voiceVolumeLabel" class="voice-volume-value">150%</div>
+            <div class="voice-volume-hint">音声テストで確認。50%と100%で差が出るか試してください（iPhoneは端末のメディア音量も上げてください）。</div>
+        </div>
+    </div>
     <div id="voiceReadyStatus" class="voice-ready-status">
         <span class="loading-dots" aria-hidden="true"><i></i><i></i><i></i></span>
         <span id="voiceReadyText">VOICEVOX音声を準備中...</span>
     </div>
-    <div id="countdownDemoBox" style="display:none; margin: 0 auto 15px auto; max-width: 420px; background:#21252B; border:1px solid #3E4451; border-radius:10px; padding:12px; text-align:center;">
+    <div id="countdownDemoBox" style="display:none; padding:12px; text-align:center;">
         <div style="font-size:12px; color:#ABB2BF;">デモカウントダウン（本番同等の音声確認）</div>
         <div id="countdownDemoValue" style="font-size:42px; color:#E5C07B; font-weight:900; letter-spacing:2px; margin-top:5px;">--</div>
     </div>
 
-    <div id="step1_intro" class="card">
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <button id="btnModeProd" class="btn-gray" style="flex:1; padding:10px 8px; border-radius:8px;" onclick="selectAppMode('prod')">【本番】通常運用</button>
-            <button id="btnModeDrill" class="btn-gray" style="flex:1; padding:10px 8px; border-radius:8px;" onclick="selectAppMode('drill')">【訓練】参謀主導</button>
+    <div id="quickStartPanel" class="quick-start-panel card" style="display:none;">
+        <div class="qs-title">おかえりなさい</div>
+        <div id="quickStartSummary" class="qs-summary"></div>
+        <div class="quick-start-actions">
+            <button type="button" class="btn-quick-start" onclick="quickStartContinue()">そのまま開始</button>
+            <button type="button" class="btn-quick-change" onclick="quickStartChangeSettings()">設定を変える</button>
         </div>
-        <div style="border: 2px solid #E06C75; background: rgba(224, 108, 117, 0.1); padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: left; box-sizing: border-box; width: 100%;">
+    </div>
+
+    <div id="step1_intro" class="card onboarding-card">
+        <p class="mode-pick-hint">どちらで使いますか？<br>※普段は「同盟の練習」、SVSの日は下を選択</p>
+        <div class="mode-pick-wrap">
+            <button type="button" id="btnModeDrill" class="mode-card mode-card-drill selected" onclick="selectAppMode('drill')">
+                <span class="mode-card-title">同盟の練習</span>
+                <p class="mode-card-sub">自同盟だけの部屋。ステ戦、砦要塞戦などで活用下さい。</p>
+            </button>
+            <button type="button" id="btnModeProd" class="mode-card mode-card-prod" onclick="selectAppMode('prod')">
+                <span class="mode-card-title">SVS（3301全体）</span>
+                <p class="mode-card-sub">全同盟が王城で使用</p>
+            </button>
+        </div>
+        <p id="chromeNoticeMini" class="chrome-notice-mini chrome-notice-collapsed">ブラウザはChrome等で開いてください。<button type="button" onclick="showChromeNoticeFull()">注意を表示</button></p>
+        <div id="chromeNoticeFull" class="chrome-notice-full">
             <div style="color: #E06C75; font-size: 16px; font-weight: bold; margin-bottom: 8px; text-align: center;">⚠️ 必ずGoogle Chromeなどの<br>ブラウザーで開いて下さい！</div>
             <div style="color: #ABB2BF; font-size: 13px; line-height: 1.5; margin-bottom: 15px;">Discordなどのアプリ上で開くと上手くツールが機能しません。また、設定も初期設定に戻ってしまう為、必ずブラウザーを使用して下さい。</div>
             <div style="display: flex; align-items: center; background: #1E2227; border: 1px solid #3E4451; border-radius: 6px; padding: 5px; width: 100%; box-sizing: border-box;">
@@ -367,63 +1089,72 @@
             </div>
         </div>
 
-        <h2 style="color: #61AFEF; margin-top:0;">ご利用環境の確認</h2>
-        <p style="font-size: 16px; margin-top: 15px;">ゲーム画面とこのツールを<br><span style="color:#E5C07B; font-weight:bold;">別々の端末（スマホとPC等）</span><br>で同時に開くことはできますか？</p>
-        <button class="role-btn inactive" style="background:#4CAF50; color:white;" onclick="selectEnv('2device')">💻 はい（別端末で開ける）</button>
-        <button class="role-btn inactive" style="background:#E06C75; color:white;" onclick="selectEnv('1device')">📱 いいえ（スマホ1台のみ）</button>
+        <h2 class="onboarding-env-title">ご利用環境の確認</h2>
+        <p class="onboarding-env-body">ゲーム画面とこのツールを<br><span style="color:#E5C07B; font-weight:bold;">別々の端末（スマホとPC等）</span><br>で同時に開くことはできますか？</p>
+        <button type="button" id="btnEnv2device" class="env-btn env-btn-2device" onclick="selectEnv('2device')">💻 はい（別端末で開ける）</button>
+        <button type="button" id="btnEnv1device" class="env-btn env-btn-1device" onclick="selectEnv('1device')">📱 いいえ（スマホ1台のみ）</button>
     </div>
 
-    <div id="step2_sync" class="card" style="display:none;">
+
+    <div id="step2_sync" style="display:none !important;" class="card">
         <h2 style="color: #E06C75; margin-top:0;">【重要】時計の準備</h2>
         <p style="font-size: 14px; text-align: left;">ゲームを開くとツールの音声が聞こえなくなるため、お手元に<b style="color:#98C379;">秒まで分かる時計</b>をご用意ください。<br>上部の「日本時間」と、お手元の時計の秒数をピッタリ合わせてから次へ進んでください。</p>
         <button class="role-btn active" onclick="confirmSync()">⏱️ 時間合わせOK！</button>
         <button class="btn-back" onclick="goBackTo('step1_intro')">◀ ひとつ前に戻る</button>
     </div>
 
-    <div id="step2_5_alliance" class="card" style="display:none;">
-        <h3 id="allianceStepTitle" style="margin-top:0;">SVS参加する同盟の選択</h3>
-        <div id="drillConfigArea" style="display:none; background:#1E2227; border:1px solid #3E4451; border-radius:8px; padding:10px; margin-bottom:10px; text-align:left;">
-            <div style="font-size:12px; color:#ABB2BF; margin-bottom:6px;">訓練モード（同盟内限定）</div>
+    <div id="step2_5_alliance" class="card onboarding-card" style="display:none;">
+        <h3 id="allianceStepTitle" class="onboarding-step-title">参加する同盟を選ぶ</h3>
+        <div id="oneDeviceClockBanner" class="one-device-banner" style="display:none;">
+            <b style="color:#E06C75;">スマホ1台:</b> 上部の日本時間と手元の時計を<b style="color:#98C379;">秒まで</b>合わせてから登録してください。
+        </div>
+        <div id="onboardingFormError" class="field-error-global"></div>
+        <div id="drillConfigArea" class="drill-config-panel" style="display:none;">
+            <div class="drill-config-label">同盟内の練習（ルーム作成・参加）</div>
             <div style="display:flex; gap:8px; margin-bottom:8px;">
                 <button id="drillTabCreate" class="btn-green" style="flex:1; padding:8px; border-radius:6px;" onclick="setDrillTab('create')">新規作成</button>
                 <button id="drillTabJoin" class="btn-gray" style="flex:1; padding:8px; border-radius:6px;" onclick="setDrillTab('join')">ルーム参加</button>
             </div>
             <div id="drillCreateArea">
-                <input type="text" id="drillAllianceNameInput" placeholder="訓練同盟名（例: MTC訓練）" style="width:100%; box-sizing:border-box; margin-bottom:6px; padding:8px; border-radius:6px; border:1px solid #3E4451; background:#181A1F; color:white;">
-                <input type="text" id="drillRoomKeyInput" placeholder="参加コード（同盟内共有）" style="width:100%; box-sizing:border-box; margin-bottom:6px; padding:8px; border-radius:6px; border:1px solid #3E4451; background:#181A1F; color:white;">
+                <input type="text" id="drillAllianceNameInput" class="onboarding-input" placeholder="同盟名（例: MTC練習）">
+                <div id="errDrillAllianceName" class="field-error"></div>
+                <input type="text" id="drillRoomKeyInput" class="onboarding-input" placeholder="参加コード（同盟内共有）">
+                <div id="errDrillRoomKey" class="field-error"></div>
                 <button class="btn-green" style="width:100%; padding:8px; border-radius:6px;" onclick="createDrillRoom()">作成して入る</button>
             </div>
             <div id="drillJoinArea" style="display:none;">
-                <select id="drillRoomSelect" onchange="selectedDrillRoomId=this.value" style="width:100%; box-sizing:border-box; margin-bottom:6px; padding:8px; border-radius:6px; border:1px solid #3E4451; background:#181A1F; color:white;"></select>
-                <input type="text" id="drillJoinCodeInput" placeholder="参加コード" style="width:100%; box-sizing:border-box; margin-bottom:6px; padding:8px; border-radius:6px; border:1px solid #3E4451; background:#181A1F; color:white;">
+                <select id="drillRoomSelect" class="onboarding-input" onchange="selectedDrillRoomId=this.value"></select>
+                <div id="errDrillRoomSelect" class="field-error"></div>
+                <input type="text" id="drillJoinCodeInput" class="onboarding-input" placeholder="参加コード（参謀から共有）">
+                <div id="errDrillJoinCode" class="field-error"></div>
                 <button class="btn-gray" style="width:100%; padding:8px; border-radius:6px;" onclick="joinDrillRoom()">選択ルームに参加</button>
             </div>
+            <div id="drillStatusMsg" style="min-height:18px; margin-top:6px; font-size:12px; color:#98C379;"></div>
         </div>
-        <button id="btnAln0" class="role-btn inactive" onclick="selectAlliance(0)">同盟1</button>
-        <button id="btnAln1" class="role-btn inactive" onclick="selectAlliance(1)">同盟2</button>
-        <button id="btnAln2" class="role-btn inactive" onclick="selectAlliance(2)">同盟3</button>
-        <button class="btn-back" onclick="goBackToEnv()">◀ ひとつ前に戻る</button>
-    </div>
-
-    <div id="step3_setup" class="card" style="display:none;">
+        <div id="prodAlliancePick" class="alliance-list">
+        <button type="button" id="btnAln0" class="alliance-row" onclick="selectAlliance(0)">XYZ</button>
+        <button type="button" id="btnAln1" class="alliance-row" onclick="selectAlliance(1)">MTC</button>
+        <button type="button" id="btnAln2" class="alliance-row" onclick="selectAlliance(2)">APL</button>
+        </div>
+        <div id="roleSetupSection" class="role-setup-section" style="display:none;">
         <div id="allianceDisplay" style="color: #98C379; font-weight: bold; margin-bottom: 15px; font-size: 18px;"></div>
-        <h3 style="margin-top:0;">役割を選択</h3>
+        <h3 class="onboarding-step-title">役割を選択</h3>
         <button id="btnStaff" class="role-btn inactive" onclick="setRole('staff')" style="background:#E5C07B; color:#282C34;">参謀（同盟内の集結指示）</button>
         <button id="btnLeader1" class="role-btn inactive" onclick="setRole('leader1')">集結主 (第1班)</button>
         <button id="btnLeader2" class="role-btn inactive" onclick="setRole('leader2')">集結主 (第2班)</button>
         <button id="btnRider" class="role-btn inactive" onclick="setRole('rider')">乗り手</button>
         <div id="staffPlayerRoleArea" style="display:none; background:#1E2227; border:1px solid #3E4451; border-radius:10px; padding:10px; margin:10px 0;">
-            <div style="font-size:13px; color:#E5C07B; margin-bottom:8px; font-weight:bold;">参謀として参加するプレーヤー役割</div>
+            <div id="staffRoleHint" style="font-size:13px; color:#E5C07B; margin-bottom:8px; font-weight:bold;">次: 担当する班を選んでください</div>
             <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:center;">
-                <button id="btnStaffLeader1" class="btn-gray" style="padding:8px 12px;" onclick="setStaffPlayerRole('leader1')">第1班 集結主</button>
-                <button id="btnStaffLeader2" class="btn-gray" style="padding:8px 12px;" onclick="setStaffPlayerRole('leader2')">第2班 集結主</button>
-                <button id="btnStaffRider" class="btn-gray" style="padding:8px 12px;" onclick="setStaffPlayerRole('rider')">乗り手</button>
+                <button id="btnStaffLeader1" class="btn-gray" style="padding:8px 12px; min-height:44px;" onclick="setStaffPlayerRole('leader1')">第1班 集結主</button>
+                <button id="btnStaffLeader2" class="btn-gray" style="padding:8px 12px; min-height:44px;" onclick="setStaffPlayerRole('leader2')">第2班 集結主</button>
+                <button id="btnStaffRider" class="btn-gray" style="padding:8px 12px; min-height:44px;" onclick="setStaffPlayerRole('rider')">乗り手</button>
             </div>
         </div>
-        
         <div id="inputsArea" style="display:none;">
             <div class="input-group">
                 <input type="text" id="pName" placeholder="名前を入力" style="width:80%; display:none;">
+                <div id="errPName" class="field-error"></div>
                 <div style="color:#61AFEF; font-weight:bold; margin-top:5px;">行軍時間を入力</div>
                 <div>
                     <input type="number" id="pMin" value="0" style="width:50px;"> 分 
@@ -431,10 +1162,15 @@
                 </div>
                 <div style="font-size: 12px; color: #E5C07B; font-weight: bold; margin-top: 5px;">※王城戦開始21:00～に入力して下さい。</div>
             </div>
-            <button class="role-btn active" onclick="register()">登録して開始</button>
+            <button type="button" class="btn-primary-cta" onclick="register()">登録して開始</button>
         </div>
-        <button class="btn-back" onclick="goBackTo('step2_5_alliance')">◀ 同盟の選択に戻る</button>
+        <div id="errRole" class="field-error" style="text-align:center;"></div>
+        </div>
+        <button class="btn-back" onclick="goBackToEnv()">◀ ひとつ前に戻る</button>
     </div>
+
+    <div id="step3_setup" class="card" style="display:none !important;"></div>
+
 
     <div id="clockContainer" class="clock-container" style="display:none;">
         <canvas id="analogClock" width="160" height="160"></canvas>
@@ -443,10 +1179,14 @@
     </div>
 
     <div id="display" style="display:none;">
-        <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; border-bottom: 2px solid #3E4451; padding-bottom: 10px;">
-            <div id="displayAllianceName" style="font-size: 24px; font-weight: bold; color: #98C379;"></div>
-            <div id="modeBadge" style="font-size:12px; font-weight:bold; padding:6px 10px; border-radius:6px; background:#3E4451; color:#ABB2BF;">【本番】</div>
-            <button type="button" id="btnLayoutMap" onclick="toggleMap()" style="background: #E5C07B; color: #282C34; border: none; border-radius: 6px; padding: 6px 15px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🗺️ 今回の配置図</button>
+        <div id="displayHeaderBlock" style="margin-bottom: 10px; border-bottom: 2px solid #3E4451; padding-bottom: 10px;">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <div id="displayAllianceName" style="font-size: 24px; font-weight: bold; color: #98C379;"></div>
+                <div id="modeBadge" style="font-size:12px; font-weight:bold; padding:6px 10px; border-radius:6px; background:#3E4451; color:#ABB2BF;">【本番】</div>
+                <button type="button" id="btnLayoutMap" onclick="toggleMap()" style="background: #E5C07B; color: #282C34; border: none; border-radius: 6px; padding: 6px 15px; font-weight: bold; font-size: 14px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🗺️ 今回の配置図</button>
+            </div>
+            <div id="alliancePresenceLine" class="alliance-presence-line" aria-live="polite"></div>
+            <div id="occupyDutyLine" class="occupy-duty-line" aria-live="polite"></div>
         </div>
         
         <div id="mapContainer" style="max-height: 0px; overflow: hidden; transition: max-height 0.3s ease-in-out, margin-bottom 0.3s ease-in-out; margin-bottom: 0px;">
@@ -455,6 +1195,7 @@
 
         <div id="departureBox"></div>
         <div id="staffCommandPanel" class="card staff-panel" style="display:none;">
+            <div id="staffAllianceHead" class="staff-alliance-head" style="display:none;"></div>
             <div style="color:#E5C07B; font-weight:bold; margin-bottom:10px;">参謀用：自同盟の集結指示</div>
             <div id="staffCommandLabel" style="font-size:12px; color:#ABB2BF; margin-bottom:10px;"></div>
             <div id="staffInsertPanel" style="display:none;"></div>
@@ -523,10 +1264,15 @@
     let drillAllianceName = "";
     let selectedDrillRoomId = "";
     let drillTab = "create";
+    let pendingDrillModePayload = null;
+    let pendingDrillModeFailMessage = "";
+    let pendingDrillRoomAction = "";
     let lastDrillRoomsSig = "";
     let myAllianceIdx = -1; 
+    const VOICE_VOLUME_DEFAULT_PCT = 150;
+    const VOICE_VOLUME_MIN_PCT = 50;
+    const VOICE_VOLUME_MAX_PCT = 300;
     let audioEnabled = true;
-    let audioCtx = null; 
     let ws, myRole=null, myName="", myMarchSec=0, timeOffset=0;
     let lastRegisteredRole = localStorage.getItem("utc_last_role") || null;
     let supportUserName = "";
@@ -544,12 +1290,13 @@
     let cachedArrTimes = {};
     let cachedInsTime = null;
     
-    const voiceBufferCache = {};
+    const voiceBlobUrlCache = {};
     const voiceFetchPromises = {};
     let voiceSpeakers = [];
     let selectedVoiceStyleId = parseInt(localStorage.getItem("utc_voice_style_id") || "3");
     let globalVoiceLockTime = 0;
-    let currentAudioSource = null;
+    let currentVoiceAudioEl = null;
+    let voiceUnlockElem = null;
     let lastVoiceKeys = {};
     let countdownDemoTimer = null;
     let countdownDemoValue = 10;
@@ -559,10 +1306,21 @@
     let staffPanelRafScheduled = false;
     let staffPanelRafHandle = null;
     let lastClientDebugSig = "";
-    const clientBuildTag = "player-gorei-fallback-20260508-0010";
+    const clientBuildTag = "player-occupy-duty-20260524-006";
+    const OCCUPY_CMD_MAX_AHEAD_MS = 4 * 3600 * 1000;
+    /** サーバー _occupy_cmd_ts_active と同型（着弾直後5秒まで有効） */
+    function isActiveOccupyCommandSec(tsSec, nowMs) {
+        if (tsSec == null || tsSec === "") return false;
+        const t = Number(tsSec) * 1000;
+        return t > (nowMs - 5000) && t <= nowMs + OCCUPY_CMD_MAX_AHEAD_MS;
+    }
     let lastStaffGoreiHint = {};
     let pendingGoreiHints = {};
     let drillStaffLive = { present: false, name: "" };
+    let lastAlliancePresence = null;
+    let lastOccupyDuty = null;
+    let lastOccupyDutySig = "";
+    let lastAlliancePresenceSig = "";
     let voicevoxAvailable = true;
 
     function staffPanelStructuralSig() {
@@ -574,7 +1332,7 @@
             `ins=${localState.insert_target_idx ?? -1}`,
             `insfix=${localState.insert_fixed_target ?? "x"}`,
             `insfire=${localState.insert_fire_target ?? "x"}`,
-            `insoff=${localState.insert_offset_tenth ?? -1}`,
+            `insmargin=${getInsertMarginSec(localState)}`,
             `glast=${(localState.gorei_last_target || []).join(",")}`
         ];
         for (let i = 0; i < 3; i++) {
@@ -614,18 +1372,33 @@
             staffMiniAnchors[i] = { iso, stKind, deadline, refPerf: performance.now(), refSynced: getSyncedNow().getTime() };
         }
     }
-    function computeMainSecForStaffRow(timerIdx, t) {
-        if (!t) return 0;
+    /** 参謀表: 出征開始まで（state4 の start_at まで。それ以外は表示なし） */
+    function computeDispatchSecForStaffRow(timerIdx, t) {
+        if (!t || Number(t.state) !== 4 || !t.start_at) return null;
         const a = staffMiniAnchors[timerIdx];
-        if (a && typeof a.deadline === "number" && typeof a.refPerf === "number" && typeof a.refSynced === "number") {
+        if (a && a.stKind === 4 && typeof a.deadline === "number" && typeof a.refPerf === "number" && typeof a.refSynced === "number") {
             const nowLin = a.refSynced + (performance.now() - a.refPerf);
             return Math.max(0, Math.floor((a.deadline - nowLin) / 1000));
         }
-        if (t.state === 2) return 0;
         const nowTs = getSyncedNow().getTime();
-        if (t.state === 4 && t.start_at) return Math.max(0, Math.floor((new Date(t.start_at).getTime() - nowTs) / 1000));
-        if (t.state === 1 && t.end) return Math.max(0, Math.floor((new Date(t.end).getTime() - nowTs) / 1000));
-        return Math.max(0, Math.floor(Number(t.sec || 0)));
+        return Math.max(0, Math.floor((new Date(t.start_at).getTime() - nowTs) / 1000));
+    }
+    /** 参謀表: 集結時間（state1=集結CD、state4=設定値、state2=0） */
+    function computeRallySecForStaffRow(timerIdx, t, defaultRally) {
+        if (!t) return 0;
+        const rallyBase = Math.max(0, Math.floor(Number(defaultRally || 0) + Number(t.off || 0)));
+        if (Number(t.state) === 4) return rallyBase;
+        if (Number(t.state) === 2) return 0;
+        const a = staffMiniAnchors[timerIdx];
+        if (a && a.stKind === 1 && typeof a.deadline === "number" && typeof a.refPerf === "number" && typeof a.refSynced === "number") {
+            const nowLin = a.refSynced + (performance.now() - a.refPerf);
+            return Math.max(0, Math.floor((a.deadline - nowLin) / 1000));
+        }
+        if (Number(t.state) === 1 && t.end) {
+            const nowTs = getSyncedNow().getTime();
+            return Math.max(0, Math.floor((new Date(t.end).getTime() - nowTs) / 1000));
+        }
+        return Math.max(0, Math.floor(Number(t.sec || 0) || rallyBase));
     }
     function staffFormatMmSs(sec) {
         sec = Math.max(0, Math.floor(Number(sec)));
@@ -690,9 +1463,15 @@
                 const nm = (t && t.name && t.name.trim() !== "") ? t.name : "---";
                 if (nameEl.textContent !== nm) nameEl.textContent = nm;
             }
+            const dispEl = document.getElementById("staffMiniDispatch_" + i);
+            if (dispEl) {
+                const dispSec = computeDispatchSecForStaffRow(i, t);
+                const dispTxt = dispSec == null ? "--:--" : staffFormatMmSs(dispSec);
+                if (dispEl.textContent !== dispTxt) dispEl.textContent = dispTxt;
+            }
             const mainEl = document.getElementById("staffMiniMain_" + i);
             if (!mainEl) continue;
-            const mainTxt = staffFormatMmSs(computeMainSecForStaffRow(i, t));
+            const mainTxt = staffFormatMmSs(computeRallySecForStaffRow(i, t, localState.default_rally));
             if (mainEl.textContent !== mainTxt) mainEl.textContent = mainTxt;
             const subEl = document.getElementById("staffMiniSub_" + i);
             if (subEl) {
@@ -700,12 +1479,13 @@
                 if (subEl.textContent !== subTxt) subEl.textContent = subTxt;
             }
             const tgtEl = document.getElementById("staffMiniTgt_" + i);
-            if (!tgtEl) continue;
-            let tgtTxt = "--:--";
-            const land = t ? staffStableLandingMs(t, localState.default_rally) : null;
-            if (land != null) tgtTxt = staffFormatImpactUtcMmSs(land);
-            const tgtLine = `\u25b6${tgtTxt}`;
-            if (tgtEl.textContent !== tgtLine) tgtEl.textContent = tgtLine;
+            if (tgtEl) {
+                let tgtTxt = "--:--";
+                const land = t ? staffStableLandingMs(t, localState.default_rally) : null;
+                if (land != null) tgtTxt = staffFormatImpactUtcMmSs(land);
+                const tgtLine = `\u25b6${tgtTxt}`;
+                if (tgtEl.textContent !== tgtLine) tgtEl.textContent = tgtLine;
+            }
         }
     }
     function updateStaffGoreiTargetsOnly() {
@@ -742,6 +1522,7 @@
         if (sig !== lastStaffPanelSig) renderStaffCommandPanel();
         else {
             syncStaffRowAnchors();
+            syncStaffDrillRallyPickInPanels();
             updateStaffGoreiTargetsOnly();
             updateStaffMiniTimersOnly();
             updateStaffInsertTimersOnly();
@@ -753,10 +1534,11 @@
         const payload = { cmd: cmd, idx: idx };
         if (val !== undefined) payload.val = val;
         ws.send(JSON.stringify(payload));
-        if (cmd === "mod_insert_offset_tenth") {
-            const cur = Number(localState.insert_offset_tenth ?? -1);
-            const next = Math.max(-50, Math.min(0, cur + Number(val || 0)));
-            localState.insert_offset_tenth = next;
+        if (cmd === "mod_insert_margin" || cmd === "mod_insert_offset_tenth") {
+            const cur = getInsertMarginSec(localState);
+            const next = Math.max(0, Math.min(5, cur + Number(val || 0)));
+            localState.insert_margin_sec = next;
+            localState.insert_offset_tenth = -next * 10;
             cachedInsTime = null;
             renderStaffInsertPanel();
             return;
@@ -767,8 +1549,7 @@
             const sumMs = getStaffInsertSummaryTargetMs(getSyncedNow().getTime());
             const autoBase = (sumMs != null) ? (sumMs / 1000) : null;
             const base = Number(localState.insert_fixed_target || autoBase || (nowTs + 1));
-            const next = base + d;
-            localState.insert_fixed_target = (next > nowTs + 1) ? next : null;
+            localState.insert_fixed_target = base + d;
             cachedInsTime = null;
             renderStaffInsertPanel();
             return;
@@ -782,10 +1563,14 @@
         }
         if (cmd === "fire_insert_fixed_target") {
             const nowTs = getSyncedNow().getTime() / 1000;
-            const tgt = Number(localState.insert_fixed_target || 0);
-            if (tgt > nowTs + 1) localState.insert_fire_target = tgt;
+            const autoTs = getStaffInsertAutoTargetMs(getSyncedNow().getTime());
+            const autoSec = autoTs != null ? autoTs / 1000 : 0;
+            const tgt = Number(localState.insert_fixed_target || autoSec || 0);
+            if (tgt) localState.insert_fire_target = tgt;
             cachedInsTime = null;
+            lastActionState = "";
             renderStaffInsertPanel();
+            if (typeof runPlayerDisplayTick === "function") runPlayerDisplayTick();
             return;
         }
         const t = localState.timers[idx];
@@ -810,6 +1595,7 @@
             localState.insert_target_idx = (localState.insert_target_idx === idx) ? -1 : idx;
             cachedInsTime = null;
         }
+        if (cmd === "mod_main" || cmd === "mod_sub") updateStaffInsertTimersOnly();
         renderStaffCommandPanel();
         startStaffPanelTicker();
     }
@@ -820,52 +1606,67 @@
         if (t.state === 1 && t.end) return Math.max(0, Math.floor((new Date(t.end).getTime() - nowTs) / 1000));
         return Math.max(0, Math.floor(Number(t.sec || 0)));
     }
+    function getInsertMarginSec(data) {
+        if (!data) return 1;
+        if (data.insert_margin_sec != null) {
+            return Math.max(0, Math.min(5, Number(data.insert_margin_sec)));
+        }
+        const tenth = Number(data.insert_offset_tenth ?? -10);
+        return Math.max(0, Math.min(5, Math.round(-tenth / 10) || 1));
+    }
     function getStaffInsertAutoTargetMs(nowTs) {
-        if (!localState) return null;
-        const marked = Number(localState.insert_target_idx);
-        if (marked >= 0 && marked < 3) {
-            const mt = localState.timers[marked];
-            if (mt && mt.state !== 0) {
-                const mTgt = getTargetTime(mt, nowTs, localState.default_rally);
-                if (mTgt) return mTgt - 1000;
-            }
-        }
-        const candidates = [];
-        for (let i = 0; i < 3; i++) {
-            const t = localState.timers[i];
-            if (!t || t.state === 0) continue;
-            const tgt = getTargetTime(t, nowTs, localState.default_rally);
-            if (tgt) candidates.push(tgt - 1000);
-        }
-        return candidates.length ? Math.max(...candidates) : null;
+        return computeInsertLandingMsFromEnemy(localState, nowTs);
     }
     function getStaffInsertSummaryTargetMs(nowTs) {
         if (!localState) return null;
-        const autoMs = getStaffInsertAutoTargetMs(nowTs);
         const fireMs = localState.insert_fire_target ? Number(localState.insert_fire_target) * 1000 : null;
-        // 上段差込表示は「号令中」だけ固定を使う。▲▼調整中(未号令)は自動値のまま。
-        if (fireMs && fireMs > nowTs) {
-            if (autoMs != null && fireMs <= autoMs) {
-                localState.insert_fire_target = null;
-            } else {
-                return fireMs;
-            }
+        if (fireMs && fireMs > nowTs) return fireMs;
+        return getStaffInsertAutoTargetMs(nowTs);
+    }
+    function staffSecToDigits(sec) {
+        sec = Math.max(0, Math.floor(Number(sec) || 0));
+        const mm = Math.floor(sec / 60);
+        const ss = sec % 60;
+        return { mm10: Math.floor(mm / 10), mm1: mm % 10, ss10: Math.floor(ss / 10), ss1: ss % 10 };
+    }
+    function buildStaffInsUpdownCol(i, cmd, baseId, colorClass, delta, part, val) {
+        return `<div class="staff-updown-col"><button type="button" class="staff-updown-btn" onclick="sendStaffEnemyCommand('${cmd}', ${i}, ${delta})">▲</button><div class="staff-digit staff-ins-mini ${colorClass}" id="${baseId}_${part}_${i}">${val}</div><button type="button" class="staff-updown-btn" onclick="sendStaffEnemyCommand('${cmd}', ${i}, ${-delta})">▼</button></div>`;
+    }
+    function buildStaffInsMainDuration(i, sec) {
+        const d = staffSecToDigits(sec);
+        return `<div class="staff-ins-duration-group">${buildStaffInsUpdownCol(i, "mod_main", "staffInsMain", "staff-ins-main", 600, "mm10", d.mm10)}${buildStaffInsUpdownCol(i, "mod_main", "staffInsMain", "staff-ins-main", 60, "mm1", d.mm1)}<span class="staff-ins-colon">:</span>${buildStaffInsUpdownCol(i, "mod_main", "staffInsMain", "staff-ins-main", 10, "ss10", d.ss10)}${buildStaffInsUpdownCol(i, "mod_main", "staffInsMain", "staff-ins-main", 1, "ss1", d.ss1)}</div>`;
+    }
+    function buildStaffInsSubDuration(i, sec) {
+        const d = staffSecToDigits(sec);
+        return `<div class="staff-ins-duration-group">${buildStaffInsUpdownCol(i, "mod_sub", "staffInsSub", "staff-ins-sub", 60, "m1", d.mm1)}<span class="staff-ins-colon">:</span>${buildStaffInsUpdownCol(i, "mod_sub", "staffInsSub", "staff-ins-sub", 10, "s10", d.ss10)}${buildStaffInsUpdownCol(i, "mod_sub", "staffInsSub", "staff-ins-sub", 1, "s1", d.ss1)}</div>`;
+    }
+    function setStaffInsDurationDigits(baseId, i, digits, subMarch) {
+        const set = (part, val) => {
+            const el = document.getElementById(`${baseId}_${part}_${i}`);
+            if (el) el.textContent = String(val);
+        };
+        if (subMarch) {
+            set("m1", digits.mm1);
+            set("s10", digits.ss10);
+            set("s1", digits.ss1);
+        } else {
+            set("mm10", digits.mm10);
+            set("mm1", digits.mm1);
+            set("ss10", digits.ss10);
+            set("ss1", digits.ss1);
         }
-        return autoMs;
     }
     function updateStaffInsertTimersOnly() {
         if (!localState) return;
         const nowTs = getSyncedNow().getTime();
         for (let i = 0; i < 3; i++) {
             const t = localState.timers[i];
-            const mainEl = document.getElementById("staffInsMain_" + i);
-            const subEl = document.getElementById("staffInsSub_" + i);
             const tgtEl = document.getElementById("staffInsArr_" + i);
-            if (mainEl) mainEl.textContent = staffFormatMmSs(staffEnemyMainSec(t, nowTs));
-            if (subEl) subEl.textContent = staffFormatMmSs(staffMarchDisplaySec(t));
+            setStaffInsDurationDigits("staffInsMain", i, staffSecToDigits(staffEnemyMainSec(t, nowTs)), false);
+            setStaffInsDurationDigits("staffInsSub", i, staffSecToDigits(staffMarchDisplaySec(t)), true);
             if (tgtEl) {
                 const tg = (t && t.state !== 0) ? getTargetTime(t, nowTs, localState.default_rally) : null;
-                tgtEl.textContent = tg ? staffFormatImpactUtcMmSs(tg) : "--:--";
+                tgtEl.textContent = tg ? ("▶" + staffFormatImpactUtcMmSs(tg)) : "--:--";
             }
         }
         const sumTgt = getStaffInsertSummaryTargetMs(nowTs);
@@ -876,8 +1677,8 @@
         const autoMs = getStaffInsertAutoTargetMs(nowTs);
         const fixMs = localState.insert_fixed_target ? Number(localState.insert_fixed_target) * 1000 : null;
         const fireMs = localState.insert_fire_target ? Number(localState.insert_fire_target) * 1000 : null;
-        const isFired = !!(fireMs && fireMs > nowTs && !(autoMs != null && fireMs <= autoMs));
-        const isFixed = !!(fixMs && fixMs > nowTs && !(autoMs != null && fixMs <= autoMs));
+        const isFired = !!(fireMs && fireMs > nowTs);
+        const isFixed = !!(fixMs && fixMs > nowTs);
         const digitRefMs = (isFixed ? fixMs : (sumTgt || nowTs));
         const d = new Date(digitRefMs);
         const mm = String(d.getUTCMinutes()).padStart(2, "0");
@@ -890,9 +1691,6 @@
         if (mm1) mm1.textContent = String(parseInt(mm, 10) % 10);
         if (ss10) ss10.textContent = String(Math.floor(parseInt(ss, 10) / 10));
         if (ss1) ss1.textContent = String(parseInt(ss, 10) % 10);
-        if (autoMs != null && fixMs != null && fixMs <= autoMs) {
-            localState.insert_fixed_target = null;
-        }
     }
 
     function renderStaffInsertPanel() {
@@ -913,17 +1711,17 @@
         const autoMs = getStaffInsertAutoTargetMs(nowTs);
         const fixMs = localState.insert_fixed_target ? Number(localState.insert_fixed_target) * 1000 : null;
         const fireMs = localState.insert_fire_target ? Number(localState.insert_fire_target) * 1000 : null;
-        const sumFired = !!(fireMs && fireMs > nowTs && !(autoMs != null && fireMs <= autoMs));
-        const sumFixed = !!(fixMs && fixMs > nowTs && !(autoMs != null && fixMs <= autoMs));
-        const insOffTenth = Number(localState.insert_offset_tenth ?? -1);
-        const insOffText = `${(insOffTenth / 10).toFixed(1)}秒`;
+        const sumFired = !!(fireMs && fireMs > nowTs);
+        const sumFixed = !!(fixMs && fixMs > nowTs);
+        const insMarginSec = getInsertMarginSec(localState);
+        const insMarginText = `${insMarginSec}秒`;
 
         let rows = "";
         for (let i = 0; i < 3; i++) {
             const t = localState.timers[i];
             const nm = escapeHtml((t && t.name) ? t.name : "");
-            const mainTxt = staffFormatMmSs(staffEnemyMainSec(t, nowTs));
-            const subTxt = staffFormatMmSs(staffMarchDisplaySec(t));
+            const mainSec = staffEnemyMainSec(t, nowTs);
+            const subSec = staffMarchDisplaySec(t);
             const tgt = (t && t.state !== 0) ? getTargetTime(t, nowTs, localState.default_rally) : null;
             const tgtTxt = tgt ? staffFormatImpactUtcMmSs(tgt) : "--:--";
             const checked = Number(localState.insert_target_idx) === i ? "checked" : "";
@@ -931,9 +1729,9 @@
                 <div class="staff-ins-row">
                     <label class="staff-ins-mark"><span>ﾏｰｸ</span><input type="radio" name="staffInsTarget" ${checked} onclick="sendStaffEnemyCommand('set_insert_target', ${i})"></label>
                     <input class="staff-ins-name" maxlength="16" placeholder="敵${i + 1}名" value="${nm}" onblur="sendStaffEnemyCommand('update_name', ${i}, this.value)" onkeydown="if(event.key==='Enter') sendStaffEnemyCommand('update_name', ${i}, this.value)">
-                    <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
-                        <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_main', ${i}, 60)">▲</button><div class="staff-ins-mini staff-ins-main" id="staffInsMain_${i}">${mainTxt}</div><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_main', ${i}, -60)">▼</button></div>
-                        <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_sub', ${i}, 10)">▲</button><div class="staff-ins-mini staff-ins-sub" id="staffInsSub_${i}">${subTxt}</div><button class="staff-updown-btn" onclick="sendStaffEnemyCommand('mod_sub', ${i}, -10)">▼</button></div>
+                    <div class="staff-ins-duration-wrap">
+                        ${buildStaffInsMainDuration(i, mainSec)}
+                        ${buildStaffInsSubDuration(i, subSec)}
                     </div>
                     <div style="display:flex; gap:4px; justify-content:center;">
                         <button class="staff-btn staff-btn-green" style="padding:4px 6px; font-size:11px;" onclick="sendStaffEnemyCommand('start', ${i})">▶</button>
@@ -972,13 +1770,13 @@
                     </div>
                 </div>
                 <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:8px;">
-                    <span style="font-size:12px; color:#ABB2BF;">到着-1秒 補正</span>
-                    <button class="staff-updown-btn" style="width:22px; height:20px; font-size:12px;" onclick="sendStaffEnemyCommand('mod_insert_offset_tenth', null, 1)">▲</button>
-                    <div id="staffInsOffsetVal" style="min-width:58px; text-align:center; color:#E5C07B; font-weight:bold; font-family:var(--utc-number-font);">${insOffText}</div>
-                    <button class="staff-updown-btn" style="width:22px; height:20px; font-size:12px;" onclick="sendStaffEnemyCommand('mod_insert_offset_tenth', null, -1)">▼</button>
-                    <span style="font-size:11px; color:#ABB2BF;">(0.0〜-5.0)</span>
+                    <span style="font-size:12px; color:#ABB2BF;">最終着弾の</span>
+                    <button class="staff-updown-btn" style="width:22px; height:20px; font-size:12px;" onclick="sendStaffEnemyCommand('mod_insert_margin', null, 1)">▲</button>
+                    <div id="staffInsOffsetVal" style="min-width:58px; text-align:center; color:#E5C07B; font-weight:bold; font-family:var(--utc-number-font);">${insMarginText}</div>
+                    <button class="staff-updown-btn" style="width:22px; height:20px; font-size:12px;" onclick="sendStaffEnemyCommand('mod_insert_margin', null, -1)">▼</button>
+                    <span style="font-size:11px; color:#ABB2BF;">秒前に差込着弾（0〜5）</span>
                 </div>
-                <div class="staff-mini-head" style="grid-template-columns:44px minmax(70px, 1fr) 132px 96px 86px;">
+                <div class="staff-mini-head" style="grid-template-columns:44px minmax(70px, 1fr) minmax(168px, 1.2fr) 72px 58px;">
                     <div></div><div></div>
                     <div class="staff-mini-head-label" style="text-align:center;">集結 / 行軍</div>
                     <div class="staff-mini-head-label" style="text-align:center;">操作</div>
@@ -999,12 +1797,28 @@
             .replace(/"/g, "&quot;");
     }
     function applyDrillStaffFromMsg(msg) {
+        if (msg && msg.alliance_presence) applyAlliancePresenceFromMsg(msg);
+        applyOccupyDutyFromMsg(msg);
         if (msg && msg.drill_staff && typeof msg.drill_staff.present === "boolean") {
             drillStaffLive = {
                 present: !!msg.drill_staff.present,
                 name: String(msg.drill_staff.name || "").trim()
             };
         }
+        if (appMode === "drill" && myAllianceIdx >= 0 && lastAlliancePresence) {
+            const sc = Number((lastAlliancePresence.staff && lastAlliancePresence.staff.count) || 0);
+            if (sc > 0) {
+                const names = (lastAlliancePresence.staff && lastAlliancePresence.staff.names) || [];
+                drillStaffLive = {
+                    present: true,
+                    name: String((names[0] || drillStaffLive.name || "")).trim()
+                };
+            }
+        }
+    }
+    function ensureStaffModeOnWire() {
+        if (!isStaffCommander || myAllianceIdx < 0 || !ws || ws.readyState !== WebSocket.OPEN) return;
+        ws.send(JSON.stringify({cmd: "set_staff_mode", val: {enabled: true, alliance_id: myAllianceIdx}}));
     }
     function applyPendingGoreiHintsToLocalState() {
         if (!localState) return;
@@ -1060,26 +1874,44 @@
         }
     }
 
+    const PROD_ALLIANCE_DEFAULTS = ["XYZ", "MTC", "APL"];
+
+    function prodAllianceDisplayName(name, idx) {
+        const n = String(name || "").trim();
+        if (n && n !== "---") return n;
+        if (typeof idx === "number" && idx >= 0 && idx < PROD_ALLIANCE_DEFAULTS.length) {
+            return PROD_ALLIANCE_DEFAULTS[idx];
+        }
+        return PROD_ALLIANCE_DEFAULTS[0];
+    }
+    function refreshProdAllianceButtons() {
+        if (appMode !== "prod") return;
+        const names = (localState && localState.alliance_names) ? localState.alliance_names : PROD_ALLIANCE_DEFAULTS;
+        for (let i = 0; i < 3; i++) {
+            const btn = document.getElementById(`btnAln${i}`);
+            if (btn) {
+                btn.innerText = prodAllianceDisplayName(names[i], i);
+                btn.className = (myAllianceIdx === i) ? "alliance-row active" : "alliance-row";
+            }
+        }
+    }
     function selectAppMode(mode) {
         appMode = (mode === "drill") ? "drill" : "prod";
         localStorage.setItem("utc_app_mode", appMode);
         const prodBtn = document.getElementById("btnModeProd");
         const drillBtn = document.getElementById("btnModeDrill");
-        if (prodBtn) prodBtn.className = appMode === "prod" ? "btn-green" : "btn-gray";
-        if (drillBtn) drillBtn.className = appMode === "drill" ? "btn-green" : "btn-gray";
+        if (prodBtn) prodBtn.classList.toggle("selected", appMode === "prod");
+        if (drillBtn) drillBtn.classList.toggle("selected", appMode === "drill");
         const drillCfg = document.getElementById("drillConfigArea");
         if (drillCfg) drillCfg.style.display = appMode === "drill" ? "block" : "none";
-        const b1 = document.getElementById("btnAln1");
-        const b2 = document.getElementById("btnAln2");
-        const b0 = document.getElementById("btnAln0");
-        if (b1) b1.style.display = appMode === "drill" ? "none" : "block";
-        if (b2) b2.style.display = appMode === "drill" ? "none" : "block";
-        if (b0) b0.style.display = appMode === "drill" ? "none" : "block";
+        const prodPick = document.getElementById("prodAlliancePick");
+        if (prodPick) prodPick.style.display = appMode === "drill" ? "none" : "block";
+        hideRoleSetupSection();
         const titleEl = document.getElementById("allianceStepTitle");
-        if (titleEl) titleEl.innerText = appMode === "drill" ? "訓練ルームに参加" : "SVS参加する同盟の選択";
+        if (titleEl) titleEl.innerText = appMode === "drill" ? "同盟の練習ルームに参加" : "参加する同盟を選ぶ";
         const badge = document.getElementById("modeBadge");
         if (badge) {
-            badge.innerText = appMode === "drill" ? "【訓練】" : "【本番】";
+            badge.innerText = appMode === "drill" ? "同盟練習" : "SVS";
             badge.style.background = appMode === "drill" ? "#C678DD" : "#3E4451";
             badge.style.color = appMode === "drill" ? "#1E2227" : "#ABB2BF";
         }
@@ -1091,16 +1923,53 @@
         } else if (mapBtn) {
             mapBtn.style.display = "";
         }
+        if (appMode === "prod") refreshProdAllianceButtons();
+        if (deviceMode) tryAutoAdvanceFromIntro();
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: appMode, alliance_id: (myAllianceIdx === -1 ? 0 : myAllianceIdx), room_key: drillRoomKey, alliance_name: drillAllianceName}}));
-            if (appMode === "drill") {
-                ws.send(JSON.stringify({cmd: "set_mode", val: {mode: "drill", room_action: "list"}}));
-            }
+            const rk = appMode === "drill" ? effectiveDrillRoomKeyForConnection() : drillRoomKey;
+            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: appMode, alliance_id: (myAllianceIdx === -1 ? 0 : myAllianceIdx), room_key: rk, alliance_name: drillAllianceName}}));
+            if (appMode === "drill") requestDrillRoomList(true);
         }
+    }
+
+    function setDrillStatus(message, isError = false) {
+        const el = document.getElementById("drillStatusMsg");
+        if (!el) return;
+        el.style.color = isError ? "#E06C75" : "#98C379";
+        el.textContent = message || "";
+    }
+
+    function isDrillSessionActive() {
+        const disp = document.getElementById("display");
+        return !!(disp && disp.style.display === "block");
+    }
+
+    function effectiveDrillRoomKeyForConnection() {
+        if (appMode !== "drill") return drillRoomKey || "default";
+        if (isDrillSessionActive() && drillRoomKey && drillRoomKey !== "default") return drillRoomKey;
+        const joinEl = document.getElementById("drillJoinArea");
+        const joinTabVisible = joinEl && joinEl.style.display !== "none";
+        if (joinTabVisible && (!drillRoomKey || drillRoomKey === "default")) return "default";
+        if (drillRoomKey && drillRoomKey !== "default") return drillRoomKey;
+        return "default";
+    }
+
+    function requestDrillRoomList(force) {
+        if (appMode !== "drill") return;
+        if (force) lastDrillRoomsSig = "";
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            try {
+                ws.send(JSON.stringify({ cmd: "set_mode", val: { mode: "drill", room_action: "list" } }));
+            } catch (e) {}
+            return;
+        }
+        pendingDrillModePayload = { cmd: "set_mode", val: { mode: "drill", room_action: "list" } };
+        if (!ws || ws.readyState === WebSocket.CLOSED) connect();
     }
 
     function setDrillTab(tab) {
         drillTab = tab === "join" ? "join" : "create";
+        localStorage.setItem("utc_drill_tab", drillTab);
         const tc = document.getElementById("drillTabCreate");
         const tj = document.getElementById("drillTabJoin");
         const ca = document.getElementById("drillCreateArea");
@@ -1109,27 +1978,38 @@
         if (tj) tj.className = drillTab === "join" ? "btn-green" : "btn-gray";
         if (ca) ca.style.display = drillTab === "create" ? "block" : "none";
         if (ja) ja.style.display = drillTab === "join" ? "block" : "none";
+        if (drillTab === "join") requestDrillRoomList(true);
     }
 
     function sendWsCommandWithRetry(payload, failMessage) {
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify(payload));
+            try { ws.send(JSON.stringify(payload)); } catch (e) {}
+            setDrillStatus("");
             return;
         }
-        connect();
-        setTimeout(() => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify(payload));
-            } else if (failMessage) {
-                alert(failMessage);
-            }
-        }, 700);
+        pendingDrillModePayload = payload;
+        pendingDrillModeFailMessage = failMessage || "";
+        setDrillStatus("接続を確認しています...");
+        if (!ws || ws.readyState === WebSocket.CLOSED) connect();
+    }
+
+    function flushPendingDrillModePayload() {
+        if (!ws || ws.readyState !== WebSocket.OPEN || !pendingDrillModePayload) return;
+        try { ws.send(JSON.stringify(pendingDrillModePayload)); } catch (e) {}
+        pendingDrillModePayload = null;
+        pendingDrillModeFailMessage = "";
     }
 
     function renderDrillRooms(rooms) {
         const sel = document.getElementById("drillRoomSelect");
         if (!sel) return;
-        const arr = Array.isArray(rooms) ? rooms : [];
+        const seen = new Set();
+        const arr = (Array.isArray(rooms) ? rooms : []).filter(r => {
+            const id = (r && r.room_id) ? String(r.room_id) : "";
+            if (!id || seen.has(id)) return false;
+            seen.add(id);
+            return true;
+        });
         const sig = JSON.stringify(arr.map(r => `${r.room_id}:${r.online}:${r.name}`));
         if (sig === lastDrillRoomsSig) return;
         lastDrillRoomsSig = sig;
@@ -1141,8 +2021,9 @@
         sel.appendChild(first);
         arr.forEach(r => {
             const opt = document.createElement("option");
+            const nm = (r.name || "訓練ルーム").trim() || "訓練ルーム";
             opt.value = r.room_id;
-            opt.textContent = `${r.name} (${r.online}人)`;
+            opt.textContent = nm;
             sel.appendChild(opt);
         });
         if (keepValue) {
@@ -1151,14 +2032,19 @@
         }
     }
     function createDrillRoom() {
+        clearOnboardingErrors();
         const dn = (document.getElementById("drillAllianceNameInput").value || "").trim();
         const rk = (document.getElementById("drillRoomKeyInput").value || "").trim();
-        if (!dn) return alert("訓練同盟名を入力してください");
-        if (!rk) return alert("参加コードを入力してください");
+        let ok = true;
+        if (!dn) { showFieldError("drillAllianceNameInput", "errDrillAllianceName", "同盟名を入力してください"); ok = false; }
+        if (!rk) { showFieldError("drillRoomKeyInput", "errDrillRoomKey", "参加コードを入力してください"); ok = false; }
+        if (!ok) return;
         drillAllianceName = dn;
         drillJoinCode = rk;
+        pendingDrillRoomAction = "create";
         localStorage.setItem("utc_drill_alliance_name", drillAllianceName);
         localStorage.setItem("utc_drill_join_code", drillJoinCode);
+        setDrillStatus("ルーム作成を送信しています...");
         sendWsCommandWithRetry(
             {cmd: "set_mode", val: {mode: "drill", alliance_id: 0, room_action: "create", room_code: rk, alliance_name: drillAllianceName}},
             "接続中です。数秒後にもう一度作成してください。"
@@ -1166,15 +2052,20 @@
     }
 
     function joinDrillRoom() {
+        clearOnboardingErrors();
         const rk = (document.getElementById("drillJoinCodeInput").value || "").trim();
         const roomId = (document.getElementById("drillRoomSelect").value || "").trim() || (drillRoomKey !== "default" ? drillRoomKey : "");
-        if (!roomId) return alert("参加するルームを選択してください");
-        if (!rk) return alert("参加コードを入力してください");
+        let ok = true;
+        if (!roomId) { showFieldError("drillRoomSelect", "errDrillRoomSelect", "参加するルームを選択してください"); ok = false; }
+        if (!rk) { showFieldError("drillJoinCodeInput", "errDrillJoinCode", "参加コードを入力してください"); ok = false; }
+        if (!ok) return;
         selectedDrillRoomId = roomId;
         drillRoomKey = roomId;
         drillJoinCode = rk;
+        pendingDrillRoomAction = "join";
         localStorage.setItem("utc_drill_room_key", drillRoomKey);
         localStorage.setItem("utc_drill_join_code", drillJoinCode);
+        setDrillStatus("参加リクエストを送信しています...");
         sendWsCommandWithRetry(
             {cmd: "set_mode", val: {mode: "drill", alliance_id: 0, room_action: "join", room_id: roomId, room_code: rk}},
             "接続中です。数秒後にもう一度参加してください。"
@@ -1270,17 +2161,182 @@
         catch (err) { alert("コピーに失敗しました。"); }
     }
 
+
+    function clearOnboardingErrors() {
+        document.querySelectorAll(".field-error").forEach(el => { el.textContent = ""; });
+        document.querySelectorAll(".input-error").forEach(el => el.classList.remove("input-error"));
+        const g = document.getElementById("onboardingFormError");
+        if (g) { g.style.display = "none"; g.textContent = ""; }
+    }
+    function showFieldError(fieldId, errId, message) {
+        const f = document.getElementById(fieldId);
+        const e = document.getElementById(errId);
+        if (e) e.textContent = message || "";
+        if (f) f.classList.toggle("input-error", !!message);
+        return !message;
+    }
+    function showOnboardingGlobal(message) {
+        const g = document.getElementById("onboardingFormError");
+        if (!g) return;
+        if (message) { g.style.display = "block"; g.textContent = message; }
+        else { g.style.display = "none"; g.textContent = ""; }
+    }
+    function applyChromeNoticeState() {
+        const seen = localStorage.getItem("utc_chrome_notice_seen") === "1";
+        const full = document.getElementById("chromeNoticeFull");
+        const mini = document.getElementById("chromeNoticeMini");
+        if (full) full.classList.toggle("chrome-notice-collapsed", seen);
+        if (mini) mini.classList.toggle("chrome-notice-collapsed", !seen);
+    }
+    function showChromeNoticeFull() {
+        const full = document.getElementById("chromeNoticeFull");
+        const mini = document.getElementById("chromeNoticeMini");
+        if (full) full.classList.remove("chrome-notice-collapsed");
+        if (mini) mini.classList.add("chrome-notice-collapsed");
+    }
+    function markChromeNoticeSeen() {
+        localStorage.setItem("utc_chrome_notice_seen", "1");
+        applyChromeNoticeState();
+    }
+    function updateEnvButtonStyles() {
+        const b2 = document.getElementById("btnEnv2device");
+        const b1 = document.getElementById("btnEnv1device");
+        if (b2) b2.classList.toggle("env-btn-selected", deviceMode === "2device");
+        if (b1) b1.classList.toggle("env-btn-selected", deviceMode === "1device");
+    }
+    function updateOneDeviceBanner() {
+        const banner = document.getElementById("oneDeviceClockBanner");
+        const topClock = document.getElementById("topClockArea");
+        const clock = document.getElementById("clockContainer");
+        if (deviceMode === "1device") {
+            if (banner) banner.style.display = "block";
+            if (topClock && clock && clock.parentElement !== topClock) topClock.appendChild(clock);
+            if (clock) clock.style.display = "flex";
+        } else {
+            if (banner) banner.style.display = "none";
+            if (clock) clock.style.display = "none";
+        }
+    }
+    function showRoleSetupSection() {
+        const sec = document.getElementById("roleSetupSection");
+        if (sec) {
+            sec.style.display = "block";
+            sec.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+    }
+    function hideRoleSetupSection() {
+        const sec = document.getElementById("roleSetupSection");
+        if (sec) sec.style.display = "none";
+    }
+    function goToJoinStep() {
+        hideAllSteps();
+        document.getElementById("step2_5_alliance").style.display = "block";
+        updateOneDeviceBanner();
+        updateJoinBackLabel();
+        if (appMode === "drill") requestDrillRoomList(true);
+    }
+    function updateJoinBackLabel() {
+        const back = document.querySelector("#step2_5_alliance .btn-back");
+        if (back) back.textContent = "◀ モード・端末の選択に戻る";
+    }
+    function tryAutoAdvanceFromIntro() {
+        if (!appMode || !deviceMode) return;
+        markChromeNoticeSeen();
+        setTimeout(goToJoinStep, 80);
+    }
+    function roleLabel(role) {
+        if (role === "leader1") return "第1班 集結主";
+        if (role === "leader2") return "第2班 集結主";
+        if (role === "rider") return "乗り手";
+        if (role === "staff") return "参謀";
+        return role || "";
+    }
+    function canQuickStart() {
+        const role = localStorage.getItem("utc_last_role");
+        const dm = localStorage.getItem("utc_device_mode");
+        if (!role || !dm || (dm !== "1device" && dm !== "2device")) return false;
+        if (appMode === "drill") {
+            const rk = localStorage.getItem("utc_drill_room_key");
+            const jc = localStorage.getItem("utc_drill_join_code");
+            if (!rk || rk === "default" || !jc) return false;
+        }
+        if (appMode === "prod") {
+            const ai = localStorage.getItem("utc_last_alliance_idx");
+            if (ai === null || ai === "") return false;
+        }
+        if ((role.startsWith("leader") || localStorage.getItem("utc_is_staff_commander") === "1") && !localStorage.getItem("utc_my_name")) return false;
+        return true;
+    }
+    function buildQuickStartSummary() {
+        const mode = appMode === "drill" ? "同盟の練習" : "SVS";
+        const dm = deviceMode === "1device" ? "スマホ1台" : "別端末";
+        let extra = "";
+        if (appMode === "prod" && localStorage.getItem("utc_last_alliance_idx") !== null) {
+            const idx = parseInt(localStorage.getItem("utc_last_alliance_idx"), 10);
+            const names = localState && localState.alliance_names ? localState.alliance_names : [];
+            extra = prodAllianceDisplayName(names[idx], idx);
+        } else if (appMode === "drill") {
+            extra = localStorage.getItem("utc_drill_alliance_name") || "練習ルーム";
+        }
+        const role = roleLabel(lastRegisteredRole || localStorage.getItem("utc_last_role") || "");
+        return `${mode} / ${dm}${extra ? " / " + extra : ""} / ${role}`;
+    }
+    function refreshQuickStartPanel() {
+        const panel = document.getElementById("quickStartPanel");
+        const intro = document.getElementById("step1_intro");
+        const join = document.getElementById("step2_5_alliance");
+        if (!panel) return;
+        if (canQuickStart() && join && join.style.display === "none" && intro && intro.style.display !== "none") {
+            document.getElementById("quickStartSummary").textContent = "前回: " + buildQuickStartSummary();
+            panel.style.display = "block";
+            intro.style.display = "none";
+        } else if (!document.getElementById("display") || document.getElementById("display").style.display === "none") {
+            panel.style.display = "none";
+            if (intro && !deviceMode) intro.style.display = "block";
+        }
+    }
+    function quickStartChangeSettings() {
+        document.getElementById("quickStartPanel").style.display = "none";
+        hideRoleSetupSection();
+        hideAllSteps();
+        document.getElementById("step1_intro").style.display = "block";
+    }
+    function quickStartContinue() {
+        clearOnboardingErrors();
+        const qsp = document.getElementById("quickStartPanel");
+        if (qsp) qsp.style.display = "none";
+        deviceMode = localStorage.getItem("utc_device_mode") || "2device";
+        const ai = localStorage.getItem("utc_last_alliance_idx");
+        if (ai !== null && ai !== "") myAllianceIdx = parseInt(ai, 10);
+        drillRoomKey = localStorage.getItem("utc_drill_room_key") || drillRoomKey;
+        drillJoinCode = localStorage.getItem("utc_drill_join_code") || "";
+        drillAllianceName = localStorage.getItem("utc_drill_alliance_name") || "";
+        isStaffCommander = localStorage.getItem("utc_is_staff_commander") === "1";
+        const lr = localStorage.getItem("utc_last_role") || "";
+        if (isStaffCommander) { staffPlayerRole = lr; myRole = lr; }
+        else { myRole = lr; staffPlayerRole = null; }
+        const sn = staffPNameFromStorage();
+        if (sn) document.getElementById("pName").value = sn;
+        if (!ws || ws.readyState !== WebSocket.OPEN) connect();
+        const tryReg = () => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) { setTimeout(tryReg, 200); return; }
+            register();
+        };
+        tryReg();
+    }
+
     function hideAllSteps() {
         document.getElementById('step1_intro').style.display = 'none';
         document.getElementById('step2_sync').style.display = 'none';
         document.getElementById('step2_5_alliance').style.display = 'none';
-        document.getElementById('step3_setup').style.display = 'none';
+        hideRoleSetupSection();
+        const s3 = document.getElementById('step3_setup'); if (s3) s3.style.display = 'none';
         document.getElementById('display').style.display = 'none';
     }
 
     function goBackTo(targetId) { hideAllSteps(); document.getElementById(targetId).style.display = 'block'; stopStaffPanelTicker(); }
-    function goBackToEnv() { hideAllSteps(); if (deviceMode === '1device') document.getElementById('step2_sync').style.display = 'block'; else document.getElementById('step1_intro').style.display = 'block'; }
-    function openEditMode() { hideAllSteps(); document.getElementById('step3_setup').style.display = 'block'; stopStaffPanelTicker(); }
+    function goBackToEnv() { hideAllSteps(); hideRoleSetupSection(); document.getElementById('step1_intro').style.display = 'block'; }
+    function openEditMode() { hideAllSteps(); goToJoinStep(); showRoleSetupSection(); stopStaffPanelTicker(); }
 
     function syncSupportNameInput() {
         const el = document.getElementById("supportGateNameInput");
@@ -1351,37 +2407,42 @@
 
     function selectEnv(mode) {
         deviceMode = mode;
-        hideAllSteps();
-        if (mode === '1device') {
-            document.getElementById('topClockArea').appendChild(document.getElementById('clockContainer'));
-            document.getElementById('clockContainer').style.display = 'flex';
-            document.getElementById('step2_sync').style.display = 'block';
-        } else {
-            document.getElementById('step2_5_alliance').style.display = 'block';
-        }
+        localStorage.setItem("utc_device_mode", deviceMode);
+        updateEnvButtonStyles();
+        tryAutoAdvanceFromIntro();
     }
 
-    function confirmSync() { hideAllSteps(); document.getElementById('step2_5_alliance').style.display = 'block'; }
+    function confirmSync() { goToJoinStep(); }
 
     function selectAlliance(idx) {
-        if (appMode === "drill") {
-            idx = 0;
-        }
+        if (appMode === "drill") idx = 0;
+        clearOnboardingErrors();
         myAllianceIdx = idx;
+        localStorage.setItem("utc_last_alliance_idx", String(idx));
         isStaffCommander = false;
         staffPlayerRole = null;
         myRole = null;
-        hideAllSteps();
-        document.getElementById('step3_setup').style.display = 'block';
-        let alnName = (localState && localState.alliance_names[idx]) ? localState.alliance_names[idx] : `同盟 ${idx+1}`;
+        document.getElementById('inputsArea').style.display = 'none';
+        const staffArea = document.getElementById('staffPlayerRoleArea');
+        if (staffArea) staffArea.style.display = 'none';
+        let alnName = (localState && localState.alliance_names && localState.alliance_names[idx]) ? localState.alliance_names[idx] : `同盟 ${idx+1}`;
+        if (appMode === "prod") alnName = prodAllianceDisplayName(alnName, idx);
+        if (appMode === "drill" && drillAllianceName) alnName = drillAllianceName;
         document.getElementById('allianceDisplay').innerText = `【 ${alnName} 】`;
         document.getElementById('displayAllianceName').innerText = `【 ${alnName} 】`;
-        for(let i=0; i<3; i++) {
-            document.getElementById(`btnAln${i}`).className = (i === idx) ? 'role-btn active' : 'role-btn inactive';
+        for (let i = 0; i < 3; i++) {
+            const btn = document.getElementById(`btnAln${i}`);
+            if (btn) btn.className = (i === idx) ? 'alliance-row active' : 'alliance-row';
         }
         if (appMode === "drill" && ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({cmd: "set_mode", val: {mode: "drill", alliance_id: idx, room_key: drillRoomKey, alliance_name: drillAllianceName}}));
         }
+        showRoleSetupSection();
+    }
+
+    function staffPNameFromStorage() {
+        const saved = (localStorage.getItem("utc_my_name") || "").trim();
+        return (saved && saved !== "乗り手") ? saved : "";
     }
 
     function setStaffPlayerRole(role) {
@@ -1390,6 +2451,7 @@
         document.getElementById('inputsArea').style.display = 'block';
         document.getElementById('pName').style.display = 'block';
         document.getElementById('pName').placeholder = "参謀名（必須）";
+        document.getElementById('pName').value = staffPNameFromStorage();
         document.getElementById('btnStaffLeader1').className = role === 'leader1' ? 'btn-green' : 'btn-gray';
         document.getElementById('btnStaffLeader2').className = role === 'leader2' ? 'btn-green' : 'btn-gray';
         document.getElementById('btnStaffRider').className = role === 'rider' ? 'btn-green' : 'btn-gray';
@@ -1399,14 +2461,6 @@
         if (!isStaffCommander || myAllianceIdx === -1 || !ws || ws.readyState !== WebSocket.OPEN) return;
         const squadId = myAllianceIdx * 2 + squadOffset;
         const startIdx = 6 + squadId * 6;
-        const hasNamedMember = !!(localState && localState.timers && localState.timers.slice(startIdx, startIdx + 6).some(t => t && (t.name || "").trim() !== ""));
-        if ((action === 'fire' || action === 'fire_fixed') && !hasNamedMember) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({cmd: "client_debug", val: `build=${clientBuildTag} fire_blocked_no_member squad=${squadId}`}));
-            }
-            alert("この班に登録済みメンバーがいないため、号令できません。先に集結主を登録してください。");
-            return;
-        }
         if (action === 'fire') ws.send(JSON.stringify({cmd:"fire_gorei", idx:squadId}));
         if (action === 'fire_fixed') ws.send(JSON.stringify({cmd:"fire_gorei_fixed", idx:squadId}));
         if (action === 'cancel') ws.send(JSON.stringify({cmd:"cancel_gorei", idx:squadId}));
@@ -1430,8 +2484,7 @@
                 const maxMarch = marches.length ? Math.max(...marches) : 0;
                 const minTgt = nowTs + (parseInt(localState.gorei_offsets[squadId] || 0)) + (parseInt(localState.default_rally || 0)) + maxMarch;
                 const cur = localState.gorei_fixed_targets[squadId] ? parseFloat(localState.gorei_fixed_targets[squadId]) : minTgt;
-                const next = cur + d;
-                localState.gorei_fixed_targets[squadId] = (next > minTgt) ? next : null;
+                localState.gorei_fixed_targets[squadId] = cur + d;
             } else if (action === 'cancel') {
                 localState.gorei_fixed_targets[squadId] = null;
                 const startIdx = 6 + squadId * 6;
@@ -1466,7 +2519,6 @@
                     const myTargetMs = syncTargetMs + delayMs;
                     t.start_at = new Date(myTargetMs - (Number(t.sub_set || 0) + Number(localState.default_rally || 0)) * 1000).toISOString();
                 }
-                if (!wroteAny) return;
                 // サーバー同期が遅れたり欠落しても、参謀上段だけは直近の号令を表示できるよう保持
                 const minSub = marches.length > 0 ? Math.min(...marches) : fallbackMarch;
                 lastStaffGoreiHint[squadId] = {
@@ -1505,6 +2557,233 @@
         }
     }
 
+
+    function buildStaffDrillRallyPickHtml() {
+        if (appMode !== "drill" || !localState) return "";
+        const r = Number(localState.default_rally || 300);
+        const c60 = (r === 60) ? " checked" : "";
+        const c300 = (r === 300) ? " checked" : "";
+        return `
+            <div class="staff-rally-pick-inline">
+                <span class="staff-rally-pick-label">集結時間</span>
+                <label class="staff-rally-choice">
+                    <input type="radio" name="staffDrillRally" class="staff-rally-cb" value="60"${c60} onchange="onStaffDrillRallyPick(60)">
+                    <span>1分</span>
+                </label>
+                <label class="staff-rally-choice">
+                    <input type="radio" name="staffDrillRally" class="staff-rally-cb" value="300"${c300} onchange="onStaffDrillRallyPick(300)">
+                    <span>5分</span>
+                </label>
+            </div>`;
+    }
+
+    function syncStaffDrillRallyPickInPanels() {
+        if (!localState) return;
+        const r = Number(localState.default_rally || 300);
+        document.querySelectorAll(".staff-rally-cb").forEach((el) => {
+            const s = Number(el.value);
+            el.checked = (s === r);
+        });
+    }
+
+    function onStaffDrillRallyPick(sec) {
+        if (appMode !== "drill" || !isStaffCommander || !localState) return;
+        const rallySec = (Number(sec) === 60) ? 60 : 300;
+        setDrillStaffRally(rallySec);
+    }
+
+    function setDrillStaffRally(sec) {
+        if (appMode !== "drill" || !isStaffCommander || !localState) return;
+        const rallySec = (Number(sec) === 60) ? 60 : 300;
+        if (Number(localState.default_rally) === rallySec) {
+            syncStaffDrillRallyPickInPanels();
+            return;
+        }
+        localState.default_rally = rallySec;
+        for (let i = 0; i < localState.timers.length; i++) {
+            const t = localState.timers[i];
+            if (t && Number(t.state || 0) === 0) t.sec = rallySec;
+        }
+        syncStaffDrillRallyPickInPanels();
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ cmd: "set_staff_mode", val: { enabled: true, alliance_id: myAllianceIdx } }));
+            ws.send(JSON.stringify({ cmd: "set_default_rally", val: rallySec }));
+        }
+        const sig = staffPanelStructuralSig();
+        if (sig !== lastStaffPanelSig) {
+            renderStaffCommandPanel();
+        } else {
+            updateStaffGoreiTargetsOnly();
+            updateStaffMiniTimersOnly();
+        }
+        startStaffPanelTicker();
+    }
+
+    function applyAlliancePresenceFromMsg(msg) {
+        const ap = msg && msg.alliance_presence;
+        if (!ap || myAllianceIdx < 0) {
+            lastAlliancePresence = null;
+            return;
+        }
+        lastAlliancePresence = ap[`aln${myAllianceIdx}`] || null;
+    }
+
+    function renderAlliancePresenceLine() {
+        const el = document.getElementById("alliancePresenceLine");
+        const disp = document.getElementById("display");
+        if (!el || !disp || disp.style.display !== "block" || myAllianceIdx < 0) return;
+        const p = lastAlliancePresence;
+        if (!p) {
+            el.style.display = "none";
+            el.innerHTML = "";
+            return;
+        }
+        const chip = (roleLabel, block, colorRole) => {
+            const cnt = Number((block && block.count) || 0);
+            const names = (block && Array.isArray(block.names)) ? block.names.filter(n => String(n || "").trim()) : [];
+            let namesHtml = "";
+            if (names.length) {
+                namesHtml = `<span class="roster-names">（${names.map(n => escapeHtml(n)).join("・")}）</span>`;
+            }
+            return `<span class="roster-chip"><span class="roster-role" style="color:${colorRole}">${roleLabel}</span><span class="roster-num">${cnt}</span>名${namesHtml}</span>`;
+        };
+        const html = [
+            chip("参謀", p.staff, "#C678DD"),
+            chip("集結主", p.leader, "#61AFEF"),
+            chip("乗り手", p.rider, "#98C379"),
+        ].join("");
+        const sig = html;
+        if (sig === lastAlliancePresenceSig) return;
+        lastAlliancePresenceSig = sig;
+        el.innerHTML = html;
+        el.style.display = "flex";
+        renderOccupyDutyLine();
+    }
+
+    function applyOccupyCommandFieldsToLocalState(src) {
+        if (!localState || !src) return;
+        let touched = false;
+        if (src.insert_fire_target != null && src.insert_fire_target !== "") {
+            localState.insert_fire_target = Number(src.insert_fire_target);
+            touched = true;
+        }
+        if (src.manual_swap_trigger_time != null && src.manual_swap_trigger_time !== "") {
+            localState.manual_swap_trigger_time = Number(src.manual_swap_trigger_time);
+            touched = true;
+        }
+        if (touched) {
+            cachedInsTime = null;
+            lastActionState = "";
+        }
+    }
+
+    function hasActiveOccupyCommandsForDisplay(nowMs) {
+        if (!localState) return false;
+        return !!(getInsertLandingMs(localState, nowMs) || getManualSwapLandingMs(localState, nowMs));
+    }
+
+    function applyOccupyDutyFromMsg(msg) {
+        const od = msg && msg.occupy_duty;
+        const cmds = (msg && msg.occupy_cmds) || od;
+        if (cmds) applyOccupyCommandFieldsToLocalState(cmds);
+        if (!od || typeof od.primary !== "string") {
+            lastOccupyDuty = null;
+            return;
+        }
+        lastOccupyDuty = {
+            primary: od.primary === "swap" ? "swap" : "ins",
+            primary_label: String(od.primary_label || (od.primary === "swap" ? "入替役" : "差込役")),
+            can_also_swap: !!od.can_also_swap,
+            insert_landed: !!od.insert_landed,
+            counts: od.counts || null,
+        };
+    }
+
+    function isOccupyDutyActive() {
+        if (!(appMode === "prod" && localState && myAllianceIdx >= 0
+            && localState.alliance_roles && localState.alliance_roles[myAllianceIdx] === "occupy"
+            && lastOccupyDuty)) {
+            return false;
+        }
+        return hasActiveOccupyCommandsForDisplay(getSyncedNow().getTime());
+    }
+
+    function renderOccupyDutyLine() {
+        const el = document.getElementById("occupyDutyLine");
+        const disp = document.getElementById("display");
+        if (!el || !disp || disp.style.display !== "block") return;
+        if (!isOccupyDutyActive()) {
+            el.style.display = "none";
+            el.innerHTML = "";
+            lastOccupyDutySig = "";
+            return;
+        }
+        const d = lastOccupyDuty;
+        const youCls = d.primary === "swap" ? "swap" : "ins";
+        let hint = "";
+        if (d.primary === "ins" && d.can_also_swap && d.insert_landed) {
+            hint = '<span class="duty-hint">差込着弾後 — 入替作業も可能です</span>';
+        } else if (d.primary === "ins" && d.can_also_swap && !d.insert_landed) {
+            hint = '<span class="duty-hint">着弾後に入替可否を自動判定します</span>';
+        }
+        let countsHtml = "";
+        if (d.counts) {
+            countsHtml = `<span class="duty-counts">差込 ${Number(d.counts.ins || 0)}名　入替 ${Number(d.counts.swap || 0)}名</span>`;
+        }
+        const html = `<span class="duty-you ${youCls}">あなた: ${escapeHtml(d.primary_label)}</span>${countsHtml}${hint}`;
+        if (html === lastOccupyDutySig) return;
+        lastOccupyDutySig = html;
+        el.innerHTML = html;
+        el.style.display = "flex";
+    }
+
+    function applyDutyTierToBlocks(blocks) {
+        if (!isOccupyDutyActive()) return blocks;
+        const pri = lastOccupyDuty.primary;
+        return blocks.map(b => {
+            if (b.type !== "ins" && b.type !== "swap") return b;
+            const isPrimary = b.type === pri;
+            const tier = isPrimary ? "primary" : "secondary";
+            let extraNote = "";
+            if (tier === "secondary" && b.type === "swap" && lastOccupyDuty.can_also_swap && lastOccupyDuty.insert_landed) {
+                extraNote = "入替作業も可能";
+            }
+            return {
+                ...b,
+                dutyTier: tier,
+                dutyRoleLabel: isPrimary ? lastOccupyDuty.primary_label : (b.type === "ins" ? "差込（参考）" : "入替（参考）"),
+                dutyExtraNote: extraNote,
+            };
+        });
+    }
+
+    function sortDisplayBlocksByDuty(blocks) {
+        if (!isOccupyDutyActive()) return blocks;
+        const pri = lastOccupyDuty.primary;
+        const primary = blocks.filter(b => b.type === pri);
+        const secondary = blocks.filter(b => (b.type === "ins" || b.type === "swap") && b.type !== pri);
+        const rest = blocks.filter(b => b.type !== "ins" && b.type !== "swap");
+        return [...primary, ...rest, ...secondary];
+    }
+
+    function renderStaffAllianceHead() {
+        if (!isStaffCommander || myAllianceIdx === -1 || !localState) return;
+        const el = document.getElementById("staffAllianceHead");
+        if (!el) return;
+        let allianceName = (localState.alliance_names && localState.alliance_names[myAllianceIdx])
+            ? localState.alliance_names[myAllianceIdx] : `同盟${myAllianceIdx + 1}`;
+        if (appMode === "drill" && drillAllianceName) allianceName = drillAllianceName;
+        if (appMode === "prod") allianceName = prodAllianceDisplayName(allianceName, myAllianceIdx);
+        const roleTxt = localState.alliance_roles && localState.alliance_roles[myAllianceIdx] === "occupy" ? "占領同盟" : "攻撃同盟";
+        const roleColor = roleTxt === "占領同盟" ? "#98C379" : "#E06C75";
+        el.style.display = "flex";
+        el.innerHTML = `
+            <div style="color:#ffffff; font-size:28px; line-height:1;">|</div>
+            <div style="font-size:30px; color:#ffffff; font-weight:bold;">${escapeHtml(allianceName)}</div>
+            <div style="color:${roleColor}; font-weight:bold;">${appMode === "drill" ? "" : `● ${roleTxt}`}</div>
+        `;
+    }
+
     function renderStaffCommandPanel() {
         if (!isStaffCommander || myAllianceIdx === -1 || !localState) return;
         const cards = document.getElementById("staffCommandCards");
@@ -1514,13 +2793,6 @@
         const roleColor = roleTxt === "占領同盟" ? "#98C379" : "#E06C75";
         const nowTs = getSyncedNow().getTime();
         let html = "";
-        html += `
-            <div class="staff-alliance-head">
-                <div style="color:#ffffff; font-size:28px; line-height:1;">|</div>
-                <div style="font-size:30px; color:#ffffff; font-weight:bold;">${allianceName}</div>
-                <div style="color:${roleColor}; font-weight:bold;">${appMode === "drill" ? "" : `● ${roleTxt}`}</div>
-            </div>
-        `;
         for (let offset = 0; offset < 2; offset++) {
             const squadId = myAllianceIdx * 2 + offset;
             const title = offset === 0 ? "第1班" : "第2班";
@@ -1547,17 +2819,10 @@
             for (let i = startIdx; i < startIdx + 6; i++) {
                 const t = localState.timers[i];
                 const nm = (t && t.name && t.name.trim() !== "") ? t.name : "---";
-                let mainSec = t ? Math.max(0, Math.floor(Number(t.sec || 0))) : 0;
-                if (t && t.state === 4 && t.start_at) {
-                    mainSec = Math.max(0, Math.floor((new Date(t.start_at).getTime() - nowTs) / 1000));
-                } else if (t && t.state === 1 && t.end) {
-                    mainSec = Math.max(0, Math.floor((new Date(t.end).getTime() - nowTs) / 1000));
-                } else if (t && t.state === 2) {
-                    mainSec = 0;
-                }
-                const marchDisp = staffMarchDisplaySec(t);
-                const mainTxt = `${String(Math.floor(mainSec / 60)).padStart(1, "0")}:${String(mainSec % 60).padStart(2, "0")}`;
-                const subTxt = staffFormatMmSs(marchDisp);
+                const dispSec = computeDispatchSecForStaffRow(i, t);
+                const dispTxt = dispSec == null ? "--:--" : staffFormatMmSs(dispSec);
+                const rallyTxt = staffFormatMmSs(computeRallySecForStaffRow(i, t, localState.default_rally));
+                const subTxt = staffFormatMmSs(staffMarchDisplaySec(t));
                 let tgtTxt = "--:--";
                 const land = (t && t.state && t.state !== 0) ? staffStableLandingMs(t, localState.default_rally) : null;
                 if (land != null) tgtTxt = staffFormatImpactUtcMmSs(land);
@@ -1565,7 +2830,8 @@
                     <div class="staff-mini-row">
                         <div style="color:#7f8796;">●</div>
                         <div class="staff-mini-name" id="staffMiniName_${i}">${nm}</div>
-                        <div class="staff-mini-timer" id="staffMiniMain_${i}">${mainTxt}</div>
+                        <div class="staff-mini-dispatch" id="staffMiniDispatch_${i}">${dispTxt}</div>
+                        <div class="staff-mini-timer" id="staffMiniMain_${i}">${rallyTxt}</div>
                         <div class="staff-mini-sub" id="staffMiniSub_${i}">${subTxt}</div>
                         <div class="staff-mini-target" id="staffMiniTgt_${i}">▶${tgtTxt}</div>
                     </div>
@@ -1577,8 +2843,8 @@
             <div>
                 <div class="staff-squad-title ${titleClass}">${title}</div>
                 <div class="staff-gorei-panel" style="border-color:${borderColor};">
-                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-                        <div style="display:flex; align-items:center; gap:5px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                        <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
                             <span style="color:#ABB2BF; font-size:12px;">猶予+</span>
                             <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_offset', ${offset}, 10)">▲</button><div class="staff-digit" style="color:#E5C07B;">${g10}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_offset', ${offset}, -10)">▼</button></div>
                             <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_offset', ${offset}, 1)">▲</button><div class="staff-digit" style="color:#E5C07B;">${g1}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_offset', ${offset}, -1)">▼</button></div>
@@ -1586,14 +2852,15 @@
                         </div>
                         <button class="staff-btn ${offset === 0 ? 'staff-btn-purple' : 'staff-btn-cyan'}" onclick="sendStaffGorei('fire', ${offset})">即時号令（今のタイミング）</button>
                     </div>
-                    <div style="display:flex; align-items:center; justify-content:space-between; background:#1E2227; border:1px solid #3E4451; border-radius:4px; padding:6px; margin-bottom:8px;">
-                        <div style="display:flex; align-items:center;">
-                            <span style="font-size:12px; color:#ABB2BF; margin-right:6px;">着弾:</span>
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; background:#1E2227; border:1px solid #3E4451; border-radius:4px; padding:6px; margin-bottom:8px;">
+                        <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px;">
+                            <span style="font-size:12px; color:#ABB2BF; margin-right:2px;">着弾:</span>
                             <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 600)">▲</button><div class="staff-digit" id="staffGoreiMM10_${offset}" style="color:${targetColor};">${Math.floor(parseInt(mm,10)/10)}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -600)">▼</button></div>
                             <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 60)">▲</button><div class="staff-digit" id="staffGoreiMM1_${offset}" style="color:${targetColor};">${parseInt(mm,10)%10}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -60)">▼</button></div>
                             <span style="color:${targetColor}; font-weight:bold; margin:0 2px;">:</span>
                             <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 10)">▲</button><div class="staff-digit" id="staffGoreiSS10_${offset}" style="color:${targetColor};">${Math.floor(parseInt(ss,10)/10)}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -10)">▼</button></div>
                             <div class="staff-updown-col"><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, 1)">▲</button><div class="staff-digit" id="staffGoreiSS1_${offset}" style="color:${targetColor};">${parseInt(ss,10)%10}</div><button class="staff-updown-btn" onclick="sendStaffGorei('mod_target', ${offset}, -1)">▼</button></div>
+                            ${offset === 0 ? buildStaffDrillRallyPickHtml() : ""}
                         </div>
                         <div style="display:flex; align-items:center; gap:6px;">
                             <button class="staff-btn staff-btn-green" onclick="sendStaffGorei('fire_fixed', ${offset})">着弾指定号令</button>
@@ -1604,6 +2871,7 @@
                         <div class="staff-mini-head">
                             <div></div>
                             <div></div>
+                            <div class="staff-mini-head-label" style="text-align:center;">出征開始まで</div>
                             <div class="staff-mini-head-label" style="text-align:center;">集結時間</div>
                             <div class="staff-mini-head-label" style="text-align:center;">行軍時間</div>
                             <div class="staff-mini-head-label" style="text-align:right;">着弾時間</div>
@@ -1613,9 +2881,11 @@
                 </div>
             </div>`;
         }
+        renderStaffAllianceHead();
         cards.innerHTML = html;
         lastStaffPanelSig = staffPanelStructuralSig();
         syncStaffRowAnchors();
+        syncStaffDrillRallyPickInPanels();
         updateStaffMiniTimersOnly();
         renderStaffInsertPanel();
     }
@@ -1699,42 +2969,143 @@
         ctx.restore();
     }
 
-    function playVoiceDynamic(text) {
-        if (!audioEnabled) return;
+    function clampVoiceVolumePct(pct) {
+        const n = parseInt(pct, 10);
+        if (isNaN(n)) return VOICE_VOLUME_DEFAULT_PCT;
+        return Math.max(VOICE_VOLUME_MIN_PCT, Math.min(VOICE_VOLUME_MAX_PCT, n));
+    }
 
-        const cacheKey = getVoiceCacheKey(text);
-        if (voiceBufferCache[cacheKey]) {
-            if (currentAudioSource) {
-                try { currentAudioSource.stop(); } catch(e) {}
-            }
-            let source = audioCtx.createBufferSource();
-            source.buffer = voiceBufferCache[cacheKey];
-            source.connect(audioCtx.destination);
-            currentAudioSource = source;
-            source.start(0);
-        } else {
-            if (!voicevoxAvailable || !isCriticalVoiceText(text)) {
-                fallbackTTS(text);
-            }
-            fetchAndCacheVoice(text);
+    function getVoiceVolumePercent() {
+        return clampVoiceVolumePct(localStorage.getItem("utc_voice_volume_pct") || String(VOICE_VOLUME_DEFAULT_PCT));
+    }
+
+    function getVoiceGainValue() {
+        return getVoiceVolumePercent() / 100;
+    }
+
+    /** HTMLAudioElement.volume 用（0〜1）。スライダー 50〜300% をそのまま反映。 */
+    function getVoiceElementVolume() {
+        return Math.min(1, getVoiceGainValue());
+    }
+
+    function clearVoiceCaches() {
+        Object.values(voiceBlobUrlCache).forEach((url) => {
+            try { URL.revokeObjectURL(url); } catch (e) {}
+        });
+        Object.keys(voiceBlobUrlCache).forEach((k) => delete voiceBlobUrlCache[k]);
+    }
+
+    function stopCurrentVoicePlayback() {
+        if (currentVoiceAudioEl) {
+            try {
+                currentVoiceAudioEl.pause();
+                currentVoiceAudioEl.currentTime = 0;
+            } catch (e) {}
+            currentVoiceAudioEl = null;
         }
+    }
+
+    async function ensureVoiceAudioUnlock() {
+        if (!voiceUnlockElem) {
+            voiceUnlockElem = document.createElement("audio");
+            voiceUnlockElem.setAttribute("playsinline", "");
+            voiceUnlockElem.preload = "auto";
+            voiceUnlockElem.style.display = "none";
+            document.body.appendChild(voiceUnlockElem);
+        }
+        voiceUnlockElem.volume = 0.001;
+        voiceUnlockElem.src = voiceBlobUrlCache[getVoiceCacheKey("10")] || voiceBlobUrlCache[Object.keys(voiceBlobUrlCache)[0]] || "";
+        if (!voiceUnlockElem.src) return;
+        try {
+            await voiceUnlockElem.play();
+            voiceUnlockElem.pause();
+            voiceUnlockElem.currentTime = 0;
+        } catch (e) {}
+    }
+
+    function updateVoiceVolumeLabel() {
+        const label = document.getElementById("voiceVolumeLabel");
+        const slider = document.getElementById("voiceVolumeSlider");
+        const pct = getVoiceVolumePercent();
+        if (label) label.innerText = pct + "%";
+        if (slider && parseInt(slider.value, 10) !== pct) slider.value = String(pct);
+    }
+
+    function initVoiceVolumeControls() {
+        const slider = document.getElementById("voiceVolumeSlider");
+        if (!slider) return;
+        slider.value = String(getVoiceVolumePercent());
+        updateVoiceVolumeLabel();
+    }
+
+    function showAudioControlsUi() {
+        const area = document.getElementById("audioControlsArea");
+        const panel = document.getElementById("voiceVolumePanel");
+        if (area) area.style.display = "flex";
+        if (panel) panel.style.display = "flex";
+        initVoiceVolumeControls();
+    }
+
+    function onVoiceVolumeSliderInput() {
+        const slider = document.getElementById("voiceVolumeSlider");
+        if (!slider) return;
+        const pct = clampVoiceVolumePct(slider.value);
+        slider.value = String(pct);
+        localStorage.setItem("utc_voice_volume_pct", String(pct));
+        if (currentVoiceAudioEl) currentVoiceAudioEl.volume = getVoiceElementVolume();
+        updateVoiceVolumeLabel();
+    }
+
+    function onVoiceVolumeSliderChange() {
+        onVoiceVolumeSliderInput();
+        if (!audioEnabled) return;
+        playVoiceDynamic("音声テストです");
+    }
+
+    async function playCachedVoice(text) {
+        if (!audioEnabled) return false;
+        const cacheKey = getVoiceCacheKey(text);
+        const blobUrl = voiceBlobUrlCache[cacheKey];
+        if (!blobUrl) return false;
+        await ensureVoiceAudioUnlock();
+        stopCurrentVoicePlayback();
+        const audio = new Audio(blobUrl);
+        audio.setAttribute("playsinline", "");
+        audio.volume = getVoiceElementVolume();
+        currentVoiceAudioEl = audio;
+        try {
+            await audio.play();
+            return true;
+        } catch (e) {
+            console.warn("音声再生に失敗:", text, e);
+            currentVoiceAudioEl = null;
+            return false;
+        }
+    }
+
+    async function playVoiceDynamic(text) {
+        if (!audioEnabled) return;
+        if (await playCachedVoice(text)) return;
+        if (!voicevoxAvailable || !isCriticalVoiceText(text)) {
+            fallbackTTS(text);
+        }
+        await fetchAndCacheVoice(text);
+        await playCachedVoice(text);
     }
 
     async function fetchAndCacheVoice(text) {
         const cacheKey = getVoiceCacheKey(text);
-        if (voiceBufferCache[cacheKey]) return;
+        if (voiceBlobUrlCache[cacheKey]) return;
         if (voiceFetchPromises[cacheKey]) return await voiceFetchPromises[cacheKey];
         voiceFetchPromises[cacheKey] = (async () => {
             try {
-            let url = window.location.protocol + "//" + window.location.host + "/api/voice?text=" + encodeURIComponent(text) + "&speaker=" + selectedVoiceStyleId;
+            let url = window.location.protocol + "//" + window.location.host + "/api/voice?text=" + encodeURIComponent(text) + "&speaker=" + selectedVoiceStyleId + "&_vg=2";
             let res = await fetch(url);
             if (res.ok) {
-                let arrayBuffer = await res.arrayBuffer();
-                await new Promise((resolve) => audioCtx.decodeAudioData(arrayBuffer, (buffer) => {
-                    voiceBufferCache[cacheKey] = buffer;
-                    voicevoxAvailable = true;
-                    resolve();
-                }));
+                const blob = await res.blob();
+                if (voiceBlobUrlCache[cacheKey]) URL.revokeObjectURL(voiceBlobUrlCache[cacheKey]);
+                voiceBlobUrlCache[cacheKey] = URL.createObjectURL(blob);
+                voicevoxAvailable = true;
             } else {
                 voicevoxAvailable = false;
             }
@@ -1753,7 +3124,8 @@
             window.speechSynthesis.cancel();
             let ut = new SpeechSynthesisUtterance(text);
             ut.lang = 'ja-JP';
-            ut.rate = 1.35; 
+            ut.rate = 1.35;
+            ut.volume = Math.min(1.0, getVoiceGainValue());
             window.speechSynthesis.speak(ut);
         }
     }
@@ -1799,9 +3171,6 @@
     }
 
     async function ensureVoiceReady() {
-        if (audioCtx === null) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
         if (voiceWarmupPromise) {
             await voiceWarmupPromise;
             return;
@@ -1809,7 +3178,7 @@
         voiceWarmupPromise = (async () => {
             setVoiceReadyStatus("VOICEVOX音声を準備中...\n音声ダウンロード中。数秒～数十秒お待ちください。", false);
             await preloadCommonVoices();
-            if (voiceBufferCache[getVoiceCacheKey("10")]) {
+            if (voiceBlobUrlCache[getVoiceCacheKey("10")]) {
                 voicevoxAvailable = true;
                 setVoiceReadyStatus("VOICEVOX音声の準備完了", true);
             } else {
@@ -1819,20 +3188,6 @@
         })();
         await voiceWarmupPromise;
         voiceWarmupPromise = null;
-    }
-
-    function playCachedVoice(text) {
-        const cacheKey = getVoiceCacheKey(text);
-        if (!voiceBufferCache[cacheKey]) return false;
-        if (currentAudioSource) {
-            try { currentAudioSource.stop(); } catch(e) {}
-        }
-        let source = audioCtx.createBufferSource();
-        source.buffer = voiceBufferCache[cacheKey];
-        source.connect(audioCtx.destination);
-        currentAudioSource = source;
-        source.start(0);
-        return true;
     }
 
     async function loadVoiceSpeakers() {
@@ -1895,6 +3250,8 @@
         const spSel = document.getElementById("voiceSpeakerSelect");
         const idx = parseInt(spSel.value || "0");
         fillStyleOptions(idx);
+        voiceWarmupPromise = null;
+        clearVoiceCaches();
         ensureVoiceReady();
     }
 
@@ -1902,29 +3259,23 @@
         const stSel = document.getElementById("voiceStyleSelect");
         selectedVoiceStyleId = parseInt(stSel.value || "3");
         localStorage.setItem("utc_voice_style_id", String(selectedVoiceStyleId));
+        voiceWarmupPromise = null;
+        clearVoiceCaches();
         ensureVoiceReady();
     }
 
     async function playTestAudio() {
-        if(audioCtx === null) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if(audioCtx.state === 'suspended') audioCtx.resume();
         if (!audioEnabled) {
             alert("音声モードがOFFになっています。ONにしてからお試しください。");
             return;
         }
         await ensureVoiceReady();
-        if (!playCachedVoice("音声テストです")) {
+        if (!(await playCachedVoice("音声テストです"))) {
             alert("VOICEVOX音声を準備中です。数秒後に再度お試しください。");
         }
     }
 
     async function startCountdownDemo() {
-        if(audioCtx === null) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if(audioCtx.state === 'suspended') audioCtx.resume();
         if (!audioEnabled) {
             alert("音声モードがOFFになっています。ONにしてからお試しください。");
             return;
@@ -1943,12 +3294,12 @@
         const tick = () => {
             if (countdownDemoValue > 0) {
                 valEl.innerText = String(countdownDemoValue);
-                if (!playCachedVoice(String(countdownDemoValue))) playVoiceDynamic(String(countdownDemoValue));
+                playVoiceDynamic(String(countdownDemoValue));
                 countdownDemoValue -= 1;
                 countdownDemoTimer = setTimeout(tick, 1000);
             } else {
                 valEl.innerText = "START";
-                if (!playCachedVoice("スタート")) playVoiceDynamic("スタート");
+                playVoiceDynamic("スタート");
                 countdownDemoTimer = setTimeout(() => {
                     valEl.innerText = "--";
                     btn.disabled = false;
@@ -2146,12 +3497,7 @@
     }
 
     document.addEventListener('touchstart', function() {
-        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-        if ('speechSynthesis' in window) {
-            let silent = new SpeechSynthesisUtterance("");
-            silent.volume = 0;
-            window.speechSynthesis.speak(silent);
-        }
+        if (Object.keys(voiceBlobUrlCache).length) ensureVoiceAudioUnlock();
     }, {passive: true});
 
     document.addEventListener("visibilitychange", () => {
@@ -2174,8 +3520,14 @@
         if (dnEl && drillAllianceName) dnEl.value = drillAllianceName;
         if (rkEl && drillJoinCode) rkEl.value = drillJoinCode;
         if (joinCodeEl && drillJoinCode) joinCodeEl.value = drillJoinCode;
-        setDrillTab("create");
-        selectAppMode(qsMode === "drill" ? "drill" : (savedMode === "drill" ? "drill" : "prod"));
+        setDrillTab(localStorage.getItem("utc_drill_tab") === "join" ? "join" : "create");
+        let initialMode = "drill";
+        if (qsMode === "drill" || qsMode === "prod") initialMode = qsMode;
+        else if (savedMode === "drill" || savedMode === "prod") initialMode = savedMode;
+        selectAppMode(initialMode);
+        deviceMode = localStorage.getItem("utc_device_mode") || null;
+        updateEnvButtonStyles();
+        applyChromeNoticeState();
         let savedName = localStorage.getItem("utc_my_name");
         let savedMin = localStorage.getItem("utc_my_min");
         let savedSec = localStorage.getItem("utc_my_sec");
@@ -2185,18 +3537,23 @@
             if (supportUserName) localStorage.setItem("utc_support_user_name", supportUserName);
         }
         syncSupportNameInput();
-        if (savedName) document.getElementById('pName').value = savedName;
+        if (savedName && savedName !== "乗り手") document.getElementById('pName').value = savedName;
         if (savedMin) document.getElementById('pMin').value = savedMin;
         if (savedSec) document.getElementById('pSec').value = savedSec;
-        
         let urlInput = document.getElementById('shareUrlInput');
         if(urlInput) urlInput.value = window.location.href;
         loadVoiceSpeakers();
+        initVoiceVolumeControls();
         ensureVoiceReady();
         const sFile = document.getElementById("supportFileInput");
         if (sFile) sFile.addEventListener("change", supportOnFilePick);
         const sOv = document.getElementById("chatOverlay");
         if (sOv) sOv.addEventListener("paste", supportOnPaste);
+        connect();
+        if (deviceMode) {
+            if (canQuickStart()) refreshQuickStartPanel();
+            else tryAutoAdvanceFromIntro();
+        }
     };
 
     function setRole(r) { 
@@ -2215,6 +3572,7 @@
             document.getElementById('btnStaffLeader2').className = 'btn-gray';
             document.getElementById('btnStaffRider').className = 'btn-gray';
             document.getElementById('pName').placeholder = "参謀名（必須）";
+            document.getElementById('pName').value = staffPNameFromStorage();
             return;
         }
         isStaffCommander = false;
@@ -2231,13 +3589,7 @@
     }
 
     function register() {
-        if(audioCtx === null) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if(audioCtx.state === 'suspended') audioCtx.resume();
-        if ('speechSynthesis' in window) {
-            let ut = new SpeechSynthesisUtterance("");
-            ut.volume = 0;
-            window.speechSynthesis.speak(ut);
-        }
+        if (Object.keys(voiceBlobUrlCache).length) ensureVoiceAudioUnlock();
         
         setTimeout(() => { preloadCommonVoices(); }, 1000 + Math.random() * 4000);
 
@@ -2251,24 +3603,26 @@
         }
 
         const effectiveRole = isStaffCommander ? staffPlayerRole : myRole;
-        if (!effectiveRole) return alert("役割を選択してください");
+        if (!effectiveRole) { document.getElementById("errRole").textContent = "役割を選択してください"; return; }
         lastRegisteredRole = effectiveRole;
         localStorage.setItem("utc_last_role", effectiveRole);
+        localStorage.setItem("utc_is_staff_commander", isStaffCommander ? "1" : "0");
+        localStorage.setItem("utc_last_alliance_idx", String(myAllianceIdx));
         ws.send(JSON.stringify({cmd:"set_staff_mode", val:{enabled: isStaffCommander, alliance_id: myAllianceIdx}}));
         myRole = effectiveRole;
 
         const inputName = (document.getElementById('pName').value || "").trim();
-        if (isStaffCommander && !inputName) return alert("参謀名を入力してください");
+        if (isStaffCommander && !inputName) { showFieldError("pName", "errPName", "参謀名を入力してください"); return; }
 
         if(effectiveRole.startsWith('leader')) {
             myName = inputName;
-            if(!myName) return alert("名前を入力してください");
+            if(!myName) { showFieldError("pName", "errPName", "名前を入力してください"); return; }
             localStorage.setItem("utc_my_name", myName);
             supportUserName = myName;
             localStorage.setItem("utc_support_user_name", supportUserName);
             ws.send(JSON.stringify({cmd:"register_player", val:{role:effectiveRole, alliance_id:myAllianceIdx, name:myName, march_min:0, march_sec:myMarchSec, device_mode: deviceMode}}));
         } else {
-            myName = isStaffCommander ? inputName : "乗り手";
+            myName = isStaffCommander ? inputName : (inputName || "");
             if (myName) localStorage.setItem("utc_my_name", myName);
             if (isStaffCommander && myName) {
                 supportUserName = myName;
@@ -2278,13 +3632,18 @@
         }
         if (isStaffCommander) {
             ws.send(JSON.stringify({cmd:"set_staff_name", val:{alliance_id: myAllianceIdx, name: inputName}}));
+            if (appMode === "drill") {
+                ws.send(JSON.stringify({cmd:"update_alliance_role", idx: myAllianceIdx, val:"occupy"}));
+                if (localState && localState.alliance_roles) localState.alliance_roles[myAllianceIdx] = "occupy";
+            }
         }
         
         hideAllSteps();
         document.getElementById('display').style.display = 'block';
+        renderAlliancePresenceLine();
         
         if (deviceMode === '2device') {
-            document.getElementById('audioControlsArea').style.display = 'flex';
+            showAudioControlsUi();
             document.getElementById('multiDeviceWarning').style.display = 'block'; 
         }
         document.getElementById('staffCommandPanel').style.display = isStaffCommander ? 'block' : 'none';
@@ -2302,18 +3661,29 @@
         if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
         let ws_protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
         const alnParam = myAllianceIdx === -1 ? 0 : myAllianceIdx;
-        ws = new WebSocket(ws_protocol + window.location.host + `/ws?mode=${appMode}&aln=${alnParam}&room=${encodeURIComponent(drillRoomKey)}`);
+        const wsRoomKey = appMode === "drill" ? effectiveDrillRoomKeyForConnection() : drillRoomKey;
+        ws = new WebSocket(ws_protocol + window.location.host + `/ws?mode=${appMode}&aln=${alnParam}&room=${encodeURIComponent(wsRoomKey)}`);
         ws.onopen = () => {
             reconnectDelayMs = 1000;
             startHeartbeat();
-            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: appMode, alliance_id: alnParam, room_key: drillRoomKey, alliance_name: drillAllianceName}}));
+            ws.send(JSON.stringify({cmd: "set_mode", val: {mode: appMode, alliance_id: alnParam, room_key: wsRoomKey, alliance_name: drillAllianceName}}));
+            ensureStaffModeOnWire();
+            flushPendingDrillModePayload();
+            if (appMode === "drill") requestDrillRoomList(true);
         };
         ws.onmessage = (e) => {
             try {
                 const msg = JSON.parse(e.data);
                 
                 if (msg.type === "sync") {
+                    if (msg.occupy_cmds) applyOccupyCommandFieldsToLocalState(msg.occupy_cmds);
                     applyDrillStaffFromMsg(msg);
+                    applyOccupyDutyFromMsg(msg);
+                    renderOccupyDutyLine();
+                    if (appMode === "prod" && (msg.occupy_duty || msg.occupy_cmds)) {
+                        lastActionState = "";
+                        runPlayerDisplayTick();
+                    }
                     if(msg.server_timestamp) {
                         applyServerTimeOffset(msg.server_timestamp);
                         refreshUtcDisplay();
@@ -2322,11 +3692,19 @@
                 }
                 if (msg.type === "mode_error") {
                     const m = String(msg.message || "");
-                    if (m.includes("訓練ルームが見つかりません")) alert("参加に失敗しました。ルーム一覧を選び直して再参加してください。");
-                    else alert(m || "訓練モードの参加に失敗しました。");
+                    pendingDrillModePayload = null;
+                    pendingDrillModeFailMessage = "";
+                    const userMsg = m.includes("訓練ルームが見つかりません")
+                        ? "参加に失敗しました。ルーム一覧を選び直してください。"
+                        : (m || "練習ルームの参加に失敗しました。");
+                    setDrillStatus(userMsg, true);
+                    showOnboardingGlobal(userMsg);
+                    if (appMode === "drill") requestDrillRoomList(true);
                     return;
                 }
                 if (msg.type === "mode_ok") {
+                    pendingDrillModePayload = null;
+                    pendingDrillModeFailMessage = "";
                     if (msg.room_id) {
                         selectedDrillRoomId = msg.room_id;
                         drillRoomKey = msg.room_id;
@@ -2335,22 +3713,45 @@
                         if (sel) sel.value = msg.room_id;
                         const joinCodeEl = document.getElementById("drillJoinCodeInput");
                         if (joinCodeEl && drillJoinCode) joinCodeEl.value = drillJoinCode;
-                        if (msg.action === "create") setDrillTab("join");
+                        if (msg.action === "create") {
+                            setDrillTab("join");
+                            requestDrillRoomList(true);
+                        }
+                    }
+                    if (appMode === "drill" && (msg.action === "create" || msg.action === "join")) {
+                        const act = msg.action === "create" ? "ルームを作成しました" : "ルームに参加しました";
+                        setDrillStatus(act + "。下の役割を選んでください。");
+                        selectAlliance(0);
                     }
                     lastActionState = "";
                     cachedArrTimes = {};
                     cachedInsTime = null;
                     lastVoiceKeys = {};
-                    // 再接続時に役割選択画面へ強制遷移しない
                     return;
                 }
                 if (msg.type === "error") {
                     const m = String(msg.message || "通信エラーが発生しました。");
-                    alert(m);
+                    const joinEl = document.getElementById("step2_5_alliance");
+                    if (joinEl && joinEl.style.display === "block") {
+                        showOnboardingGlobal(m);
+                        setDrillStatus(m, true);
+                    } else {
+                        alert(m);
+                    }
                     return;
                 }
                 if (msg.type === "drill_rooms") {
                     renderDrillRooms(msg.rooms || []);
+                    return;
+                }
+                if (msg.type === "init" && msg.data) {
+                    if (msg.server_timestamp) applyServerTimeOffset(msg.server_timestamp);
+                    localState = msg.data;
+                    applyDrillStaffFromMsg(msg);
+                    renderAlliancePresenceLine();
+                    renderOccupyDutyLine();
+                    ensureStaffModeOnWire();
+                    lastActionState = "";
                     return;
                 }
                 if (msg.type === "gorei_hint") {
@@ -2391,23 +3792,23 @@
                 refreshUtcDisplay();
                 
                 localState = msg.data;
+                if (msg.occupy_cmds) applyOccupyCommandFieldsToLocalState(msg.occupy_cmds);
                 applyPendingGoreiHintsToLocalState();
                 ensureGoreiLastTargets(localState, getSyncedNow().getTime());
                 applyDrillStaffFromMsg(msg);
+                applyAlliancePresenceFromMsg(msg);
+                applyOccupyDutyFromMsg(msg);
                 if (msg.drill_rooms) {
                     renderDrillRooms(msg.drill_rooms);
                 }
                 
-                if (appMode !== "drill") {
-                    for (let a = 0; a < 3; a++) {
-                        let btn = document.getElementById(`btnAln${a}`);
-                        if (btn && localState.alliance_names[a]) {
-                            btn.innerText = localState.alliance_names[a];
-                        }
-                    }
-                }
+                if (appMode !== "drill") refreshProdAllianceButtons();
+                renderStaffAllianceHead();
+                renderAlliancePresenceLine();
+                renderOccupyDutyLine();
                 if (myAllianceIdx !== -1 && localState.alliance_names[myAllianceIdx]) {
                     let alnName = localState.alliance_names[myAllianceIdx];
+                    if (appMode === "prod") alnName = prodAllianceDisplayName(alnName, myAllianceIdx);
                     if (appMode === "drill" && drillAllianceName) {
                         alnName = drillAllianceName;
                     }
@@ -2426,6 +3827,7 @@
                     renderChatBody();
                 }
                 if (isStaffCommander) maybeRefreshStaffPanelAfterTick();
+                runPlayerDisplayTick();
 
             } catch (err) { console.error(err); }
         };
@@ -2438,69 +3840,338 @@
         };
     }
 
+    function isShuketsuShuRole(role) {
+        return role === 'leader1' || role === 'leader2';
+    }
+
+    function goreiBoxDomId(b) {
+        return b.boxId || b.type;
+    }
+
+    function goreiCdSeconds(b, now) {
+        if (b.goreiPhase === 'rallying' || b.goreiPhase === 'marching') {
+            const endMs = b.cdEndMs || b.targetMs;
+            return Math.max(0, (endMs - now) / 1000);
+        }
+        if (b.goreiPhase === 'pre_rally') {
+            return Math.max(0, (b.actionMs - now) / 1000);
+        }
+        return Math.max(0, (b.actionMs - now) / 1000);
+    }
+
+    function buildGoreiBlockFromTimer(timer, defaultRally, now) {
+        if (!timer || Number(timer.state || 0) === 0) return null;
+        const targetMs = staffLandingMsForUi(timer, defaultRally, now);
+        if (!targetMs) return null;
+        const rallySec = Number(defaultRally || 0) + Number(timer.sub_set || 0);
+        if (Number(timer.state) === 4) {
+            const actionMs = timer.start_at
+                ? new Date(timer.start_at).getTime()
+                : (targetMs - rallySec * 1000);
+            return {
+                type: 'gorei', boxId: 'gorei', goreiPhase: 'pre_rally',
+                actionMs, targetMs, cdEndMs: actionMs,
+                actionLabel: '集結開始まで', arrLabel: '着弾', color: '#E5C07B'
+            };
+        }
+        if (Number(timer.state) === 1) {
+            const cdEndMs = timer.end ? new Date(timer.end).getTime() : targetMs;
+            return {
+                type: 'gorei', boxId: 'gorei', goreiPhase: 'rallying',
+                actionMs: now - 1, targetMs, cdEndMs,
+                actionLabel: '集結中', arrLabel: '着弾', color: '#E5C07B'
+            };
+        }
+        if (Number(timer.state) === 2) {
+            const cdEndMs = timer.end ? new Date(timer.end).getTime() : targetMs;
+            return {
+                type: 'gorei', boxId: 'gorei', goreiPhase: 'marching',
+                actionMs: now - 1, targetMs, cdEndMs,
+                actionLabel: '行軍中', arrLabel: '着弾', color: '#E5C07B'
+            };
+        }
+        return null;
+    }
+
+    function buildPreRallyGoreiBlock(actionMs, targetMs) {
+        return {
+            type: 'gorei', boxId: 'gorei', goreiPhase: 'pre_rally',
+            actionMs, targetMs, cdEndMs: actionMs,
+            actionLabel: '集結開始まで', arrLabel: '着弾', color: '#E5C07B'
+        };
+    }
+
+    function buildRiderGoreiWatchBlocks(localState, allianceIdx, defaultRally, now) {
+        const blocks = [];
+        for (let off = 0; off < 2; off++) {
+            const squadId = allianceIdx * 2 + off;
+            const s0 = 6 + squadId * 6;
+            const squadTimers = localState.timers.slice(s0, s0 + 6);
+            let timer = squadTimers.find(t => t && Number(t.state || 0) !== 0);
+            let blk = timer ? buildGoreiBlockFromTimer(timer, defaultRally, now) : null;
+            if (!blk) {
+                let targetSec = 0;
+                if (Array.isArray(localState.gorei_last_target)) {
+                    targetSec = Number(localState.gorei_last_target[squadId] || 0);
+                }
+                if (!targetSec && pendingGoreiHints[squadId]) {
+                    targetSec = Number(pendingGoreiHints[squadId] || 0);
+                }
+                if (targetSec > 0) {
+                    const targetMs = targetSec * 1000;
+                    const maxSub = squadTimers.reduce((m, t) => Math.max(m, Number((t && t.sub_set) || 0)), 0);
+                    const rallySec = Number(defaultRally || 0) + maxSub;
+                    const actionMs = targetMs - rallySec * 1000;
+                    blk = buildPreRallyGoreiBlock(actionMs, targetMs);
+                }
+            }
+            if (!blk) continue;
+            const watch = Object.assign({}, blk, {
+                type: 'gorei_rider_watch',
+                boxId: `gorei_rider_watch_s${off}`,
+                riderTag: '乗り手',
+                cdCaption: 'CD',
+                arrLabel: '着弾時間',
+                riderHint: ''
+            });
+            if (watch.goreiPhase === 'pre_rally') {
+                watch.headline = '集結準備中';
+                watch.subline = '集結主が集結準備中です。';
+            } else if (watch.goreiPhase === 'rallying') {
+                watch.headline = '集結中';
+                watch.subline = '集結主が集結中です。';
+            } else {
+                watch.headline = '行軍中';
+                watch.subline = '集結主が行軍中です。';
+            }
+            blocks.push(watch);
+        }
+        return blocks;
+    }
+
+    function pushShuketsuShuGoreiBlocks(displayBlocks, localState, effectiveRoleForUi, leaderT, myAllianceIdx, now) {
+        if (leaderT) {
+            const blk = buildGoreiBlockFromTimer(leaderT, localState.default_rally, now);
+            if (blk) {
+                displayBlocks.push(blk);
+                return;
+            }
+        }
+        const baseSquad = myAllianceIdx * 2;
+        const t1 = Number((localState.gorei_last_target || [])[baseSquad] || 0);
+        const t2 = Number((localState.gorei_last_target || [])[baseSquad + 1] || 0);
+        let chosen = 0;
+        if (effectiveRoleForUi === 'leader1') chosen = t1;
+        else if (effectiveRoleForUi === 'leader2') chosen = t2;
+        else chosen = [t1, t2].filter(x => x > 0).sort((a, b) => a - b)[0] || 0;
+        if (!chosen) {
+            const p1 = Number(pendingGoreiHints[baseSquad] || 0);
+            const p2 = Number(pendingGoreiHints[baseSquad + 1] || 0);
+            if (effectiveRoleForUi === 'leader1') chosen = p1;
+            else if (effectiveRoleForUi === 'leader2') chosen = p2;
+            else chosen = [p1, p2].filter(x => x > 0).sort((a, b) => a - b)[0] || 0;
+        }
+        if (chosen > 0) {
+            const targetMs = chosen * 1000;
+            const rallySec = Number(localState.default_rally || 0) + Number(myMarchSec || 0);
+            const actionMs = targetMs - rallySec * 1000;
+            displayBlocks.push(buildPreRallyGoreiBlock(actionMs, targetMs));
+        }
+    }
+
     function buildBoxHTML(b, now) {
-        let isActionDone = (b.actionMs <= now);
-        let isInsFlight = (b.type === 'ins' && isActionDone && now < b.targetMs);
-        let boxBg = isActionDone ? "#3E4451" : "#2A2E37";
-        let bdColor = isActionDone ? "#3E4451" : b.color;
-        let txtColor = isActionDone ? "#ABB2BF" : b.color;
-        let cdText = isActionDone
-            ? (isInsFlight ? formatSec((b.targetMs - now) / 1000) : "00:00")
-            : formatSec((b.actionMs - now)/1000);
-        let actionLabel = isActionDone
-            ? (isInsFlight ? "⏳ 差込着弾まで" : `✅ ${b.actionLabel} 完了`)
-            : `⏳ ${b.actionLabel} まで`;
+        const boxDomId = goreiBoxDomId(b);
+        const dutyCls = b.dutyTier === "primary" ? " duty-block-primary" : (b.dutyTier === "secondary" ? " duty-block-secondary" : "");
+        let dutyBadgeHtml = "";
+        if (b.dutyRoleLabel) {
+            const badgeCls = b.dutyTier === "primary"
+                ? (b.type === "ins" ? "primary-ins" : "primary-swap")
+                : "secondary";
+            const extra = b.dutyExtraNote ? ` — ${escapeHtml(b.dutyExtraNote)}` : "";
+            dutyBadgeHtml = `<div class="duty-role-badge ${badgeCls}">${escapeHtml(b.dutyRoleLabel)}${extra}</div>`;
+        }
+        const isRiderWatch = (b.type === 'gorei_rider_watch');
+        const isGorei = (b.type === 'gorei' || isRiderWatch);
+        const isWd = (b.type === 'wd_manual');
+        const isIns = (b.type === 'ins');
+        const isWdActive = isWd && now < b.targetMs;
+        const isInsReturn = isIns && b.returnEndMs && now >= b.targetMs && now < b.returnEndMs;
+        const isInsActive = isIns && (b.returnEndMs ? now < b.returnEndMs : now < b.actionMs);
+        let isActionDone = !isWd && !isIns && !isGorei && (b.actionMs <= now);
+        if (isGorei && b.goreiPhase === 'pre_rally') {
+            isActionDone = now >= b.actionMs;
+        } else if (isGorei && (b.goreiPhase === 'rallying' || b.goreiPhase === 'marching')) {
+            isActionDone = false;
+        }
+        let boxBg = (isActionDone && !isInsActive && !isWdActive) ? "#3E4451" : "#2A2E37";
+        let bdColor = (isActionDone && !isInsActive && !isWdActive) ? "#3E4451" : b.color;
+        let txtColor = (isActionDone && !isInsActive && !isWdActive) ? "#ABB2BF" : b.color;
+        let cdText;
+        if (isWd) {
+            if (now < b.targetMs) {
+                cdText = formatSec((b.targetMs - now) / 1000);
+            } else {
+                cdText = "00:00";
+            }
+        } else if (isIns) {
+            if (now < b.actionMs) {
+                cdText = formatSec((b.actionMs - now) / 1000);
+            } else if (b.returnEndMs && now < b.returnEndMs) {
+                if (now < b.targetMs) {
+                    cdText = formatSec((b.targetMs - now) / 1000);
+                } else {
+                    cdText = formatSec((b.returnEndMs - now) / 1000);
+                }
+            } else {
+                cdText = "00:00";
+            }
+        } else if (isGorei) {
+            cdText = formatSec(goreiCdSeconds(b, now));
+        } else if (isActionDone) {
+            cdText = "00:00";
+        } else {
+            cdText = formatSec((b.actionMs - now) / 1000);
+        }
+        let actionLabel;
+        if (isRiderWatch) {
+            actionLabel = b.headline || '集結中';
+        } else if (isWd) {
+            actionLabel = (now < b.targetMs) ? `⏳ ${b.actionLabel} まで` : `✅ ${b.actionLabel} 完了`;
+        } else if (isIns) {
+            if (now < b.actionMs) {
+                actionLabel = `⏳ ${b.actionLabel} まで`;
+            } else if (b.returnEndMs && now < b.returnEndMs) {
+                actionLabel = now < b.targetMs ? "⏳ 差込着弾まで" : "⏳ 差込帰還中";
+            } else {
+                actionLabel = `✅ ${b.actionLabel} 完了`;
+            }
+        } else if (isGorei) {
+            const done = (b.goreiPhase === 'pre_rally' && now >= b.actionMs);
+            actionLabel = done ? `✅ ${b.actionLabel} 完了` : `⏳ ${b.actionLabel}`;
+        } else if (isActionDone) {
+            actionLabel = `✅ ${b.actionLabel} 完了`;
+        } else {
+            actionLabel = `⏳ ${b.actionLabel} まで`;
+        }
+
+        const riderSub = isRiderWatch && b.subline
+            ? `<div style="font-size:16px;color:#ABB2BF;margin:14px 0 10px;line-height:1.5;">${b.subline}</div>`
+            : '';
+        const riderCdCap = isRiderWatch && b.cdCaption
+            ? `<div style="font-size:16px;color:#E5C07B;font-weight:bold;margin-bottom:8px;">${b.cdCaption}</div>`
+            : '';
+        const riderArrLabel = isRiderWatch
+            ? `<div style="font-size:16px;color:#ABB2BF;margin-bottom:5px;">${b.arrLabel || '着弾時間'}</div>`
+            : `<div style="font-size:16px; color:#ABB2BF; margin-bottom: 5px;">🎯 ${b.arrLabel}時間 (UTC)</div>`;
+        const riderHeadline = isRiderWatch
+            ? `<div style="font-size:28px;font-weight:bold;color:${txtColor};letter-spacing:1px;margin:12px 0 4px;">${actionLabel}</div>`
+            : '';
+        const riderFoot = (isRiderWatch && b.riderHint)
+            ? `<div style="font-size:13px;color:#ABB2BF;margin-top:12px;line-height:1.5;">${b.riderHint}</div>`
+            : '';
+        const riderRoleTag = isRiderWatch
+            ? `<div style="font-size:14px;color:#61AFEF;font-weight:bold;letter-spacing:1px;margin-bottom:10px;">${b.riderTag || '乗り手'}</div>`
+            : '';
 
         if (deviceMode === '1device') {
+            const oneDevClockTitle = isRiderWatch
+                ? ''
+                : (isGorei ? '💡 集結のタイミング (日本時間)' : '💡 あなたの出発時刻 (日本時間)');
+            const oneDevBtnHint = isRiderWatch
+                ? ''
+                : '<div style="font-size:13px; margin-top:15px; font-weight:bold; background:rgba(0,0,0,0.2); padding:6px; border-radius:4px;">※お手元の時計がこの時間になったらボタンを押す！</div>';
             return `
-            <div class="departure-info" style="background:${boxBg}; color:#fff; border:2px solid ${bdColor}; padding: 20px;">
-                <div style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">💡 あなたの出発時刻 (日本時間)</div>
+            <div class="player-action-card departure-info lux-instruction-frame${dutyCls}" style="background:${boxBg}; color:#fff; border:2px solid ${bdColor}; padding: 20px;">
+                ${riderRoleTag}
+                ${dutyBadgeHtml}
+                ${oneDevClockTitle ? `<div style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">${oneDevClockTitle}</div>` : ''}
                 <div style="display:flex; justify-content:center; align-items:center; gap: 25px;">
-                    <canvas id="clock_${b.type}" width="110" height="110" style="background:#fff; border-radius:50%; border:4px solid #282C34; box-shadow: 0 2px 5px rgba(0,0,0,0.5);"></canvas>
-                    <span class="departure-time" id="jst_${b.type}">--:--:--</span>
+                    <canvas id="clock_${boxDomId}" width="110" height="110" style="background:#fff; border-radius:50%; border:4px solid #282C34; box-shadow: 0 2px 5px rgba(0,0,0,0.5);"></canvas>
+                    <span class="departure-time" id="jst_${boxDomId}">--:--:--</span>
                 </div>
-                <div style="font-size:13px; margin-top:15px; font-weight:bold; background:rgba(0,0,0,0.2); padding:6px; border-radius:4px;">※お手元の時計がこの時間になったらボタンを押す！</div>
-                
+                ${oneDevBtnHint}
                 <div style="margin-top:20px; padding-top:20px; border-top:1px dashed rgba(255,255,255,0.5);">
-                    <div style="font-size: 20px; font-weight: bold; color:${txtColor}; letter-spacing: 1px;">${actionLabel}</div>
-                    <div id="cd_${b.type}" style="font-size: 56px; color: ${txtColor}; font-weight: 900; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 3px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); margin: 15px 0;">${cdText}</div>
-                    <div style="margin-top:15px; background:rgba(0,0,0,0.3); padding:10px; border-radius:6px;">
-                        <div style="font-size:15px; color:#ABB2BF;">🎯 ${b.arrLabel}時間 (UTC)</div>
-                        <div id="arr_${b.type}" style="font-size:32px; color:#98C379; font-weight:bold; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin-top: 5px;">--:--:--</div>
+                    ${isRiderWatch ? riderHeadline : `<div style="font-size: 22px; font-weight: bold; color:${txtColor}; letter-spacing: 1px;">${actionLabel}</div>`}
+                    ${riderCdCap}
+                    <div id="cd_${boxDomId}" class="player-action-countdown" style="font-size: 56px; color: ${txtColor}; font-weight: 900; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 3px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); margin: 15px 0;">${cdText}</div>
+                    ${riderSub}
+                    <div class="lux-arr-panel" style="margin-top:15px; background:rgba(0,0,0,0.3); padding:10px; border-radius:6px;">
+                        ${riderArrLabel}
+                        <div id="arr_${boxDomId}" style="font-size:32px; color:#98C379; font-weight:bold; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 2px; margin-top: 5px;">--:--:--</div>
                     </div>
+                    ${riderFoot}
+                </div>
+            </div>`;
+        } else if (isRiderWatch) {
+            return `
+            <div class="player-action-card departure-info lux-instruction-frame${dutyCls}" style="background:${boxBg}; color:#61AFEF; border:2px solid ${bdColor}; box-shadow: 0 4px 8px rgba(0,0,0,0.5); margin-bottom: 20px; padding: 25px 15px;">
+                ${riderRoleTag}
+                ${dutyBadgeHtml}
+                ${riderHeadline}
+                ${riderCdCap}
+                <div id="cd_${boxDomId}" class="player-action-countdown departure-time" style="color:${txtColor}; font-size: 76px; font-weight: 900; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 4px; margin: 8px 0;">${cdText}</div>
+                ${riderSub}
+                <div class="lux-arr-panel" style="margin-top:16px; background:#1E2227; padding:15px; border-radius:8px; border:1px solid #3E4451;">
+                    ${riderArrLabel}
+                    <div id="arr_${boxDomId}" style="font-size:40px; color:#98C379; font-weight:bold; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 2px;">--:--:--</div>
                 </div>
             </div>`;
         } else {
             return `
-            <div class="departure-info" style="background:${boxBg}; color:#61AFEF; border:2px solid ${bdColor}; box-shadow: 0 4px 8px rgba(0,0,0,0.5); margin-bottom: 20px; padding: 25px 15px;">
+            <div class="player-action-card departure-info lux-instruction-frame${dutyCls}" style="background:${boxBg}; color:#61AFEF; border:2px solid ${bdColor}; box-shadow: 0 4px 8px rgba(0,0,0,0.5); margin-bottom: 20px; padding: 25px 15px;">
+                ${dutyBadgeHtml}
                 <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px; color:${txtColor}; letter-spacing: 1px;">${actionLabel}</div>
-                <div id="cd_${b.type}" class="departure-time" style="color:${txtColor}; font-size: 76px; font-weight: 900; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 4px; margin: 20px 0;">${cdText}</div>
-                <div style="margin-top:20px; background:#1E2227; padding:15px; border-radius:8px; border:1px solid #3E4451;">
-                    <div style="font-size:16px; color:#ABB2BF; margin-bottom: 5px;">🎯 ${b.arrLabel}時間 (UTC)</div>
-                    <div id="arr_${b.type}" style="font-size:40px; color:#98C379; font-weight:bold; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 2px;">--:--:--</div>
+                <div id="cd_${boxDomId}" class="player-action-countdown departure-time" style="color:${txtColor}; font-size: 76px; font-weight: 900; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 4px; margin: 20px 0;">${cdText}</div>
+                <div class="lux-arr-panel" style="margin-top:20px; background:#1E2227; padding:15px; border-radius:8px; border:1px solid #3E4451;">
+                    ${riderArrLabel}
+                    <div id="arr_${boxDomId}" style="font-size:40px; color:#98C379; font-weight:bold; font-family: 'Arial Black', 'Verdana', sans-serif; font-variant-numeric: tabular-nums; letter-spacing: 2px;">--:--:--</div>
                 </div>
+                ${riderFoot}
             </div>`;
         }
     }
 
     function updateBoxDynamic(b, now) {
-        let isActionDone = (b.actionMs <= now);
-        let isInsFlight = (b.type === 'ins' && isActionDone && now < b.targetMs);
-        let cdEl = document.getElementById(`cd_${b.type}`);
+        const boxDomId = goreiBoxDomId(b);
+        const isGorei = (b.type === 'gorei' || b.type === 'gorei_rider_watch');
+        const isWd = (b.type === 'wd_manual');
+        const isIns = (b.type === 'ins');
+        let isActionDone = !isWd && !isIns && !isGorei && (b.actionMs <= now);
+        if (isGorei && b.goreiPhase === 'pre_rally') {
+            isActionDone = now >= b.actionMs;
+        } else if (isGorei && (b.goreiPhase === 'rallying' || b.goreiPhase === 'marching')) {
+            isActionDone = false;
+        }
+        let cdEl = document.getElementById(`cd_${boxDomId}`);
         if (cdEl) {
-            if (!isActionDone) cdEl.innerText = formatSec((b.actionMs - now) / 1000);
-            else if (isInsFlight) cdEl.innerText = formatSec((b.targetMs - now) / 1000);
+            if (isWd) {
+                cdEl.innerText = (now < b.targetMs) ? formatSec((b.targetMs - now) / 1000) : "00:00";
+            } else if (isIns) {
+                if (now < b.actionMs) {
+                    cdEl.innerText = formatSec((b.actionMs - now) / 1000);
+                } else if (b.returnEndMs && now < b.returnEndMs) {
+                    if (now < b.targetMs) {
+                        cdEl.innerText = formatSec((b.targetMs - now) / 1000);
+                    } else {
+                        cdEl.innerText = formatSec((b.returnEndMs - now) / 1000);
+                    }
+                } else {
+                    cdEl.innerText = "00:00";
+                }
+            } else if (isGorei) {
+                cdEl.innerText = formatSec(goreiCdSeconds(b, now));
+            } else if (!isActionDone) cdEl.innerText = formatSec((b.actionMs - now) / 1000);
             else cdEl.innerText = "00:00";
         }
 
-        let arrEl = document.getElementById(`arr_${b.type}`);
+        let arrEl = document.getElementById(`arr_${boxDomId}`);
         if (arrEl) {
             let d = new Date(b.targetMs);
             arrEl.innerText = `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}:${String(d.getUTCSeconds()).padStart(2, '0')}`;
         }
 
         if (deviceMode === '1device') {
-            let jstEl = document.getElementById(`jst_${b.type}`);
+            let jstEl = document.getElementById(`jst_${boxDomId}`);
             if (jstEl) {
                 let d = new Date(b.actionMs + 9 * 3600000); 
                 jstEl.innerText = `${String(d.getUTCHours() % 24).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}:${String(d.getUTCSeconds()).padStart(2, '0')}`;
@@ -2558,35 +4229,69 @@
         return null;
     }
 
+    /** 差込の着弾(0)時刻 — 敵集結の最遅着弾−margin。号令前の参謀プレビュー用 */
+    function computeInsertLandingMsFromEnemy(data, nowTs) {
+        if (!data) return null;
+        const marginMs = getInsertMarginSec(data) * 1000;
+        const marked = Number(data.insert_target_idx);
+        if (marked >= 0 && marked < 6) {
+            const mt = data.timers[marked];
+            if (mt && mt.state !== 0) {
+                const mTgt = getTargetTime(mt, nowTs, data.default_rally);
+                if (mTgt) return mTgt - marginMs;
+            }
+        }
+        const candidates = [];
+        for (let i = 0; i < 6; i++) {
+            const t = data.timers[i];
+            if (!t || t.state === 0) continue;
+            const tgt = getTargetTime(t, nowTs, data.default_rally);
+            if (tgt) candidates.push(tgt - marginMs);
+        }
+        return candidates.length ? Math.max(...candidates) : null;
+    }
+    /** 号令後の着弾時刻（プレイヤー表示の基準） */
+    function getInsertLandingMs(data, now) {
+        if (!data) return null;
+        if (!isActiveOccupyCommandSec(data.insert_fire_target, now)) return null;
+        return Number(data.insert_fire_target) * 1000;
+    }
+    function getManualSwapLandingMs(data, now) {
+        if (!data) return null;
+        if (!isActiveOccupyCommandSec(data.manual_swap_trigger_time, now)) return null;
+        return Number(data.manual_swap_trigger_time) * 1000;
+    }
+    /** 入替と同型: 着弾−行軍秒＝各プレイヤーの差込スタート */
+    function buildInsertDisplayBlock(landingMs, marchSec) {
+        const targetMs = landingMs;
+        const msec = Number(marchSec || 0) * 1000;
+        const actionMs = targetMs - msec;
+        return {
+            type: 'ins',
+            actionMs,
+            targetMs,
+            returnEndMs: targetMs + msec,
+            actionLabel: "差込スタート",
+            arrLabel: "差込着弾",
+            color: "#E06C75"
+        };
+    }
+    function allianceUsesInsertFeature(roleType) {
+        return roleType === 'occupy';
+    }
     function getInsTargetTime(data, now) {
-        if (data.insert_fire_target && Number(data.insert_fire_target) * 1000 > now) {
-            return Number(data.insert_fire_target) * 1000;
-        }
-        let idx = data.insert_target_idx;
-        let res = null;
-        if (idx >= 0 && idx < 6 && data.timers[idx].state !== 0) {
-            res = getTargetTime(data.timers[idx], now, data.default_rally);
-        } else {
-            let arr = [];
-            for(let i=0; i<6; i++) { let t = getTargetTime(data.timers[i], now, data.default_rally); if(t) arr.push(t); }
-            if(arr.length > 0) res = Math.max(...arr);
-        }
-        if (res !== null) {
-            cachedInsTime = { time: res, updated: now };
-            return res;
-        }
-        if (cachedInsTime && (now - cachedInsTime.updated < 300000)) return cachedInsTime.time;
-        return null;
+        return getInsertLandingMs(data, now);
     }
 
     setInterval(() => {
         refreshUtcDisplay();
     }, 250);
 
-    setInterval(() => {
+    function runPlayerDisplayTick() {
         const effectiveRoleForUi = (myRole || (isStaffCommander ? staffPlayerRole : null) || lastRegisteredRole);
         if (!localState || !effectiveRoleForUi || myAllianceIdx === -1) return;
         let now = getSyncedNow().getTime();
+        renderOccupyDutyLine();
         ensureGoreiLastTargets(localState, now);
 
         if (localState.cancel_trigger !== lastCancelTrigger) {
@@ -2621,20 +4326,11 @@
             }
         }
 
-        let leaderLeadTime = effectiveRoleForUi.startsWith('leader') ? (localState.default_rally + myMarchSec) * 1000 : 0;
-        let riderLeadTime = effectiveRoleForUi === 'rider' ? myMarchSec * 1000 : 0;
-        let finalLeadTime = effectiveRoleForUi.startsWith('leader') ? leaderLeadTime : riderLeadTime;
-
         let displayBlocks = [];
 
-        let insT = getInsTargetTime(localState, now);
-        if (insT) {
-            let actionTime = insT - 1000 - finalLeadTime;
-            let actionLbl = effectiveRoleForUi.startsWith('leader') ? "差込スタート(集結)" : "差込スタート";
-            displayBlocks.push({
-                type: 'ins', actionMs: actionTime, targetMs: insT - 1000,
-                actionLabel: actionLbl, arrLabel: "差込", color: "#E06C75"
-            });
+        const insLandingMs = getInsertLandingMs(localState, now);
+        if (insLandingMs && allianceUsesInsertFeature(myRoleType)) {
+            displayBlocks.push(buildInsertDisplayBlock(insLandingMs, myMarchSec));
         }
 
         if (isStaffCommander) {
@@ -2650,10 +4346,16 @@
                 .filter(Boolean)
                 .sort((a, b) => a.targetMs - b.targetMs)[0];
             if (activeGorei) {
-                displayBlocks.push({
-                    type: 'gorei', actionMs: activeGorei.actionMs, targetMs: activeGorei.targetMs,
-                    actionLabel: "集結開始", arrLabel: "着弾", color: "#E5C07B"
-                });
+                const staffBlk = buildGoreiBlockFromTimer(activeGorei.t, localState.default_rally, now);
+                if (staffBlk) {
+                    displayBlocks.push(staffBlk);
+                } else {
+                    displayBlocks.push({
+                        type: 'gorei', boxId: 'gorei', goreiPhase: 'pre_rally',
+                        actionMs: activeGorei.actionMs, targetMs: activeGorei.targetMs, cdEndMs: activeGorei.actionMs,
+                        actionLabel: "集結開始まで", arrLabel: "着弾", color: "#E5C07B"
+                    });
+                }
             }
             if (!activeGorei) {
                 const nowMs = now;
@@ -2665,110 +4367,61 @@
                 if (hinted.length > 0) {
                     hinted.sort((a, b) => a.targetMs - b.targetMs);
                     const h = hinted[0];
-                    displayBlocks.push({
-                        type: 'gorei', actionMs: Number(h.actionMs), targetMs: Number(h.targetMs),
-                        actionLabel: "集結開始", arrLabel: "着弾", color: "#E5C07B"
-                    });
+                    displayBlocks.push(buildPreRallyGoreiBlock(Number(h.actionMs), Number(h.targetMs)));
                 }
             }
-        } else {
-            // 非参謀は役割情報が一時欠落しても、同盟内アクティブ号令を直接拾って表示する
-            const ownTimers = localState.timers.slice(startIdx, startIdx + 12);
-            let ownActive = ownTimers
-                .map(t => {
-                    if (!t || Number(t.state || 0) === 0) return null;
-                    const targetMs = staffLandingMsForUi(t, localState.default_rally, now);
-                    if (!targetMs) return null;
-                    const startAt = (t.start_at ? new Date(t.start_at).getTime() : (targetMs - (localState.default_rally + Number(t.sub_set || 0)) * 1000));
-                    return { t, targetMs, startAt };
-                })
-                .filter(Boolean)
-                .sort((a, b) => a.targetMs - b.targetMs)[0];
-            if (!ownActive) {
-                // 端末側同盟状態が崩れても表示を落とさない最終フォールバック
-                ownActive = localState.timers.slice(6)
-                    .map(t => {
-                        if (!t || Number(t.state || 0) === 0) return null;
-                        const targetMs = staffLandingMsForUi(t, localState.default_rally, now);
-                        if (!targetMs) return null;
-                        const startAt = (t.start_at ? new Date(t.start_at).getTime() : (targetMs - (localState.default_rally + Number(t.sub_set || 0)) * 1000));
-                        return { t, targetMs, startAt };
-                    })
-                    .filter(Boolean)
-                    .sort((a, b) => a.targetMs - b.targetMs)[0];
-            }
-            if (!ownActive && Array.isArray(localState.gorei_last_target)) {
-                const baseSquad = myAllianceIdx * 2;
-                const t1 = Number(localState.gorei_last_target[baseSquad] || 0);
-                const t2 = Number(localState.gorei_last_target[baseSquad + 1] || 0);
-                let chosen = 0;
-                if (effectiveRoleForUi === 'leader1') chosen = t1;
-                else if (effectiveRoleForUi === 'leader2') chosen = t2;
-                else chosen = [t1, t2].filter(x => x > 0).sort((a, b) => a - b)[0] || 0;
-                if (chosen > 0) {
-                    const targetMs = chosen * 1000;
-                    const isRider = (effectiveRoleForUi === 'rider');
-                    const actionMs = isRider
-                        ? (targetMs - Number(myMarchSec || 0) * 1000)
-                        : (targetMs - (Number(localState.default_rally || 0) + Number(myMarchSec || 0)) * 1000);
-                    ownActive = { targetMs, startAt: actionMs };
-                }
-            }
-            if (!ownActive) {
-                const baseSquad = myAllianceIdx * 2;
-                const p1 = Number(pendingGoreiHints[baseSquad] || 0);
-                const p2 = Number(pendingGoreiHints[baseSquad + 1] || 0);
-                let chosenP = 0;
-                if (effectiveRoleForUi === 'leader1') chosenP = p1;
-                else if (effectiveRoleForUi === 'leader2') chosenP = p2;
-                else chosenP = [p1, p2].filter(x => x > 0).sort((a, b) => a - b)[0] || 0;
-                if (chosenP > 0) {
-                    const targetMs = chosenP * 1000;
-                    const isRider = (effectiveRoleForUi === 'rider');
-                    const actionMs = isRider
-                        ? (targetMs - Number(myMarchSec || 0) * 1000)
-                        : (targetMs - (Number(localState.default_rally || 0) + Number(myMarchSec || 0)) * 1000);
-                    ownActive = { targetMs, startAt: actionMs };
-                }
-            }
-            if (ownActive) {
-                const isRider = (effectiveRoleForUi === 'rider');
-                const actionMs = isRider ? (ownActive.targetMs - (Number(myMarchSec || 0) * 1000)) : ownActive.startAt;
-                displayBlocks.push({
-                    type: 'gorei', actionMs: actionMs, targetMs: ownActive.targetMs,
-                    actionLabel: isRider ? "出発" : "集結開始", arrLabel: "着弾", color: "#E5C07B"
-                });
-            }
+        } else if (effectiveRoleForUi === 'rider') {
+            buildRiderGoreiWatchBlocks(localState, myAllianceIdx, localState.default_rally, now)
+                .forEach(blk => displayBlocks.push(blk));
+        } else if (isShuketsuShuRole(effectiveRoleForUi)) {
+            pushShuketsuShuGoreiBlocks(displayBlocks, localState, effectiveRoleForUi, leaderT, myAllianceIdx, now);
         }
 
         if (myRoleType === 'occupy') {
-            if (localState.manual_swap_trigger_time) {
-                let targetMs = localState.manual_swap_trigger_time * 1000;
+            const swapLandMs = getManualSwapLandingMs(localState, now);
+            if (swapLandMs) {
+                let targetMs = swapLandMs;
                 let actionTime = targetMs - (myMarchSec * 1000); 
                 displayBlocks.push({
                     type: 'swap', actionMs: actionTime, targetMs: targetMs,
-                    actionLabel: effectiveRoleForUi.startsWith('leader') ? "占領入替" : "入替", arrLabel: "入替着弾", color: "#98C379"
+                    actionLabel: isShuketsuShuRole(effectiveRoleForUi) ? "占領入替" : "入替", arrLabel: "入替着弾", color: "#98C379"
                 });
             }
         }
 
         if (myRoleType === 'attack') {
-            if (localState.manual_wd_trigger_time) {
-                let targetMs = localState.manual_wd_trigger_time * 1000;
-                let actionTime = targetMs - (myMarchSec * 1000); 
+            if (isActiveOccupyCommandSec(localState.manual_wd_trigger_time, now)
+                || getManualSwapLandingMs(localState, now)) {
+                const wdMarginSec = Number(localState.manual_wd_margin ?? 1);
+                const swapLandMs = getManualSwapLandingMs(localState, now);
+                const targetMs = swapLandMs != null
+                    ? swapLandMs - wdMarginSec * 1000
+                    : (isActiveOccupyCommandSec(localState.manual_wd_trigger_time, now)
+                        ? Number(localState.manual_wd_trigger_time) * 1000
+                        : null);
+                if (targetMs == null) { /* skip */ } else {
                 displayBlocks.push({
-                    type: 'wd_manual', actionMs: actionTime, targetMs: targetMs, 
-                    actionLabel: "占領抜き (一斉撤退)", arrLabel: "撤退完了", color: "#C678DD"
+                    type: 'wd_manual',
+                    actionMs: targetMs,
+                    targetMs,
+                    actionLabel: "占領抜き (一斉撤退)",
+                    arrLabel: "撤退完了",
+                    color: "#C678DD"
                 });
+                }
             }
         }
 
         displayBlocks = displayBlocks.filter(b => {
-            if (b.type === 'swap' || b.type === 'wd_manual' || b.type === 'gorei') return true;
+            if (b.type === 'swap' || b.type === 'wd_manual' || b.type === 'gorei' || b.type === 'gorei_rider_watch' || b.type === 'ins') return true;
             return (b.targetMs - now) > -5000;
         });
-        
-        displayBlocks.sort((a,b) => a.actionMs - b.actionMs);
+
+        displayBlocks = applyDutyTierToBlocks(displayBlocks);
+        displayBlocks = sortDisplayBlocksByDuty(displayBlocks);
+        if (!isOccupyDutyActive()) {
+            displayBlocks.sort((a, b) => a.actionMs - b.actionMs);
+        }
 
         let newStateStr = displayBlocks.map(b => `${b.type}_${b.actionMs}`).join('|') || "waiting";
         if (appMode === "drill" && newStateStr === "waiting") {
@@ -2787,14 +4440,16 @@
             }
         }
 
-        if (newStateStr !== lastActionState) {
-            lastActionState = newStateStr;
-            let depBox = document.getElementById('departureBox');
+        const depBox = document.getElementById('departureBox');
+        const occupyCdForce = appMode === "prod" && displayBlocks.length > 0
+            && displayBlocks.some(b => b.type === "ins" || b.type === "swap");
+        if (newStateStr !== lastActionState || occupyCdForce) {
+            if (newStateStr !== lastActionState) lastActionState = newStateStr;
             
-            if (newStateStr.startsWith("waiting")) {
+            if (newStateStr.startsWith("waiting") && !occupyCdForce) {
                 if (appMode === "drill") {
                     if (isStaffCommander) {
-                        depBox.innerHTML = `<div style="background:#2A2E37; color:#ABB2BF; padding: 30px; border-radius: 8px; border: 2px dashed #61AFEF; font-size: 17px; font-weight: bold; margin-bottom: 15px;"><div style="color:#61AFEF; margin-bottom:10px;">📋 参謀として参加中</div><div style="font-size:15px; font-weight:normal; line-height:1.55; color:#ABB2BF;">下部の<strong style="color:#E5C07B;">「参謀用」パネル</strong>から、第1班・第2班へ集結指示を出してください。</div></div>`;
+                        depBox.innerHTML = `<div style="background:#2A2E37; color:#ABB2BF; padding: 30px; border-radius: 8px; border: 2px dashed #61AFEF; font-size: 17px; font-weight: bold; margin-bottom: 15px;"><div style="color:#61AFEF; margin-bottom:10px;">📋 参謀として参加中</div><div style="font-size:15px; font-weight:normal; line-height:1.55; color:#ABB2BF;">下部の<strong style="color:#E5C07B;">「参謀用」パネル</strong>から、各集結主へ集結指示を出してください。</div></div>`;
                     } else if (drillStaffLive.present) {
                         const dn = drillStaffLive.name ? escapeHtml(drillStaffLive.name) : "参謀";
                         depBox.innerHTML = `<div style="background:#2A2E37; color:#ABB2BF; padding: 30px; border-radius: 8px; border: 2px dashed #3E4451; font-size: 18px; font-weight: bold; margin-bottom: 15px;">💡 参謀：${dn}からの指示を待機中…</div>`;
@@ -2811,8 +4466,11 @@
 
                 if (deviceMode === '1device') {
                     displayBlocks.forEach(b => {
-                        if (b.actionMs > now) {
-                            drawStaticClock(`clock_${b.type}`, new Date(b.actionMs + 9*3600000));
+                        const clockMs = (b.goreiPhase === 'rallying' || b.goreiPhase === 'marching')
+                            ? (b.cdEndMs || b.targetMs)
+                            : b.actionMs;
+                        if (clockMs > now || b.type === 'gorei_rider_watch') {
+                            drawStaticClock(`clock_${goreiBoxDomId(b)}`, new Date(clockMs + 9*3600000));
                         }
                     });
                 }
@@ -2823,8 +4481,17 @@
             displayBlocks.forEach(b => { 
                 updateBoxDynamic(b, now); 
                 if (deviceMode === '2device') {
-                    let wait = (b.actionMs - now) / 1000;
-                    handleVoice(wait, b.type);
+                    if (b.type === 'gorei_rider_watch') return;
+                    if (b.type === 'gorei' && b.goreiPhase && b.goreiPhase !== 'pre_rally') return;
+                    let wait;
+                    if (b.type === 'wd_manual') {
+                        wait = (b.targetMs - now) / 1000;
+                    } else if (b.type === 'gorei') {
+                        wait = goreiCdSeconds(b, now);
+                    } else {
+                        wait = (b.actionMs - now) / 1000;
+                    }
+                    handleVoice(wait, goreiBoxDomId(b));
                 }
             });
         }
@@ -2864,7 +4531,10 @@
             </div>`;
         });
         document.getElementById('cardsArea').innerHTML = html;
-    }, 50); 
+        renderAlliancePresenceLine();
+    }
+
+    setInterval(runPlayerDisplayTick, 250);
 
     function handleVoice(remSec, fullType) {
         let r = Math.floor(remSec);

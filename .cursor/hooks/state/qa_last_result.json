@@ -1,0 +1,832 @@
+{
+  "pass": false,
+  "pass_automated": false,
+  "manual_required": [
+    "manual_voice",
+    "manual_countdown",
+    "manual_op_ins_screen",
+    "manual_op_swap_screen",
+    "manual_op_wd_screen",
+    "manual_op_gorei_screen",
+    "manual_staff_panel"
+  ],
+  "scopes": [
+    "operator"
+  ],
+  "mode": "scoped",
+  "checked_at": "2026-05-23T10:32:52Z",
+  "steps": [
+    {
+      "id": "op_spec_common_update_box",
+      "name": "共通:update_box",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_common_build_box",
+      "name": "共通:build_box",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_ins_usage_gate",
+      "name": "差込:ins_usage_gate",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_ins_build_fn",
+      "name": "差込:ins_build_fn",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_ins_block",
+      "name": "差込:ins_block",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_ins_isIns",
+      "name": "差込:ins_isIns",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_wd_cd_to_target",
+      "name": "差込:wd_cd_to_target",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_ins_cd_to_start",
+      "name": "差込:ins_cd_to_start",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_ins_label_start",
+      "name": "差込:ins_label_start",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_ins_march_start",
+      "name": "差込:ins_march_start",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_insert_fire",
+      "name": "差込:insert_fire",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_get_insert_landing",
+      "name": "差込:get_insert_landing",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_compute_enemy_landing",
+      "name": "差込:compute_enemy_landing",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_insert_margin",
+      "name": "差込:insert_margin",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_ins_ins_filter_keep",
+      "name": "差込:ins_filter_keep",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_swap_manual_swap_field",
+      "name": "入替:manual_swap_field",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_swap_swap_block",
+      "name": "入替:swap_block",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_swap_swap_march_action",
+      "name": "入替:swap_march_action",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_swap_swap_label",
+      "name": "入替:swap_label",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_swap_swap_filter_keep",
+      "name": "入替:swap_filter_keep",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_block",
+      "name": "集結:gorei_block",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_last_target",
+      "name": "集結:gorei_last_target",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_pre_rally",
+      "name": "集結:gorei_pre_rally",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_rallying",
+      "name": "集結:gorei_rallying",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_marching",
+      "name": "集結:gorei_marching",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_rider_watch",
+      "name": "集結:gorei_rider_watch",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_rider_prep",
+      "name": "集結:gorei_rider_prep",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_rider_rallying_ui",
+      "name": "集結:gorei_rider_rallying_ui",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_rider_subline",
+      "name": "集結:gorei_rider_subline",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_rider_cd",
+      "name": "集結:gorei_rider_cd",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_rider_tag",
+      "name": "集結:gorei_rider_tag",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_role_pick",
+      "name": "集結:gorei_role_pick",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_gorei_hint",
+      "name": "集結:gorei_hint",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_force_gorei_handler",
+      "name": "集結:force_gorei_handler",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_fire_gorei_cmd",
+      "name": "集結:fire_gorei_cmd",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_forbid_0",
+      "name": "集結:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_forbid_1",
+      "name": "集結:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_forbid_2",
+      "name": "集結:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_forbid_3",
+      "name": "集結:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_forbid_4",
+      "name": "集結:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_gorei_forbid_5",
+      "name": "集結:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_wd_isWd",
+      "name": "占領抜き:isWd",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_wd_label_immediate",
+      "name": "占領抜き:label_immediate",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_wd_voice_target",
+      "name": "占領抜き:voice_target",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_wd_margin_from_swap",
+      "name": "占領抜き:margin_from_swap",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_wd_forbid_0",
+      "name": "占領抜き:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_wd_forbid_1",
+      "name": "占領抜き:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_wd_forbid_2",
+      "name": "占領抜き:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_wd_forbid_3",
+      "name": "占領抜き:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_wd_forbid_4",
+      "name": "占領抜き:禁止パターンなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_main_fire_manual_swap",
+      "name": "サーバー:fire_manual_swap",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_main_fire_manual_wd",
+      "name": "サーバー:fire_manual_wd",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_main_fire_insert",
+      "name": "サーバー:fire_insert",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_main_mod_insert_margin",
+      "name": "サーバー:mod_insert_margin",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_main_wd_from_swap",
+      "name": "サーバー:wd_from_swap",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_spec_wd_no_prewarn_block",
+      "name": "占領抜き:preWarnMsブロックなし",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "meta_scope",
+      "name": "QA対象スコープ",
+      "ok": true,
+      "note": "operator",
+      "kind": "meta"
+    },
+    {
+      "id": "op_ins_swap_like_start",
+      "name": "差込: スタート=着弾-行軍秒（入替同様）",
+      "ok": true,
+      "note": "action=87000 target=99000",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ins_cd_to_start_display",
+      "name": "差込: 表示CDはスタート(actionMs)まで",
+      "ok": true,
+      "note": "スタート12秒前=12.0s スタート5秒後=0.0s",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ins_block_persists",
+      "name": "差込: 号令後も表示ブロック維持",
+      "ok": true,
+      "note": "ins は filter で常に残る",
+      "kind": "auto"
+    },
+    {
+      "id": "op_swap_block_persists",
+      "name": "占領入替: 指示後も表示ブロック維持",
+      "ok": true,
+      "note": "swap は filter で常に残る",
+      "kind": "auto"
+    },
+    {
+      "id": "op_swap_has_target",
+      "name": "占領入替: 着弾時刻あり",
+      "ok": true,
+      "note": "target=15000",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ins_with_swap_parallel",
+      "name": "差込+入替並存時も差込カウント継続",
+      "ok": true,
+      "note": "ins残り=0s swap維持=True",
+      "kind": "auto"
+    },
+    {
+      "id": "op_gorei_block_after_action",
+      "name": "集結: 号令後もブロック維持",
+      "ok": true,
+      "note": "cd=0s（アクション表示は0想定）",
+      "kind": "auto"
+    },
+    {
+      "id": "op_wd_zero_before_swap",
+      "name": "占領抜き: ゼロ=入替着弾の1秒前",
+      "ok": true,
+      "note": "target=99000 swap=100000",
+      "kind": "auto"
+    },
+    {
+      "id": "op_wd_countdown_10s",
+      "name": "占領抜き: 10秒前からカウント",
+      "ok": true,
+      "note": "残り=5s",
+      "kind": "auto"
+    },
+    {
+      "id": "op_wd_prewarn_18s",
+      "name": "占領抜き: 18秒前から予告フェーズ",
+      "ok": true,
+      "note": "preWarn=81000",
+      "kind": "auto"
+    },
+    {
+      "id": "op_wd_no_march_offset",
+      "name": "占領抜き: 行軍時間でactionMsをずらさない",
+      "ok": true,
+      "note": "actionMs=target-10s（行軍秒なし）",
+      "kind": "auto"
+    },
+    {
+      "id": "op_wd_display_immediate",
+      "name": "占領抜き: 指示後すぐCD表示（入替同様）",
+      "ok": true,
+      "note": "18秒前でも残り=23s（10秒待たない）",
+      "kind": "auto"
+    },
+    {
+      "id": "op_wd_countdown_to_zero_at_target",
+      "name": "占領抜き: CDは常にゼロ時刻まで一本",
+      "ok": true,
+      "note": "10秒前残り=9.8s（actionMs境界ではない）",
+      "kind": "auto"
+    },
+    {
+      "id": "op_wd_no_zero_at_10s_boundary",
+      "name": "占領抜き: 10秒前に0→再スタートしない",
+      "ok": true,
+      "note": "10秒境界手前残り=10.5s",
+      "kind": "auto"
+    },
+    {
+      "id": "op_wd_monotonic_to_zero",
+      "name": "占領抜き: カウント中はゼロ方向へ減少",
+      "ok": true,
+      "note": "中間残り=5.0s",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_ins_usage_gate",
+      "name": "差込 利用ゲート(占領のみ)",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_ins_build",
+      "name": "差込 buildInsertDisplayBlock",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_ins_landing",
+      "name": "差込 getInsertLandingMs",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_ins_margin",
+      "name": "差込 insert_margin_sec",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_swap",
+      "name": "占領入替 manual_swap",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_swap_label",
+      "name": "占領入替ラベル",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_insert_fire",
+      "name": "差込号令 insert_fire_target",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_fire_swap",
+      "name": "入替発火コマンド",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_fire_insert",
+      "name": "差込発火",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_filter_swap",
+      "name": "入替/集結のfilter維持",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_update_cd",
+      "name": "カウントダウン更新",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_wd_immediate_cd",
+      "name": "占領抜き 即CD",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_wd_isWd",
+      "name": "占領抜き isWd",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_src_wd_target_swap",
+      "name": "占領抜き 入替着弾基準",
+      "ok": true,
+      "note": "ok",
+      "kind": "auto"
+    },
+    {
+      "id": "op_admin_insert_send_staff",
+      "name": "管理画面:差込ボタンがstaff_modeを送る",
+      "ok": true,
+      "note": "index.html send()",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ws_register_leader",
+      "name": "集結主登録→タイマー反映",
+      "ok": true,
+      "note": "名前登録OK",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ws_gorei_target_before_min",
+      "name": "着弾指定:計算下限より前を設定可",
+      "ok": true,
+      "note": "fixed=1779532044.121565 min~1779532644",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ws_gorei_fixed_no_members",
+      "name": "着弾指定号令:集結主0人でも発火",
+      "ok": true,
+      "note": "force_gorei",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ws_gorei_force",
+      "name": "集結号令→プレイヤーへ伝達",
+      "ok": true,
+      "note": "force/hint受信",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ws_gorei_state",
+      "name": "集結号令→gorei_last_target設定",
+      "ok": true,
+      "note": "[1779532648.996549]",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ws_manual_swap",
+      "name": "占領入替発火→manual_swap_trigger_time",
+      "ok": true,
+      "note": "trigger=1779532322.74758",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ws_wd_vs_swap",
+      "name": "占領抜きゼロ=入替着弾-margin秒",
+      "ok": true,
+      "note": "swap=1779532322.74758 wd=1779532321.74758 margin=1",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ws_insert_fire",
+      "name": "差込号令→insert_fire_target",
+      "ok": true,
+      "note": "target=1779532347.943741",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ws_occupy_role",
+      "name": "占領同盟ロール設定",
+      "ok": true,
+      "note": "['occupy']",
+      "kind": "auto"
+    },
+    {
+      "id": "op_ws_insert_player_visible",
+      "name": "差込号令→占領プレイヤーに反映",
+      "ok": true,
+      "note": "insert_fire_target+occupy",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_can_both",
+      "name": "着弾後入替出発可(47秒×2<120秒差)",
+      "ok": true,
+      "note": "gap=120s march=47",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_cannot_both",
+      "name": "入替出発が差込着弾前は不可",
+      "ok": true,
+      "note": "swap_dep before ins land",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_plan_balance",
+      "name": "差込+入替時に両方へ割当",
+      "ok": true,
+      "note": "{'ins': 2, 'swap': 1}",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_swap_only_all",
+      "name": "差込なし時は全員入替役",
+      "ok": true,
+      "note": "{'ins': 0, 'swap': 3}",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_ignore_stale_swap",
+      "name": "総指揮未指示相当(遠い未来の入替ゴミ)は割当なし",
+      "ok": true,
+      "note": "plan=None",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_ws_ins_fire",
+      "name": "差込号令",
+      "ok": true,
+      "note": "ins=1779532466.113362 swap=1779532546.113362",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_ws_sync_cmds",
+      "name": "syncに号令時刻(occupy_cmds)",
+      "ok": true,
+      "note": "{'insert_fire_target': 1779532466.113362}",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_ws_duty_p1",
+      "name": "参加者1: occupy_duty",
+      "ok": true,
+      "note": "{'primary': 'ins', 'primary_label': '差込役', 'can_also_swap': True, 'insert_landed': False, 'counts': {'ins': 1, 'swap': 1",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_ws_duty_p2",
+      "name": "参加者2: occupy_duty",
+      "ok": true,
+      "note": "{'primary': 'ins', 'primary_label': '差込役', 'can_also_swap': False, 'insert_landed': False, 'counts': {'ins': 2, 'swap': ",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_ws_balance",
+      "name": "2名で差込/入替が分かれる",
+      "ok": false,
+      "note": "p1=ins p2=ins",
+      "kind": "auto"
+    },
+    {
+      "id": "op_occupy_ws_swap_only",
+      "name": "差込解除後は入替役",
+      "ok": true,
+      "note": "入替役",
+      "kind": "auto"
+    },
+    {
+      "id": "op_operator_mandatory_bundle",
+      "name": "操作者ロジック 必須QAバンドル（差込・入替・集結・占領抜き）",
+      "ok": false,
+      "note": "FAIL: op_occupy_ws_balance",
+      "kind": "meta"
+    },
+    {
+      "id": "manual_voice",
+      "name": "音声テスト（耳確認）",
+      "ok": null,
+      "note": "本番で「音声テスト」ボタンを押し、読み上げが聞こえること",
+      "kind": "manual"
+    },
+    {
+      "id": "manual_countdown",
+      "name": "カウントダウン（画面確認）",
+      "ok": null,
+      "note": "本番で「カウントダウンテスト」を押し、数字が減ること",
+      "kind": "manual"
+    },
+    {
+      "id": "manual_op_ins_screen",
+      "name": "差込: 画面で着弾までカウント",
+      "ok": null,
+      "note": "占領同盟で号令後すぐCD、スタート18秒/10秒音声、着弾0まで一本",
+      "kind": "manual"
+    },
+    {
+      "id": "manual_op_swap_screen",
+      "name": "占領入替: 画面で入替着弾確認",
+      "ok": null,
+      "note": "入替指示後、着弾(UTC)時刻が表示され、実戦で意図どおりか確認",
+      "kind": "manual"
+    },
+    {
+      "id": "manual_op_wd_screen",
+      "name": "占領抜き: 18秒予告→10秒CD→0",
+      "ok": null,
+      "note": "攻撃同盟画面で18秒前に予告音声、10秒前から数字CD、入替1秒前で0（margin変更も確認）",
+      "kind": "manual"
+    },
+    {
+      "id": "manual_op_gorei_screen",
+      "name": "集結号令: 画面・音声",
+      "ok": null,
+      "note": "号令〜着弾まで、表示と音声が役割どおりか（2台/1台）",
+      "kind": "manual"
+    },
+    {
+      "id": "manual_staff_panel",
+      "name": "参謀パネル操作",
+      "ok": null,
+      "note": "差込▲▼・集結/行軍・第1/2班の操作が効くこと",
+      "kind": "manual"
+    }
+  ]
+}

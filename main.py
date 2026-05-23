@@ -12,12 +12,15 @@ import urllib.parse
 import ssl
 import json
 import copy
+import io
+import wave
+import struct
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
 state = {
     "timers": [{"name": "", "sec": 300, "off": 0, "sub_set": 30, "sub_sec": 0, "state": 0, "end": None, "frozen_target": None, "start_at": None, "online": False, "device_mode": "2device"} for i in range(42)],
-    "alliance_names": ["APL", "PKD", "MTC"],
+    "alliance_names": ["XYZ", "MTC", "APL"],
     "alliance_roles": ["occupy", "attack", "attack"], 
     "gorei_offsets": [15] * 6,
     "gorei_fixed_targets": [None] * 6,
@@ -30,7 +33,8 @@ state = {
     "insert_target_idx": -1, 
     "insert_fixed_target": None,
     "insert_fire_target": None,
-    "insert_offset_tenth": -1,
+    "insert_margin_sec": 1,
+    "insert_offset_tenth": -10,
     "delay_target_idxs": [-1] * 6,
     "cancel_trigger": 0, 
     "online_counts": {
@@ -67,7 +71,7 @@ def fresh_drill_state(alliance_primary: str):
             for _ in range(42)
         ],
         "alliance_names": [an, f"{an}-2", f"{an}-3"],
-        "alliance_roles": ["", "", ""],
+        "alliance_roles": ["occupy", "", ""],
         "gorei_offsets": [15] * 6,
         "gorei_fixed_targets": [None] * 6,
         "gorei_last_target": [None] * 6,
@@ -79,7 +83,8 @@ def fresh_drill_state(alliance_primary: str):
         "insert_target_idx": -1,
         "insert_fixed_target": None,
         "insert_fire_target": None,
-        "insert_offset_tenth": -1,
+        "insert_margin_sec": 1,
+        "insert_offset_tenth": -10,
         "delay_target_idxs": [-1] * 6,
         "cancel_trigger": 0,
         "online_counts": {
@@ -134,24 +139,61 @@ def get_state_for_conn(info):
         return drill_rooms[room_key]
     return state
 
+def is_automation_test_room(name: str, online: int) -> bool:
+    """自動QAが量産した幽霊ルーム（0人・固定名）を一覧から除外する。"""
+    if int(online or 0) > 0:
+        return False
+    n = (name or "").strip()
+    if n in ("QA自動", "QA操作"):
+        return True
+    return n.startswith("QA_E2E_")
+
+
+def drill_room_online_count(room_id):
+    """ルームに紐づく drill WebSocket 接続数。参謀のみ在室のときも最低 1 とする。"""
+    cnt = 0
+    for _ws, info in list(connections.items()):
+        if info.get("mode") == "drill" and info.get("drill_key") == room_id:
+            cnt += 1
+    if cnt <= 0 and room_id in drill_rooms:
+        st = drill_rooms.get(room_id)
+        if drill_staff_status_for_room(room_id, st).get("present"):
+            cnt = 1
+    return cnt
+
+
+async def broadcast_drill_room_list():
+    """訓練モードの全クライアントへルーム一覧を即時配信（作成直後の参加一覧反映用）。"""
+    rooms = get_public_drill_rooms()
+    dead = []
+    for ws, info in list(connections.items()):
+        if info.get("mode") != "drill":
+            continue
+        try:
+            await ws.send_json({"type": "drill_rooms", "rooms": rooms})
+        except Exception:
+            dead.append(ws)
+    for ws in dead:
+        connections.pop(ws, None)
+
+
 def get_public_drill_rooms():
+    """公開ルーム一覧。同盟名のみ表示。同名は接続中が多い1件だけ返す。"""
     items = []
-    stale_room_ids = []
     for room_id, meta in list(drill_room_meta.items()):
-        name = meta.get("name", "訓練ルーム")
-        cnt = 0
-        for _ws, info in list(connections.items()):
-            if info.get("mode") == "drill" and info.get("drill_key") == room_id:
-                cnt += 1
-        if cnt <= 0:
-            stale_room_ids.append(room_id)
+        name = (meta.get("name") or "訓練ルーム").strip() or "訓練ルーム"
+        cnt = drill_room_online_count(room_id)
+        if is_automation_test_room(name, cnt):
             continue
         items.append({"room_id": room_id, "name": name, "online": cnt})
-    for rid in stale_room_ids:
-        if rid in drill_room_meta:
-            del drill_room_meta[rid]
-        if rid in drill_rooms:
-            del drill_rooms[rid]
+    by_name = {}
+    for it in items:
+        n = it["name"]
+        prev = by_name.get(n)
+        if prev is None or int(it.get("online") or 0) > int(prev.get("online") or 0):
+            by_name[n] = it
+    items = list(by_name.values())
+    items.sort(key=lambda x: (-int(x.get("online") or 0), str(x.get("name") or "")))
     return items
 
 def same_context(info_a, info_b):
@@ -180,6 +222,68 @@ def drill_staff_status_for_room(room_key, state_obj):
         name = str(sn[0] or "").strip()
     return {"present": present, "name": name}
 
+def build_alliance_presence(state_obj, conn_items, alliance_id: int) -> dict:
+    """自同盟の接続人数（参謀・集結主・乗り手）。同盟名直下表示用。"""
+    staff_online = 0
+    leader_online = 0
+    rider_online = 0
+    for _ws, info in conn_items:
+        if info.get("a_id") != alliance_id:
+            continue
+        if info.get("staff_enabled"):
+            staff_online += 1
+            continue
+        role = str(info.get("role") or "")
+        if role == "rider":
+            rider_online += 1
+        elif role.startswith("leader"):
+            leader_online += 1
+    staff_names = []
+    sn = (state_obj or {}).get("staff_names")
+    staff_nm = ""
+    if isinstance(sn, list) and 0 <= alliance_id < len(sn):
+        staff_nm = str(sn[alliance_id] or "").strip()
+        if staff_online > 0 and staff_nm:
+            staff_names.append(staff_nm)
+    leader_cnt = leader_online
+    rider_cnt = rider_online
+    leader_names = []
+    seen = set()
+    timers = (state_obj or {}).get("timers") or []
+    for squad_off in (0, 1):
+        sid = alliance_id * 2 + squad_off
+        start = 6 + sid * 6
+        squad_name = ""
+        for i in range(start, start + 6):
+            if i >= len(timers) or not isinstance(timers[i], dict):
+                continue
+            t = timers[i]
+            if not t.get("online"):
+                continue
+            nm = (t.get("name") or "").strip()
+            if nm:
+                squad_name = nm
+                break
+        if not squad_name or squad_name in seen:
+            continue
+        if staff_nm and squad_name == staff_nm:
+            continue
+        seen.add(squad_name)
+        leader_names.append(squad_name)
+    return {
+        "staff": {"count": staff_online, "names": staff_names},
+        "leader": {"count": leader_cnt, "names": leader_names},
+        "rider": {"count": rider_cnt, "names": []},
+    }
+
+
+def alliance_presence_by_alliance(state_obj, conn_items) -> dict:
+    out = {}
+    for aid in range(3):
+        out[f"aln{aid}"] = build_alliance_presence(state_obj, conn_items, aid)
+    return out
+
+
 def clear_drill_staff_name_if_absent(state_obj, present):
     """参謀が誰も接続していないとき、表示名のゴーストを残さない。"""
     if present or not isinstance(state_obj, dict):
@@ -194,6 +298,211 @@ def clear_drill_staff_name_if_absent(state_obj, present):
         sn[0] = ""
         return True
     return False
+
+OCCUPY_DUTY_BUFFER_SEC = 3
+# 号令の有効範囲（これより先の時刻は QA 残り等のゴミとみなして無効化）
+OCCUPY_CMD_MAX_AHEAD_SEC = 4 * 3600
+
+
+def _occupy_cmd_ts_active(ts: float | None, now_ts: float) -> bool:
+    if ts is None:
+        return False
+    try:
+        t = float(ts)
+    except (TypeError, ValueError):
+        return False
+    return (now_ts - 5) < t <= (now_ts + OCCUPY_CMD_MAX_AHEAD_SEC)
+
+
+def _occupy_insert_landing_ts(state_obj) -> float | None:
+    ft = (state_obj or {}).get("insert_fire_target")
+    if ft is None:
+        return None
+    try:
+        v = float(ft)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
+
+def _occupy_swap_landing_ts(state_obj) -> float | None:
+    st = (state_obj or {}).get("manual_swap_trigger_time")
+    if st is None:
+        return None
+    try:
+        v = float(st)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
+
+def occupy_can_also_swap(march_sec: int, ins_land: float, swap_land: float, buffer_sec: int = OCCUPY_DUTY_BUFFER_SEC) -> bool:
+    """差込着弾後（帰還中）に入替出発が取れるか。"""
+    m = max(0, int(march_sec or 0))
+    swap_dep = float(swap_land) - m
+    return swap_dep >= float(ins_land) + buffer_sec
+
+
+def _occupy_prod_players(conn_items, alliance_id: int) -> list[dict]:
+    out = []
+    for _ws, info in conn_items:
+        if info.get("mode") != "prod":
+            continue
+        if info.get("a_id") != alliance_id:
+            continue
+        role = info.get("role")
+        if not role:
+            continue
+        cid = str(info.get("id") or "")
+        if not cid:
+            continue
+        out.append({"id": cid, "march": max(0, int(info.get("march_sec") or 0))})
+    return out
+
+
+def _occupy_fill_counts(by_id: dict, counts: dict) -> None:
+    c = dict(counts)
+    for rec in by_id.values():
+        rec["counts"] = c
+
+
+def compute_occupy_duty_plan(state_obj, conn_items, alliance_id: int, now_ts: float) -> dict | None:
+    """SVS 占領同盟: 差込/入替の自動割当（参謀・集結主・乗り手）。"""
+    roles = (state_obj or {}).get("alliance_roles") or []
+    if alliance_id < 0 or alliance_id >= len(roles) or roles[alliance_id] != "occupy":
+        return None
+    players = _occupy_prod_players(conn_items, alliance_id)
+    if not players:
+        return None
+
+    ins_land = _occupy_insert_landing_ts(state_obj)
+    swap_land = _occupy_swap_landing_ts(state_obj)
+    has_ins = _occupy_cmd_ts_active(ins_land, now_ts)
+    has_swap = _occupy_cmd_ts_active(swap_land, now_ts)
+
+    by_id: dict[str, dict] = {}
+    counts = {"ins": 0, "swap": 0}
+
+    if has_swap and not has_ins:
+        for p in players:
+            by_id[p["id"]] = {
+                "primary": "swap",
+                "primary_label": "入替役",
+                "can_also_swap": False,
+                "insert_landed": False,
+                "counts": None,
+            }
+            counts["swap"] += 1
+        _occupy_fill_counts(by_id, counts)
+        return {"counts": counts, "by_id": by_id, "has_ins": False, "has_swap": True}
+
+    if has_ins and not has_swap:
+        for p in players:
+            by_id[p["id"]] = {
+                "primary": "ins",
+                "primary_label": "差込役",
+                "can_also_swap": False,
+                "insert_landed": bool(now_ts >= float(ins_land)),
+                "counts": None,
+            }
+            counts["ins"] += 1
+        _occupy_fill_counts(by_id, counts)
+        return {"counts": counts, "by_id": by_id, "has_ins": True, "has_swap": False}
+
+    if not has_ins and not has_swap:
+        return None
+
+    swap_pool: list[dict] = []
+    ins_pool: list[dict] = []
+    flex_pool: list[dict] = []
+    for p in players:
+        m = p["march"]
+        swap_dep = float(swap_land) - m
+        if swap_dep < float(ins_land):
+            swap_pool.append(p)
+        elif occupy_can_also_swap(m, float(ins_land), float(swap_land)):
+            flex_pool.append(p)
+        else:
+            ins_pool.append(p)
+
+    ins_cnt = 0
+    swap_cnt = 0
+    for p in swap_pool:
+        by_id[p["id"]] = {
+            "primary": "swap",
+            "primary_label": "入替役",
+            "can_also_swap": False,
+            "insert_landed": bool(now_ts >= float(ins_land)),
+            "counts": None,
+        }
+        swap_cnt += 1
+    for p in ins_pool:
+        by_id[p["id"]] = {
+            "primary": "ins",
+            "primary_label": "差込役",
+            "can_also_swap": False,
+            "insert_landed": bool(now_ts >= float(ins_land)),
+            "counts": None,
+        }
+        ins_cnt += 1
+
+    flex_pool.sort(key=lambda x: x["id"])
+    for p in flex_pool:
+        if ins_cnt <= swap_cnt:
+            primary = "ins"
+            ins_cnt += 1
+            can_also = True
+        else:
+            primary = "swap"
+            swap_cnt += 1
+            can_also = False
+        by_id[p["id"]] = {
+            "primary": primary,
+            "primary_label": "差込役" if primary == "ins" else "入替役",
+            "can_also_swap": can_also,
+            "insert_landed": bool(now_ts >= float(ins_land)),
+            "counts": None,
+        }
+
+    counts = {"ins": ins_cnt, "swap": swap_cnt}
+    _occupy_fill_counts(by_id, counts)
+    return {"counts": counts, "by_id": by_id, "has_ins": True, "has_swap": True}
+
+
+def _occupy_cmd_fields_for_clients(state_obj, now_ts: float) -> dict:
+    """占領プレイヤーへ sync でも渡す号令時刻（CD 表示に必須）。"""
+    out: dict = {}
+    ins = _occupy_insert_landing_ts(state_obj)
+    swap = _occupy_swap_landing_ts(state_obj)
+    if _occupy_cmd_ts_active(ins, now_ts):
+        out["insert_fire_target"] = float(ins)
+    if _occupy_cmd_ts_active(swap, now_ts):
+        out["manual_swap_trigger_time"] = float(swap)
+    return out
+
+
+def occupy_duty_for_connection(state_obj, conn_items, info: dict, now_ts: float) -> dict | None:
+    if info.get("mode") != "prod":
+        return None
+    a_id = info.get("a_id")
+    if a_id is None or a_id not in (0, 1, 2):
+        return None
+    if not info.get("role"):
+        return None
+    plan = compute_occupy_duty_plan(state_obj, conn_items, int(a_id), now_ts)
+    if not plan:
+        return None
+    cid = str(info.get("id") or "")
+    rec = plan.get("by_id", {}).get(cid)
+    if not rec:
+        return None
+    cmds = _occupy_cmd_fields_for_clients(state_obj, now_ts)
+    if not cmds:
+        return None
+    out = dict(rec)
+    out.update(cmds)
+    return out
+
 
 def _timer_target_ts(t, default_rally):
     if not isinstance(t, dict):
@@ -214,24 +523,35 @@ def _timer_target_ts(t, default_rally):
         return None
     return None
 
+def _insert_margin_sec(state_obj) -> int:
+    if not isinstance(state_obj, dict):
+        return 1
+    if state_obj.get("insert_margin_sec") is not None:
+        return max(0, min(5, int(state_obj["insert_margin_sec"])))
+    # 旧 insert_offset_tenth（-10 = 1秒前）からの読み替え
+    tenth = int(state_obj.get("insert_offset_tenth", -10) or -10)
+    return max(0, min(5, int(round(-tenth / 10))))
+
+
 def _compute_insert_auto_target_ts(state_obj):
     if not isinstance(state_obj, dict):
         return None
     timers = state_obj.get("timers", [])
     if not isinstance(timers, list) or len(timers) < 6:
         return None
+    margin = _insert_margin_sec(state_obj)
     idx = int(state_obj.get("insert_target_idx", -1) or -1)
     default_rally = state_obj.get("default_rally", 300)
     if 0 <= idx < 6:
         t = _timer_target_ts(timers[idx], default_rally)
         if t is not None:
-            return t
+            return float(t) - margin
     arr = []
     for i in range(6):
         t = _timer_target_ts(timers[i], default_rally)
         if t is not None:
             arr.append(t)
-    return max(arr) if arr else None
+    return (max(arr) - margin) if arr else None
 
 def _compute_squad_gorei_target_ts(state_obj, squad_idx):
     if not isinstance(state_obj, dict):
@@ -765,43 +1085,31 @@ async def broadcast():
 
         if state_obj["manual_base_target"] is not None and state_obj["manual_base_target"] <= now_ts:
             state_obj["manual_base_target"] = None; changed = True
-        if state_obj["manual_swap_trigger_time"] is not None and state_obj["manual_swap_trigger_time"] < now_ts - 5:
-            state_obj["manual_swap_trigger_time"] = None; changed = True
-        if state_obj["manual_wd_trigger_time"] is not None and state_obj["manual_wd_trigger_time"] < now_ts - 5:
-            state_obj["manual_wd_trigger_time"] = None; changed = True
+        if state_obj["manual_swap_trigger_time"] is not None:
+            t_swap = float(state_obj["manual_swap_trigger_time"])
+            if not _occupy_cmd_ts_active(t_swap, now_ts):
+                state_obj["manual_swap_trigger_time"] = None
+                changed = True
+        if state_obj["manual_wd_trigger_time"] is not None:
+            t_wd = float(state_obj["manual_wd_trigger_time"])
+            if t_wd < now_ts - 5 or t_wd > now_ts + OCCUPY_CMD_MAX_AHEAD_SEC:
+                state_obj["manual_wd_trigger_time"] = None
+                changed = True
 
         for s in range(6):
-            if state_obj["gorei_fixed_targets"][s] is not None:
-                start_idx = 6 + s * 6
-                marches = [state_obj["timers"][i]["sub_set"] for i in range(start_idx, start_idx + 6) if state_obj["timers"][i]["name"].strip() != ""]
-                max_march = max(marches) if marches else 0
-                min_tgt = now_ts + state_obj["gorei_offsets"][s] + state_obj["default_rally"] + max_march
-                if state_obj["gorei_fixed_targets"][s] <= min_tgt:
-                    state_obj["gorei_fixed_targets"][s] = None; changed = True
             if state_obj["gorei_last_target"][s] is not None and state_obj["gorei_last_target"][s] <= (now_ts - 10):
-                state_obj["gorei_last_target"][s] = None; changed = True
+                if state_obj["gorei_fixed_targets"][s] is None:
+                    state_obj["gorei_last_target"][s] = None; changed = True
 
-        if state_obj["pair_fixed_target"] is not None:
-            marches = []
-            for s in range(6):
-                if state_obj["pair_selected"][s]:
-                    start_idx = 6 + s * 6
-                    for i in range(start_idx, start_idx + 6):
-                        if state_obj["timers"][i]["name"].strip() != "":
-                            marches.append(state_obj["timers"][i]["sub_set"])
-            max_march = max(marches) if marches else 0
-            min_tgt = now_ts + state_obj["pair_gorei_offset"] + state_obj["default_rally"] + max_march
-            if state_obj["pair_fixed_target"] <= min_tgt:
-                state_obj["pair_fixed_target"] = None; changed = True
-        if state_obj.get("insert_fixed_target") is not None:
-            auto_insert = _compute_insert_auto_target_ts(state_obj)
-            # 集結の着弾指定と同様: 未来固定で止め、自然時刻が追いついたら解除して自動へ戻す
-            if auto_insert is not None and float(state_obj["insert_fixed_target"]) <= float(auto_insert):
-                state_obj["insert_fixed_target"] = None
-                changed = True
         if state_obj.get("insert_fire_target") is not None:
-            if float(state_obj["insert_fire_target"]) <= (now_ts - 1):
+            t_ins = float(state_obj["insert_fire_target"])
+            if not _occupy_cmd_ts_active(t_ins, now_ts):
                 state_obj["insert_fire_target"] = None
+                changed = True
+        if state_obj.get("insert_fixed_target") is not None:
+            t_fix = float(state_obj["insert_fixed_target"])
+            if not _occupy_cmd_ts_active(t_fix, now_ts):
+                state_obj["insert_fixed_target"] = None
                 changed = True
 
         for t in state_obj["timers"]:
@@ -871,7 +1179,8 @@ async def broadcast():
             "data": data_out,
             "utc": now.strftime("%H:%M:%S"),
             "server_timestamp": now_ts * 1000,
-            "drill_rooms": get_public_drill_rooms()
+            "drill_rooms": get_public_drill_rooms(),
+            "alliance_presence": alliance_presence_by_alliance(state_obj, conn_items),
         }
         if drill_staff_payload is not None:
             payload["drill_staff"] = drill_staff_payload
@@ -882,17 +1191,39 @@ async def broadcast():
         dead_ws = []
         for ws, info in conn_items:
             try:
+                od = occupy_duty_for_connection(state_obj, conn_items, info, now_ts) if drill_key is None else None
+                out_payload = {**payload, "occupy_duty": od} if od else payload
+                if drill_key is None and info.get("mode") == "prod" and info.get("role"):
+                    cmd_fields = _occupy_cmd_fields_for_clients(state_obj, now_ts)
+                    if cmd_fields:
+                        out_payload = {**out_payload, "occupy_cmds": cmd_fields}
                 if info.get("role") is None:
-                    await ws.send_json(payload)
+                    await ws.send_json(out_payload)
                 else:
                     # 訓練モードは常時フル state を配信して端末差分同期ズレを防ぐ
                     if info.get("mode") == "drill":
-                        await ws.send_json(payload)
+                        await ws.send_json(out_payload)
                     elif changed or force_player_sync:
-                        await ws.send_json(payload)
+                        await ws.send_json(out_payload)
                     else:
                         if tick_counter % 4 == 0:
-                            await ws.send_json(sync_payload)
+                            sync_out = {**sync_payload, "occupy_duty": od} if od else sync_payload
+                            if od:
+                                cmd_fields = _occupy_cmd_fields_for_clients(state_obj, now_ts)
+                                if cmd_fields:
+                                    sync_out["occupy_cmds"] = cmd_fields
+                            await ws.send_json(sync_out)
+                        elif od:
+                            cmd_fields = _occupy_cmd_fields_for_clients(state_obj, now_ts)
+                            sync_body = {
+                                "type": "sync",
+                                "utc": now.strftime("%H:%M:%S"),
+                                "server_timestamp": now_ts * 1000,
+                                "occupy_duty": od,
+                            }
+                            if cmd_fields:
+                                sync_body["occupy_cmds"] = cmd_fields
+                            await ws.send_json(sync_body)
             except Exception:
                 dead_ws.append(ws)
         for ws in dead_ws:
@@ -937,47 +1268,137 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
+# HTML は各端末・CDNで古いものが残らないよう明示（完全保証はCDN設定も要参照）
+HTML_NO_CACHE_HEADERS = {
+    "Cache-Control": "private, no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+    # Cloudflare: エッジのキャッシュ挙動を弱める（ダッシュボード設定で上書きされる場合あり）
+    "CDN-Cache-Control": "private, no-store, no-cache, max-age=0, s-maxage=0",
+}
+
+
+@app.head("/", include_in_schema=False)
+@app.head("/player", include_in_schema=False)
+@app.head("/admin_hq_777", include_in_schema=False)
+@app.head("/staff_hq_3301", include_in_schema=False)
+@app.head("/support_hq_3301", include_in_schema=False)
+@app.head("/staff_hq_555", include_in_schema=False)
+async def head_pages():
+    """HEAD（CDN／監視）：GET と同ページで 405 になるとチェック実装によっては失敗する。"""
+    return Response(status_code=200, headers=dict(HTML_NO_CACHE_HEADERS))
+
+
+@app.get("/healthz")
+async def healthz():
+    return {"ok": True}
+
+
+@app.head("/healthz", include_in_schema=False)
+async def head_healthz():
+    return Response(status_code=200)
+
 
 @app.get("/")
 async def get_player():
     with open("player.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(
-            f.read(),
-            headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
-        )
+        return HTMLResponse(f.read(), headers=dict(HTML_NO_CACHE_HEADERS))
 
 @app.get("/player")
 async def get_player_backup():
     with open("player.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(
-            f.read(),
-            headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"}
-        )
+        return HTMLResponse(f.read(), headers=dict(HTML_NO_CACHE_HEADERS))
 
 @app.get("/admin_hq_777")
 async def get_admin():
-    with open("index.html", "r", encoding="utf-8") as f: return HTMLResponse(f.read())
+    with open("index.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(f.read(), headers=dict(HTML_NO_CACHE_HEADERS))
 
 # ★ 追加：参謀用画面へのアクセスルート
 @app.get("/staff_hq_3301")
 async def get_staff():
-    with open("staff.html", "r", encoding="utf-8") as f: return HTMLResponse(f.read())
+    with open("staff.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(f.read(), headers=dict(HTML_NO_CACHE_HEADERS))
 
 @app.get("/support_hq_3301")
 async def get_support():
     with open("support.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(f.read())
+        return HTMLResponse(f.read(), headers=dict(HTML_NO_CACHE_HEADERS))
 
 @app.get("/staff_hq_555")
 async def get_staff_555():
     with open("staff.html", "r", encoding="utf-8") as f:
-        return HTMLResponse(f.read())
+        return HTMLResponse(f.read(), headers=dict(HTML_NO_CACHE_HEADERS))
+
+
+@app.head("/map.jpg", include_in_schema=False)
+async def head_map():
+    if os.path.exists("map.jpg"):
+        return Response(status_code=200)
+    return Response(status_code=404)
+
 
 @app.get("/map.jpg")
 async def get_map():
     if os.path.exists("map.jpg"):
         return FileResponse("map.jpg")
     return Response(status_code=404)
+
+
+def _safe_asset_path(name: str) -> str | None:
+    if not name or "/" in name or "\\" in name or ".." in name:
+        return None
+    path = os.path.join("assets", name)
+    if os.path.isfile(path):
+        return path
+    return None
+
+
+@app.head("/assets/{asset_name}", include_in_schema=False)
+async def head_asset(asset_name: str):
+    path = _safe_asset_path(asset_name)
+    if path:
+        return Response(status_code=200)
+    return Response(status_code=404)
+
+
+@app.get("/assets/{asset_name}")
+async def get_asset(asset_name: str):
+    path = _safe_asset_path(asset_name)
+    if path:
+        return FileResponse(path)
+    return Response(status_code=404)
+
+
+VOICE_OUTPUT_GAIN = float(os.environ.get("UTC_VOICE_GAIN", "2.5"))
+
+
+def _normalize_wav_loudness(wav_bytes: bytes) -> bytes:
+    """VOICEVOX 出力が小さい端末向けに 16bit PCM を正規化してから返す。"""
+    try:
+        with wave.open(io.BytesIO(wav_bytes), "rb") as w:
+            nch, sampwidth, framerate, nframes, comptype, compname = w.getparams()
+            if sampwidth != 2 or nch < 1:
+                return wav_bytes
+            frames = w.readframes(nframes)
+        count = len(frames) // 2
+        if count == 0:
+            return wav_bytes
+        samples = struct.unpack(f"<{count}h", frames)
+        peak = max(abs(s) for s in samples) or 1
+        target_peak = 28000
+        scale = min(6.0, target_peak / peak)
+        boosted = [max(-32768, min(32767, int(s * scale))) for s in samples]
+        out = io.BytesIO()
+        with wave.open(out, "wb") as wout:
+            wout.setnchannels(nch)
+            wout.setsampwidth(sampwidth)
+            wout.setframerate(framerate)
+            wout.writeframes(struct.pack(f"<{len(boosted)}h", *boosted))
+        return out.getvalue()
+    except Exception:
+        return wav_bytes
+
 
 @app.get("/api/voice")
 def get_voice(text: str, speaker: int = 3):
@@ -990,13 +1411,14 @@ def get_voice(text: str, speaker: int = 3):
         with urllib.request.urlopen(req1) as res1: query_data = res1.read()
         query_dict = json.loads(query_data)
         query_dict["speedScale"] = 1.35
+        query_dict["volumeScale"] = VOICE_OUTPUT_GAIN
         query_data_modified = json.dumps(query_dict).encode("utf-8")
         synth_url = f"http://127.0.0.1:50021/synthesis?speaker={speaker}"
         req2 = urllib.request.Request(synth_url, data=query_data_modified, method="POST")
         req2.add_header("Content-Type", "application/json")
         with urllib.request.urlopen(req2) as res2: audio_data = res2.read()
-        
-        voice_cache[cache_key] = audio_data 
+        audio_data = _normalize_wav_loudness(audio_data)
+        voice_cache[cache_key] = audio_data
         return Response(content=audio_data, media_type="audio/wav", headers={"Cache-Control": "public, max-age=31536000"})
     except Exception as e:
         return Response(status_code=503)
@@ -1041,15 +1463,17 @@ async def websocket_endpoint(websocket: WebSocket):
         "mode": mode, "drill_alliance": q_aln, "drill_key": q_room
     }
     try:
+        init_st = get_state_for_conn(connections[websocket])
         init_pkg = {
             "type": "init",
-            "data": get_state_for_conn(connections[websocket]),
+            "data": init_st,
             "mode": mode,
-            "drill_rooms": get_public_drill_rooms()
+            "drill_rooms": get_public_drill_rooms(),
+            "alliance_presence": alliance_presence_by_alliance(init_st, list(connections.items())),
         }
         if mode == "drill":
             dk = connections[websocket]["drill_key"]
-            init_pkg["drill_staff"] = drill_staff_status_for_room(dk, get_state_for_conn(connections[websocket]))
+            init_pkg["drill_staff"] = drill_staff_status_for_room(dk, init_st)
         await websocket.send_json(init_pkg)
         while True:
             try:
@@ -1088,6 +1512,11 @@ async def send_full_state_to_one(websocket: WebSocket):
     if info.get("mode") == "drill":
         dk = info.get("drill_key", "default")
         payload["drill_staff"] = drill_staff_status_for_room(dk, get_state_for_conn(info))
+    elif info.get("mode") == "prod":
+        st = get_state_for_conn(info)
+        od = occupy_duty_for_connection(st, list(connections.items()), info, now.timestamp())
+        if od:
+            payload["occupy_duty"] = od
     try:
         await websocket.send_json(payload)
     except Exception:
@@ -1195,8 +1624,15 @@ async def process_command(data, websocket):
             return False
         return squad_idx in (staff_a_id * 2, staff_a_id * 2 + 1)
 
-    # Keepalive heartbeat from clients. No state change needed.
+    # Keepalive heartbeat from clients.
     if cmd == "ping":
+        try:
+            await websocket.send_json({
+                "type": "pong",
+                "server_timestamp": datetime.now(timezone.utc).timestamp() * 1000
+            })
+        except Exception:
+            pass
         return
     if cmd == "set_mode":
         payload = val if isinstance(val, dict) else {}
@@ -1209,6 +1645,7 @@ async def process_command(data, websocket):
         room_action = str(payload.get("room_action", "")).strip()
         room_code = str(payload.get("room_code", "")).strip()[:32]
         room_id = str(payload.get("room_id", "")).strip()[:32]
+        broadcast_rooms_after_set_mode = False
         if websocket in connections:
             if mode == "drill":
                 if room_action == "create":
@@ -1220,6 +1657,7 @@ async def process_command(data, websocket):
                     drill_room_meta[room_id] = {"name": drill_name, "code": room_code}
                     drill_rooms[room_id] = fresh_drill_state(drill_name)
                     await websocket.send_json({"type": "mode_ok", "action": "create", "room_id": room_id})
+                    broadcast_rooms_after_set_mode = True
                 elif room_action == "join":
                     if room_id not in drill_room_meta:
                         await websocket.send_json({"type": "mode_error", "message": "訓練ルームが見つかりません。"})
@@ -1243,19 +1681,27 @@ async def process_command(data, websocket):
             connections[websocket]["staff_enabled"] = False
             if mode == "drill":
                 st = get_state_for_conn(connections[websocket])
-                st["alliance_roles"] = ["", "", ""]
                 if drill_name:
                     st["alliance_names"] = [drill_name, f"{drill_name}-2", f"{drill_name}-3"]
+                roles = st.get("alliance_roles")
+                if not isinstance(roles, list) or len(roles) != 3:
+                    st["alliance_roles"] = ["occupy", "", ""]
+                elif room_action == "create" and not any(str(r or "").strip() for r in roles):
+                    st["alliance_roles"] = ["occupy", "", ""]
+            ack_st = get_state_for_conn(connections[websocket])
             ack = {
                 "type": "init",
-                "data": get_state_for_conn(connections[websocket]),
+                "data": ack_st,
                 "mode": mode,
-                "drill_rooms": get_public_drill_rooms()
+                "drill_rooms": get_public_drill_rooms(),
+                "alliance_presence": alliance_presence_by_alliance(ack_st, list(connections.items())),
             }
             if mode == "drill":
                 dk = connections[websocket]["drill_key"]
-                ack["drill_staff"] = drill_staff_status_for_room(dk, get_state_for_conn(connections[websocket]))
+                ack["drill_staff"] = drill_staff_status_for_room(dk, ack_st)
             await websocket.send_json(ack)
+            if broadcast_rooms_after_set_mode:
+                await broadcast_drill_room_list()
         return
     if cmd == "set_staff_mode":
         enabled = bool(val.get("enabled")) if isinstance(val, dict) else False
@@ -1264,6 +1710,12 @@ async def process_command(data, websocket):
             connections[websocket]["staff_enabled"] = enabled
             if enabled:
                 connections[websocket]["a_id"] = a_id
+            elif not enabled:
+                conn_role = connections[websocket].get("role")
+                if not conn_role:
+                    connections[websocket]["a_id"] = None
+        FORCE_STATE_BROADCAST = True
+        state_version += 1
         return
     if cmd == "set_staff_name":
         payload = val if isinstance(val, dict) else {}
@@ -1273,6 +1725,8 @@ async def process_command(data, websocket):
             state["staff_names"] = ["", "", ""]
         if 0 <= a_id < 3:
             state["staff_names"][a_id] = name
+        FORCE_STATE_BROADCAST = True
+        state_version += 1
         return
     
     if cmd == "mod_manual_base":
@@ -1288,9 +1742,13 @@ async def process_command(data, websocket):
     elif cmd == "fire_manual_swap":
         base = state["manual_base_target"] if state["manual_base_target"] else now_ts
         state["manual_swap_trigger_time"] = base + state["manual_swap_margin"]
+        FORCE_STATE_BROADCAST = True
     elif cmd == "fire_manual_wd":
-        base = state["manual_base_target"] if state["manual_base_target"] else now_ts
-        state["manual_wd_trigger_time"] = (base + state["manual_swap_margin"]) - state["manual_wd_margin"]
+        if state.get("manual_swap_trigger_time") is not None:
+            state["manual_wd_trigger_time"] = float(state["manual_swap_trigger_time"]) - state["manual_wd_margin"]
+        else:
+            base = state["manual_base_target"] if state["manual_base_target"] else now_ts
+            state["manual_wd_trigger_time"] = (base + state["manual_swap_margin"]) - state["manual_wd_margin"]
         
     elif cmd == "cancel_manual_swap": 
         state["manual_swap_trigger_time"] = None
@@ -1318,28 +1776,29 @@ async def process_command(data, websocket):
         delta = int(val if isinstance(val, (int, float, str)) and str(val).strip() != "" else 0)
         auto_base = _compute_insert_auto_target_ts(state)
         current = state["insert_fixed_target"] if state.get("insert_fixed_target") else (auto_base if auto_base else now_ts + 1)
-        new_tgt = float(current) + delta
-        if new_tgt > now_ts + 1:
-            state["insert_fixed_target"] = new_tgt
-        else:
-            state["insert_fixed_target"] = None
+        state["insert_fixed_target"] = float(current) + delta
     elif cmd == "fire_insert_fixed_target":
         if not bool(conn.get("staff_enabled", False)):
             return
+        auto_tgt = _compute_insert_auto_target_ts(state)
         tgt = state.get("insert_fixed_target")
-        if tgt is not None and float(tgt) > now_ts + 1:
+        if tgt is None:
+            tgt = auto_tgt
+        if tgt is not None:
             state["insert_fire_target"] = float(tgt)
+            FORCE_STATE_BROADCAST = True
     elif cmd == "clear_insert_fixed_target":
         if not bool(conn.get("staff_enabled", False)):
             return
         state["insert_fixed_target"] = None
         state["insert_fire_target"] = None
-    elif cmd == "mod_insert_offset_tenth":
+    elif cmd in ("mod_insert_margin", "mod_insert_offset_tenth"):
         if not bool(conn.get("staff_enabled", False)):
             return
         delta = int(val if isinstance(val, (int, float, str)) and str(val).strip() != "" else 0)
-        current = int(state.get("insert_offset_tenth", -1))
-        state["insert_offset_tenth"] = min(0, max(-50, current + delta))
+        current = _insert_margin_sec(state)
+        state["insert_margin_sec"] = max(0, min(5, current + delta))
+        state["insert_offset_tenth"] = -int(state["insert_margin_sec"]) * 10
     elif cmd == "set_delay_target":
         squad_id = (idx - 6) // 6
         state["delay_target_idxs"][squad_id] = -1 if state["delay_target_idxs"][squad_id] == idx else idx
@@ -1354,9 +1813,7 @@ async def process_command(data, websocket):
         max_march = max(marches) if marches else 0
         min_tgt = now_ts + state["gorei_offsets"][squad_id] + state["default_rally"] + max_march
         current = state["gorei_fixed_targets"][squad_id] if state["gorei_fixed_targets"][squad_id] else min_tgt
-        new_tgt = current + val
-        if new_tgt > min_tgt: state["gorei_fixed_targets"][squad_id] = new_tgt
-        else: state["gorei_fixed_targets"][squad_id] = None
+        state["gorei_fixed_targets"][squad_id] = current + val
 
     elif cmd == "toggle_pair_squad":
         if is_staff_limited and not in_staff_scope(idx): return
@@ -1375,9 +1832,7 @@ async def process_command(data, websocket):
         max_march = max(marches) if marches else 0
         min_tgt = now_ts + state["pair_gorei_offset"] + state["default_rally"] + max_march
         current = state["pair_fixed_target"] if state["pair_fixed_target"] else min_tgt
-        new_tgt = current + val
-        if new_tgt > min_tgt: state["pair_fixed_target"] = new_tgt
-        else: state["pair_fixed_target"] = None
+        state["pair_fixed_target"] = current + val
 
     elif cmd == "fire_pair_gorei" or cmd == "fire_pair_gorei_fixed":
         if is_staff_limited: return
@@ -1387,8 +1842,7 @@ async def process_command(data, websocket):
                 start_idx = 6 + s * 6
                 for i in range(start_idx, start_idx + 6):
                     if state["timers"][i]["name"].strip() != "": marches.append(state["timers"][i]["sub_set"])
-        if not marches: return
-        max_march = max(marches)
+        max_march = max(marches) if marches else 0
         if cmd == "fire_pair_gorei": sync_target = datetime.now(timezone.utc) + timedelta(seconds=state["pair_gorei_offset"] + state["default_rally"] + max_march)
         else:
             if not state["pair_fixed_target"]: return
@@ -1435,6 +1889,22 @@ async def process_command(data, websocket):
         state["default_rally"] = 60 if state["default_rally"] == 300 else 300
         for t in state["timers"]:
             if t["state"] == 0: t["sec"] = state["default_rally"]
+    elif cmd == "set_default_rally":
+        if (conn or {}).get("mode") != "drill":
+            return
+        if not is_staff_limited:
+            return
+        try:
+            rally_sec = int(float(val)) if val is not None else 300
+        except (TypeError, ValueError):
+            return
+        if rally_sec not in (60, 300):
+            return
+        state["default_rally"] = rally_sec
+        for t in state["timers"]:
+            if t["state"] == 0:
+                t["sec"] = rally_sec
+        FORCE_STATE_BROADCAST = True
             
     elif cmd == "fire_gorei":
         if not is_staff_limited:
@@ -1453,12 +1923,8 @@ async def process_command(data, websocket):
         msg_dbg = f"[GOREI_DEBUG] fire_gorei idx={idx} names={names} marches={marches} delay_idx={state['delay_target_idxs'][idx]}"
         print(msg_dbg)
         gorei_debug_log(msg_dbg)
-        if not marches:
-            msg_dbg = f"[GOREI_DEBUG] fire_gorei no marches idx={idx} -> skipped"
-            print(msg_dbg)
-            gorei_debug_log(msg_dbg)
-            return
-        sync_target = datetime.now(timezone.utc) + timedelta(seconds=state["gorei_offsets"][idx] + state["default_rally"] + max(marches))
+        max_march = max(marches) if marches else 0
+        sync_target = datetime.now(timezone.utc) + timedelta(seconds=state["gorei_offsets"][idx] + state["default_rally"] + max_march)
         state["gorei_last_target"][idx] = sync_target.timestamp()
         for i in range(start_idx, start_idx + 6):
             if state["timers"][i]["name"].strip() != "":
@@ -1645,4 +2111,14 @@ async def process_command(data, websocket):
     state_version += 1
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    _port = int(os.environ.get("PORT", "8000"))
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=_port,
+        reload=False,
+        timeout_keep_alive=int(os.environ.get("UVICORN_TIMEOUT_KEEP_ALIVE", "120")),
+        backlog=int(os.environ.get("UVICORN_BACKLOG", "2048")),
+        ws_ping_interval=float(os.environ.get("UVICORN_WS_PING_INTERVAL", "25")),
+        ws_ping_timeout=float(os.environ.get("UVICORN_WS_PING_TIMEOUT", "120")),
+    )

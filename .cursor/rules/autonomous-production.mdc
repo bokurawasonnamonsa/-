@@ -1,0 +1,71 @@
+---
+description: ユーザーは3301-svs.jpの確認のみ。バッチ操作・手動デプロイ禁止。自動ループはhooksが実行。
+alwaysApply: true
+---
+
+# 完全自動本番ループ（ユーザー操作なし）
+
+## ユーザーがすること
+
+- チャットで修正内容を指示する
+- 完了後 **https://3301-svs.jp/** をブラウザで確認するだけ
+- **.bat のダブルクリック・手動デプロイ・「ターミナルで実行して」を依頼しない**
+
+## 修正項目の実画面確認ループ（必須）
+
+ユーザーが依頼した**対象の修正項目**について、次を満たすまで **ループ** する（1回のデプロイや静的QAだけで完了扱いにしない）。
+
+1. **本番URLを実際に起動して操作する** — `python scripts/qa_drill_browser.py`（headed 推奨）または browser MCP で **https://3301-svs.jp/** を開き、依頼どおりの画面・クリック・入力を行う。
+2. **実画面で修正が反映されていることを確認する** — スクリーンショット（`logs/browser_qa/`）または DOM テキストで、依頼内容（表示文言・レイアウト・挙動）が意図どおりか検証する。
+3. **不合格なら** 原因を特定 → 最小修正 → `python scripts/production_auto_pipeline.py full` → 手順1〜2を再実行。
+4. **合格するまで** 上記を繰り返す。ユーザーに「後で確認」と言わない。
+
+HTTP 200・WS E2E だけでは足りない。**プレイヤー画面の見た目・操作結果**が依頼と一致していることまで確認してから「修正完了」と報告する。
+
+## エージェントがすること
+
+0. **毎返答** `.cursor/rules/workflow-status.mdc` のフェーズ表示と作業完了サマリー（自動保存含む）を出す
+1. 指示範囲のみコード修正
+2. **毎ターン（コード変更の有無を問わず、返答前に必ず実行・省略禁止）**
+
+   | # | チェック | コマンド / 確認 |
+   |---|----------|-----------------|
+   | A | **操作者目線ロジック**（差込・入替・集結・占領抜き・**無断変更検知**） | `python scripts/operator_spec_guard.py` + `python scripts/qa_feature_check.py --full` → 全 `op_spec_*` / `op_*` / `op_ws_*` ok、`op_operator_mandatory_bundle` ok。返答に機能別 PASS 表を必ず載せる |
+   | B | 編集ファイル関連 | `python scripts/qa_feature_check.py --scope-from-edits`（編集なしでも operator は A で担保） |
+   | C | 本番インフラ | `powershell -File qa_production_check.ps1`（secret / SSH / ローカル tunnel 警告） |
+   | D | HTTP 本番 | `python scripts/production_auto_pipeline.py verify-only` または直前デプロイ済みなら `logs/production_pipeline_status.json` の `ok: true` |
+   | E | 本番ブラウザ項目 | `.cursor/qa_checklist.md` + `vps-production.mdc`（下表）。browser MCP 不可時は HTTP+WS 自動結果を `logs/qa_last_result.json` の `production_browser` に記録 |
+   | F | フェーズ表示 | 本ルール `workflow-status.mdc` の **現在の作業** + **作業完了サマリー** |
+
+   **本番ブラウザ（E）— 毎回 PASS/FAIL を報告**
+
+   | ID | 内容 |
+   |----|------|
+   | br_public | `public_url` HTTP 200（502/503 でない） |
+   | br_player | `player_url` 表示（`/player.html` は使わない） |
+   | br_drill_create | 訓練: 同盟名+参加コードで作成 → 参加一覧に出る（自動: `ws_drill_create`） |
+   | br_drill_join | 参加 → `step3_setup`（役割選択）まで進む（手動 or browser MCP） |
+   | br_ws | WebSocket / `mode_error` 連発なし（自動: `ws_init` 等） |
+   | br_staff | `staff_url` 200（任意だが毎回 HTTP 確認） |
+   | br_screen_loop | **依頼した修正項目**を本番実画面で確認（上記「実画面確認ループ」）。UI変更時は `#alliancePresenceLine` 等、該当DOM・スクリーンショットで PASS |
+
+3. **コード変更を含むターンでは上記に加え**
+   - **実画面確認ループ**を必ず1回以上実行（Playwright / browser MCP）
+   - `python scripts/production_auto_pipeline.py full`（デプロイ後 A〜E を再実行）
+   - 失敗時は原因をログに書き、修正して再実行。ユーザーに「後でデプロイ」と言わない
+3. 保存して会話ターンを終える → **stop フック**も同様にデプロイ + HTTP 検証（二重実行は許容）
+4. stop フック内で `qa_feature_check.py`（**毎回 `operator` 必須**）
+5. followup **【自動QA】** → browser MCP（コード編集禁止）
+6. followup **【自動修正】** → FAIL のみ直す（`operator-logic-guard.mdc` 遵守）
+7. 本番反映を主張する前に上記 QA + `production_pipeline_status.json` の `ok: true` を確認済みであること
+
+## 手動コマンド（フックと同じ・緊急時のみ）
+
+```bash
+python scripts/production_auto_pipeline.py full
+```
+
+## 禁止
+
+- `RECONNECT_3301_STABLE.bat` / `UTC_ALLINONE_24x7.bat` で本番配信（VPS 一本化）
+- ユーザーへの `DEPLOY_PRODUCTION.bat` 案内（フックが実行する）

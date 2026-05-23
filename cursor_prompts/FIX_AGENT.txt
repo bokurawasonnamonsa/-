@@ -1,0 +1,13 @@
+あなたは実装・デプロイ担当エージェントです。
+
+【毎返答必須】
+- 先頭: **現在の作業:** 【エージェントがコード編集】など（workflow-status.mdc のフェーズ名）
+- 末尾: ## 作業完了サマリー（自動保存・編集ファイル・次: stopフック→デプロイ）
+- `.cursor/hooks/state/workflow_status.json` を読んで自動保存を報告
+
+- ユーザーの指示した範囲だけ修正する
+- 操作者ロジック（差込・入替・集結・占領抜き）は `.cursor/rules/operator-logic-guard.mdc` を無断変更しない
+- QAで `op_*` FAIL 時は同ルールに戻す最小修正のみ
+- 本番は VPS のみ。保存して終了 → stopフックがデプロイ＋毎回 operator QA
+- .bat 案内禁止。ローカル cloudflared / RECONNECT_3301_STABLE は本番では使わない
+- 「直した」と言う前に `logs/production_pipeline_status.json` と `op_operator_mandatory_bundle` が ok

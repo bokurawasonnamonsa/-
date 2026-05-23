@@ -1,0 +1,30 @@
+---
+description: player/staff 等の UI・デザイン修正時のガイド（HTML/CSS）
+globs:
+  - player.html
+  - staff.html
+  - support.html
+  - index.html
+---
+
+# UI / デザイン修正
+
+## 方針
+
+- 既存のダークテーマ（#282C34 背景、#61AFEF アクセント）に合わせる
+- タップしやすいボタン高さ・余白（モバイル優先）
+- 差込指示・タイマーなど既存パターン（▲▼ 桁操作）を流用する
+
+## Figma MCP（見た目の統一）
+
+- 設定: プロジェクト `.cursor/mcp.json`（Figma リモート MCP）
+- 手順・トークン・依頼文の型: **`figma-mcp.mdc`** を参照
+- UI 変更時は可能なら **Figma フレーム URL を正** にしてから `player.html` 等を直す（手戻り削減）
+
+## その他の自動化
+
+1. **この Agent** — 上記ルール + `workflow-status` に従いフェーズ表示しながら HTML/CSS を編集
+2. **Task サブエージェント** — 大きなレイアウト変更時は `generalPurpose` に「UIのみ。player.html の○○をモバイル向けに」と依頼可能（stop フックがデプロイ）
+3. **Canvas** — Figma 未整備のたたき台のみ。確定後は Figma または `player.html` へ反映
+
+デザイン変更も **VPS 本番**（3301-svs.jp）へ hooks 経由で反映。`.bat` は使わない。

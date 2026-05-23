@@ -1,0 +1,86 @@
+{
+  "player_url": "https://3301-svs.jp/",
+  "staff_url": "https://3301-svs.jp/staff_hq_3301",
+  "room_name": "TEST",
+  "room_code": "doc7c24c2",
+  "shots": [
+    {
+      "id": "01_entry_mode",
+      "file": "screenshots/01_entry_mode.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\01_entry_mode.png"
+    },
+    {
+      "id": "02_drill_mode_selected",
+      "file": "screenshots/02_drill_mode_selected.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\02_drill_mode_selected.png"
+    },
+    {
+      "id": "03_drill_join_hub",
+      "file": "screenshots/03_drill_join_hub.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\03_drill_join_hub.png"
+    },
+    {
+      "id": "04_drill_create_form",
+      "file": "screenshots/04_drill_create_form.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\04_drill_create_form.png"
+    },
+    {
+      "id": "05_drill_create_done_role",
+      "file": "screenshots/05_drill_create_done_role.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\05_drill_create_done_role.png"
+    },
+    {
+      "id": "05b_drill_join_list",
+      "file": "screenshots/05b_drill_join_list.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\05b_drill_join_list.png"
+    },
+    {
+      "id": "06_role_staff_pick",
+      "file": "screenshots/06_role_staff_pick.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\06_role_staff_pick.png"
+    },
+    {
+      "id": "07_role_staff_rider_name",
+      "file": "screenshots/07_role_staff_rider_name.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\07_role_staff_rider_name.png"
+    },
+    {
+      "id": "08_role_rider_pick",
+      "file": "screenshots/08_role_rider_pick.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\08_role_rider_pick.png"
+    },
+    {
+      "id": "09_staff_main",
+      "file": "screenshots/09_staff_main.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\09_staff_main.png"
+    },
+    {
+      "id": "10_staff_command_panel",
+      "file": "screenshots/10_staff_command_panel.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\10_staff_command_panel.png"
+    },
+    {
+      "id": "11_presence_line_staff",
+      "file": "screenshots/11_presence_line_staff.png"
+    },
+    {
+      "id": "12_joiner_waiting_staff",
+      "file": "screenshots/12_joiner_waiting_staff.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\12_joiner_waiting_staff.png"
+    },
+    {
+      "id": "13_departure_waiting",
+      "file": "screenshots/13_departure_waiting.png"
+    },
+    {
+      "id": "14_prod_alliance_pick",
+      "file": "screenshots/14_prod_alliance_pick.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\14_prod_alliance_pick.png"
+    },
+    {
+      "id": "15_staff_hq_overview",
+      "file": "screenshots/15_staff_hq_overview.png",
+      "path": "C:\\Users\\sator\\OneDrive\\デスクトップ\\utc_web\\docs\\screenshots\\15_staff_hq_overview.png"
+    }
+  ]
+}

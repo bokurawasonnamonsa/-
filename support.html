@@ -80,6 +80,8 @@
     let activeClientId = null;
     let reconnectDelayMs = 1000;
     let heartbeatTimer = null;
+    let wsLastMessageAt = 0;
+    let wsWatchdogTimer = null;
 
     function startHeartbeat() {
         stopHeartbeat();
@@ -87,7 +89,7 @@
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({cmd: "ping"}));
             }
-        }, 20000);
+        }, 10000);
     }
 
     function stopHeartbeat() {
@@ -96,17 +98,43 @@
             heartbeatTimer = null;
         }
     }
+    function startWsWatchdog() {
+        stopWsWatchdog();
+        wsWatchdogTimer = setInterval(() => {
+            if (!ws || ws.readyState === WebSocket.CLOSED) {
+                connect();
+                return;
+            }
+            if (ws.readyState !== WebSocket.OPEN) return;
+            const now = Date.now();
+            if (wsLastMessageAt > 0 && (now - wsLastMessageAt) > 90000) {
+                try { ws.close(); } catch (e) {}
+                setTimeout(connect, 300);
+            }
+        }, 3000);
+    }
+    function stopWsWatchdog() {
+        if (wsWatchdogTimer) {
+            clearInterval(wsWatchdogTimer);
+            wsWatchdogTimer = null;
+        }
+    }
 
     function connect() {
+        if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
         let ws_protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
         ws = new WebSocket(ws_protocol + window.location.host + "/ws");
         ws.onopen = () => {
             reconnectDelayMs = 1000;
+            wsLastMessageAt = Date.now();
             startHeartbeat();
+            startWsWatchdog();
         };
         ws.onmessage = (e) => {
             try {
                 const msg = JSON.parse(e.data);
+                wsLastMessageAt = Date.now();
+                if (msg.type === "pong") return;
                 if(msg.type === "init" || msg.type === "tick") {
                     supportChats = msg.data.support_chats || {};
                     renderUserList();
@@ -116,12 +144,19 @@
         };
         ws.onclose = () => {
             stopHeartbeat();
+            stopWsWatchdog();
             const wait = reconnectDelayMs + Math.floor(Math.random() * 400);
             setTimeout(connect, wait);
             reconnectDelayMs = Math.min(reconnectDelayMs * 2, 15000);
         };
+        ws.onerror = () => { try { ws.close(); } catch (e) {} };
     }
     connect();
+    window.addEventListener("online", () => { try { if (!ws || ws.readyState !== WebSocket.OPEN) connect(); } catch (e) {} });
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState !== "visible") return;
+        try { if (!ws || ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) connect(); } catch (e) {}
+    });
 
     function escapeHtml(s) {
         return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -175,7 +210,7 @@
         document.getElementById('chatHeaderName').innerText = supportChats[clientId].name + " 様からのSOS";
         
         // 既読にする
-        if (supportChats[clientId].unread_admin) {
+        if (supportChats[clientId].unread_admin && ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({cmd: "mark_chat_read", client_id: clientId}));
         }
         

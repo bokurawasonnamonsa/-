@@ -138,22 +138,45 @@
     let ws; let isBuilt = false; let timeOffset = 0; 
     let reconnectDelayMs = 1000;
     let heartbeatTimer = null;
+    let wsLastMessageAt = 0;
+    let wsWatchdogTimer = null;
     let globalLocalState = null; 
     let myStaffAllianceIdx = -1; 
     let lastChatCount = 0; // ★ チャット件数の管理
 
     function getSyncedNow() { return new Date(Date.now() + timeOffset); }
-    function send(cmd, idx=null, val=null) { if(ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({cmd: cmd, idx: idx, val: val})); }
+    function send(cmd, idx=null, val=null) { if(ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({cmd: cmd, idx: idx, val: val})); }
     function startHeartbeat() {
         stopHeartbeat();
         heartbeatTimer = setInterval(() => {
             if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({cmd: "ping"}));
-        }, 20000);
+        }, 10000);
     }
     function stopHeartbeat() {
         if (heartbeatTimer) {
             clearInterval(heartbeatTimer);
             heartbeatTimer = null;
+        }
+    }
+    function startWsWatchdog() {
+        stopWsWatchdog();
+        wsWatchdogTimer = setInterval(() => {
+            if (!ws || ws.readyState === WebSocket.CLOSED) {
+                connect();
+                return;
+            }
+            if (ws.readyState !== WebSocket.OPEN) return;
+            const now = Date.now();
+            if (wsLastMessageAt > 0 && (now - wsLastMessageAt) > 90000) {
+                try { ws.close(); } catch (e) {}
+                setTimeout(connect, 300);
+            }
+        }, 3000);
+    }
+    function stopWsWatchdog() {
+        if (wsWatchdogTimer) {
+            clearInterval(wsWatchdogTimer);
+            wsWatchdogTimer = null;
         }
     }
 
@@ -323,15 +346,28 @@
     }
 
     function connect() {
+        if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) return;
         let ws_protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
         ws = new WebSocket(ws_protocol + window.location.host + "/ws");
         ws.onopen = () => {
             reconnectDelayMs = 1000;
+            wsLastMessageAt = Date.now();
             startHeartbeat();
+            startWsWatchdog();
         };
         ws.onmessage = (e) => {
             try {
-                const msg = JSON.parse(e.data); const data = msg.data;
+                const msg = JSON.parse(e.data);
+                wsLastMessageAt = Date.now();
+                if (msg.type === "pong") {
+                    if (msg.server_timestamp) {
+                        timeOffset = msg.server_timestamp - Date.now();
+                        let elOffset = document.getElementById('offsetDisp');
+                        if (elOffset) elOffset.innerText = `(補正: ${timeOffset > 0 ? "+" : ""}${(timeOffset/1000).toFixed(2)}秒)`;
+                    }
+                    return;
+                }
+                const data = msg.data;
                 globalLocalState = data; 
                 if(msg.server_timestamp) {
                     timeOffset = msg.server_timestamp - Date.now();
@@ -351,12 +387,19 @@
         };
         ws.onclose = () => {
             stopHeartbeat();
+            stopWsWatchdog();
             const wait = reconnectDelayMs + Math.floor(Math.random() * 400);
             setTimeout(connect, wait);
             reconnectDelayMs = Math.min(reconnectDelayMs * 2, 15000);
         };
+        ws.onerror = () => { try { ws.close(); } catch (e) {} };
     }
     connect();
+    window.addEventListener("online", () => { try { if (!ws || ws.readyState !== WebSocket.OPEN) connect(); } catch (e) {} });
+    document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState !== "visible") return;
+        try { if (!ws || ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) connect(); } catch (e) {}
+    });
 
     function stableLandingMs(t, defaultRally) {
         if (!t || t.state === 0) return null;

@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": ".cursor/hooks/run_hook.cmd on_session_start.py"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": ".cursor/hooks/run_hook.cmd on_after_file_edit.py",
+        "timeout": 15
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/run_hook.cmd allow_production_shell.py",
+        "matcher": "production_auto_pipeline|vps_deploy_with_password|VERIFY_PRODUCTION|qa_production_check",
+        "timeout": 10
+      }
+    ],
+    "stop": [
+      {
+        "command": ".cursor/hooks/run_hook.cmd on_stop_production_loop.py",
+        "loop_limit": 12,
+        "timeout": 600
+      }
+    ],
+    "subagentStop": [
+      {
+        "command": ".cursor/hooks/run_hook.cmd on_subagent_stop_qa.py",
+        "loop_limit": 12,
+        "timeout": 30
+      }
+    ]
+  }
+}
