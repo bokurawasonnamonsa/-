@@ -1,0 +1,62 @@
+---
+description: TactNode Labs clean multi-agent operating rules for Cursor
+alwaysApply: true
+---
+
+# TactNode Labs Cursor Rules
+
+Read `AGENTS.md` before making changes. This repo is shared by Codex, Cursor, Claude, and the owner.
+
+## ワークフロー上のCursorの位置づけ
+
+Cursorは「実装」担当。設計はClaudeが行い、Cursorはその設計書に従って実装する。
+タスクを始める前に `commercial/codex_ops/cursor_tasks/` 内の指示書を確認すること。
+指示書がない場合は、実装を始める前に人間またはClaudeに設計を依頼する。
+
+## タスク開始前に必ず読むファイル
+
+1. `AGENTS.md`
+2. `commercial/codex_ops/TEAM_HANDOFF.md`
+3. `commercial/codex_ops/cursor_tasks/` 内の該当指示書（あれば）
+
+## Scope
+
+- Implement only the requested task.
+- Do not rewrite unrelated UI, copy, scripts, or infrastructure.
+- Never revert user or other-agent changes unless explicitly instructed.
+
+## Product Safety
+
+- The commercial app must not expose 3301-specific names, server URLs, alliance names, SVS/WOS wording, or private operational data.
+- Keep 3301 production separate from commercial product work.
+- Do not commit secrets, passwords, keys, tokens, or Play Console credentials.
+- 禁止ワード（コード・文字列・コメントに使わない）: `3301`, `WOS`, `SVS`, `WhiteOut`, `Survival`, `同盟`, `占領`, `号令`
+
+## Android Verification
+
+For Command Clock changes:
+
+- Build debug APK.
+- Run on Android emulator or connected device.
+- Visually verify the feature.
+- Capture screenshots for timer, overlay, permission, or language behavior.
+- Build signed AAB only after verification.
+
+## Coordination
+
+- Use `commercial/codex_ops/TASK_BOARD.md` for task status.
+- Use `commercial/codex_ops/TEAM_HANDOFF.md` for handoff notes.
+- When a task changes app behavior, update `commercial/apps/command_clock/android/BUILD_STATUS.md`.
+- 実装完了後、該当する `cursor_tasks/` の指示書のステータスを「Done」に更新する。
+
+## コミットメッセージ規則
+
+```
+feat:     新機能追加
+fix:      バグ修正
+refactor: リファクタリング
+docs:     ドキュメント更新
+chore:    ビルド・設定変更
+```
+
+例: `feat: Add language selector dropdown to Command Clock main screen`
