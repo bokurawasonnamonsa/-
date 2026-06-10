@@ -1,5 +1,37 @@
 # Build Status
 
+## Version 0.1.10 Floating Permission Button Fix
+
+Status:
+
+- Release AAB build: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+
+Changed:
+
+- Floating ON/OFF button is disabled and grayed out when overlay permission is not granted.
+- Floating ON/OFF button returns to enabled opacity when overlay permission is granted.
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `11 (0.1.10)`
+- Published: 2026-06-10 16:42
+- Status shown in Play Console: Internal testers, unreviewed
+
+Release notes:
+
+```text
+EN: v0.1.10: The Floating ON/OFF button is now grayed out when overlay permission is not granted.
+JA: v0.1.10: フローティングON/OFFボタンが、権限がない場合にグレーアウトされるようになりました。
+```
+
 ## Version 0.1.9 Multi-Language Fix
 
 Status:

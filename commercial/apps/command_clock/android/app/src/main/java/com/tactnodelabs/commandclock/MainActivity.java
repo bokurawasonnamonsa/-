@@ -641,19 +641,22 @@ public class MainActivity extends Activity {
     }
 
     private void refreshPermissionState() {
-        if (!Settings.canDrawOverlays(this) && overlayEnabled) {
+        boolean canDraw = Settings.canDrawOverlays(this);
+        if (!canDraw && overlayEnabled) {
             overlayEnabled = false;
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_OVERLAY, false).apply();
         }
         if (permissionButton != null) {
-            permissionButton.setVisibility(Settings.canDrawOverlays(this) ? View.GONE : View.VISIBLE);
+            permissionButton.setVisibility(canDraw ? View.GONE : View.VISIBLE);
         }
         if (overlayButton != null) {
+            overlayButton.setEnabled(canDraw);
+            overlayButton.setAlpha(canDraw ? 1.0f : 0.4f);
             overlayButton.setText(overlayEnabled
                     ? msg("Floating countdown: ON", "フローティング: ON", "플로팅: ON", "浮动显示: 开", "ลอย: เปิด", "Mengambang: ON", "Flotante: ON", "Flutuante: ON", "Flottant: ON", "Schwebend: AN")
                     : msg("Floating countdown: OFF", "フローティング: OFF", "플로팅: OFF", "浮动显示: 关", "ลอย: ปิด", "Mengambang: OFF", "Flotante: OFF", "Flutuante: OFF", "Flottant: OFF", "Schwebend: AUS"));
         }
-        if (overlayEnabled && Settings.canDrawOverlays(this)) {
+        if (canDraw && overlayEnabled) {
             startOverlayService(CommandOverlayService.ACTION_SHOW, null);
         }
     }
