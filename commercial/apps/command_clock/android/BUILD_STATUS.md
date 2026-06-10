@@ -1,5 +1,38 @@
 # Build Status
 
+## Version 0.1.12 Floating Permission Auto-On Fix
+
+Status:
+
+- Release AAB build: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+
+Changed:
+
+- Overlay permission screen is now opened with `startActivityForResult`.
+- When returning from the permission screen, the app rechecks overlay permission after 500 ms.
+- When overlay permission is newly granted, the floating countdown is automatically turned ON.
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `13 (0.1.12)`
+- Published: 2026-06-10 17:16
+- Status shown in Play Console: Internal testers, unreviewed
+
+Release notes:
+
+```text
+EN: v0.1.12: Floating overlay now turns ON automatically when permission is granted.
+JA: v0.1.12: 重ねて表示の許可を与えると、フローティングが自動でONになるようになりました。
+```
+
 ## Version 0.1.11 Language Selector Visual Fix
 
 Status:

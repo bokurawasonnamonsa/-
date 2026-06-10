@@ -43,6 +43,7 @@ public class MainActivity extends Activity {
     private static final String KEY_LANGUAGE = "language";
     private static final String KEY_OVERLAY = "overlay_enabled";
     private static final int REQUEST_POST_NOTIFICATIONS = 4101;
+    private static final int REQUEST_OVERLAY_PERMISSION = 4102;
 
     private static final String[] LANG_CODES = {"en", "ja", "ko", "zh", "th", "id", "es", "pt", "fr", "de"};
     private static final String[] LANG_NAMES = {
@@ -116,6 +117,15 @@ public class MainActivity extends Activity {
         super.onPause();
         if (!overlayEnabled) {
             handler.removeCallbacks(tick);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_OVERLAY_PERMISSION) {
+            // canDrawOverlays() may not update instantly on some devices — recheck after a short delay
+            handler.postDelayed(this::refreshPermissionState, 500);
         }
     }
 
@@ -638,11 +648,16 @@ public class MainActivity extends Activity {
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:" + getPackageName())
         );
-        startActivity(intent);
+        startActivityForResult(intent, REQUEST_OVERLAY_PERMISSION);
     }
+
+    private boolean prevCanDraw = false;
 
     private void refreshPermissionState() {
         boolean canDraw = Settings.canDrawOverlays(this);
+        boolean justGranted = canDraw && !prevCanDraw;
+        prevCanDraw = canDraw;
+
         if (!canDraw && overlayEnabled) {
             overlayEnabled = false;
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_OVERLAY, false).apply();
@@ -656,6 +671,14 @@ public class MainActivity extends Activity {
             overlayButton.setText(overlayEnabled
                     ? msg("Floating countdown: ON", "フローティング: ON", "플로팅: ON", "浮动显示: 开", "ลอย: เปิด", "Mengambang: ON", "Flotante: ON", "Flutuante: ON", "Flottant: ON", "Schwebend: AN")
                     : msg("Floating countdown: OFF", "フローティング: OFF", "플로팅: OFF", "浮动显示: 关", "ลอย: ปิด", "Mengambang: OFF", "Flotante: OFF", "Flutuante: OFF", "Flottant: OFF", "Schwebend: AUS"));
+        }
+        if (justGranted && !overlayEnabled) {
+            // Auto-enable the overlay the first time permission is granted
+            overlayEnabled = true;
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(KEY_OVERLAY, true).apply();
+            if (overlayButton != null) {
+                overlayButton.setText(msg("Floating countdown: ON", "フローティング: ON", "플로팅: ON", "浮动显示: 开", "ลอย: เปิด", "Mengambang: ON", "Flotante: ON", "Flutuante: ON", "Flottant: ON", "Schwebend: AN"));
+            }
         }
         if (canDraw && overlayEnabled) {
             startOverlayService(CommandOverlayService.ACTION_SHOW, null);
