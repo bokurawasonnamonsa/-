@@ -1,5 +1,25 @@
 # Build Status
 
+## Version 0.1.8 Work
+
+Status:
+
+- Debug build: Success
+- Release AAB build: Success
+- Signed AAB: Success
+
+Changed:
+
+- Fixed floating ON/OFF button no longer redirects to system settings when permission is not granted
+- Tapping without permission now shows a status message only
+- Use the separate Allow floating display button to open permission settings
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
 ## 2026-06-10
 
 ## Version 0.1.7 Work
@@ -343,4 +363,31 @@ commercial/apps/command_clock/android/verify_017_overlay_a_after.png
 commercial/apps/command_clock/android/verify_017_overlay_b_home.png
 commercial/apps/command_clock/android/verify_017_overlay_c_home.png
 commercial/apps/command_clock/android/verify_017_overlay_d_home.png
+```
+
+## Version 0.1.8 Floating Button Fix
+
+Status:
+
+- Debug build: Success
+- Emulator verification: Success
+
+Changed:
+
+- `toggleOverlay()` no longer opens the overlay permission settings screen.
+- Without permission, the floating ON/OFF button now shows a status message and keeps the separate `Allow floating display` button for permission setup.
+- Version bumped to `0.1.8` (`versionCode 9`).
+
+Verified on emulator:
+
+- Scenario A: Tapping floating ON/OFF without permission stays in-app, shows guidance, and keeps `ALLOW FLOATING DISPLAY` visible.
+- Scenario B: With permission granted, floating ON/OFF toggles overlay on the home screen and back off again.
+- Scenario C: After `Issue instruction`, floating ON keeps the arrival countdown on the home-screen overlay.
+
+Screenshots:
+
+```text
+commercial/apps/command_clock/android/verify_018_overlay_a.png
+commercial/apps/command_clock/android/verify_018_overlay_b_home.png
+commercial/apps/command_clock/android/verify_018_overlay_c_home.png
 ```
