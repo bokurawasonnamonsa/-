@@ -51,5 +51,7 @@ Last updated: 2026-06-10
 - Command Clock `0.1.8` internal test release `9 (0.1.8)` published.
 - Command Clock `0.1.9` internal test release `10 (0.1.9)` published with multi-language support fix.
 - Command Clock `0.1.10` internal test release `11 (0.1.10)` published with floating permission button disabled state.
+- Command Clock `0.1.11` internal test release `12 (0.1.11)` published with language selector visual improvement.
+- Google Play listing draft v1 created at `commercial/store/play_listing_v1.md`.
 - Codex -> Claude completion notifications sent for Floating Button Behavior Fix, Release 0.1.8 Prep, Release 0.1.8 Prep Retrigger, and Hook Test.
 - Codex re-verified Floating Button Behavior Fix (2026-06-10): debug + signed AAB + emulator scenario A; Claude notified again.

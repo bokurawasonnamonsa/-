@@ -1,5 +1,37 @@
 # Build Status
 
+## Version 0.1.11 Language Selector Visual Fix
+
+Status:
+
+- Release AAB build: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+
+Changed:
+
+- Language selector is now more visible with a blue border.
+- Selected language text is larger and bold for easier discovery.
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `12 (0.1.11)`
+- Published: 2026-06-10 16:59
+- Status shown in Play Console: Internal testers, unreviewed
+
+Release notes:
+
+```text
+EN: v0.1.11: Language selector is now visually distinct with a blue border and larger text, making it easier to find.
+JA: v0.1.11: 言語セレクターが青枠と大きな文字で目立つようになり、見つけやすくなりました。
+```
+
 ## Version 0.1.10 Floating Permission Button Fix
 
 Status:

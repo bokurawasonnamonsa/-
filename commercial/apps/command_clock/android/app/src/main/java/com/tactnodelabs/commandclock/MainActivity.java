@@ -143,14 +143,15 @@ public class MainActivity extends Activity {
         languageBox.addView(languageLabel, new LinearLayout.LayoutParams(-1, -2));
 
         languageSpinner = new Spinner(this);
-        languageSpinner.setBackground(border(0xFF1B2430, 0xFF2B3542, 1));
+        languageSpinner.setBackground(border(0xFF1C2A3A, 0xFF58A6FF, 2));
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, LANG_NAMES) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
                 TextView view = (TextView) super.getView(position, convertView, parent);
-                view.setTextColor(0xFFF2F5F8);
-                view.setTextSize(17);
-                view.setPadding(dp(14), dp(10), dp(14), dp(10));
+                view.setTextColor(0xFF58A6FF);
+                view.setTextSize(19);
+                view.setTypeface(null, Typeface.BOLD);
+                view.setPadding(dp(14), dp(12), dp(14), dp(12));
                 return view;
             }
 
@@ -158,8 +159,8 @@ public class MainActivity extends Activity {
             public View getDropDownView(int position, View convertView, ViewGroup parent) {
                 TextView view = (TextView) super.getDropDownView(position, convertView, parent);
                 view.setTextColor(0xFF111820);
-                view.setTextSize(16);
-                view.setPadding(dp(14), dp(10), dp(14), dp(10));
+                view.setTextSize(17);
+                view.setPadding(dp(14), dp(12), dp(14), dp(12));
                 return view;
             }
         };
