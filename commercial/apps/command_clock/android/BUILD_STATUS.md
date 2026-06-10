@@ -10,7 +10,7 @@ Status:
 - Emulator verification: Success
 - Release AAB build: Success
 - Signed AAB: Success
-- Google Play internal test release: Pending verification
+- Google Play internal test release: Success
 
 Changed:
 
@@ -28,6 +28,12 @@ Screenshots:
 
 - `verify_017_overlay_permission_state.png`
 - `verify_017_overlay_home.png`
+
+Google Play:
+
+- Internal test release: `8 (0.1.7)`
+- Published: 2026-06-10 12:05
+- Status shown in Play Console: Internal testers, unreviewed
 
 Release notes draft:
 
