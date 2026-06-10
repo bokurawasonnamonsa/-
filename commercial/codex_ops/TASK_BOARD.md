@@ -2,14 +2,15 @@
 
 Last updated: 2026-06-10
 
-## Done（最新）
-
-- Claude→Cursor→Codex ワークフロー設計完了（`commercial/codex_ops/workflow_design.md`）
-- Cursor Rules 拡張（`.cursor/rules/tactnode-agent-ops.mdc`）
-- `cursor_tasks/` ディレクトリ作成（Cursor向け実装指示書置き場）
-- CLAUDE.md にClaudeの役割とワークフロー位置づけを追記
-
 ## Doing
+
+- Multi-agent workflow hardening:
+  - Claude Code creates `commercial/codex_ops/cursor_tasks/*.md`
+  - Claude hook opens Cursor for implementation
+  - Cursor marks task `Status: Done`
+  - watcher generates `commercial/codex_ops/codex_ready/*_codex.md`
+  - watcher posts the Codex instruction into the open Codex window
+  - Codex performs final verification/release work and notifies Claude with `automation/notify_claude.ps1`
 
 ## Next: Command Clock Product Repair
 
@@ -43,4 +44,9 @@ Last updated: 2026-06-10
 
 - Git for Windows installed on this machine.
 - Shared agent instruction files added.
-
+- Claude -> Cursor hook created.
+- Cursor -> Codex watcher created.
+- Codex -> Claude notification script created.
+- Command Clock `0.1.7` internal test release published.
+- Command Clock `0.1.8` internal test release `9 (0.1.8)` published.
+- Codex -> Claude completion notifications sent for Floating Button Behavior Fix, Release 0.1.8 Prep, Release 0.1.8 Prep Retrigger, and Hook Test.
