@@ -2,6 +2,7 @@ package com.tactnodelabs.commandclock;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -44,6 +45,8 @@ public class MainActivity extends Activity {
     private static final String KEY_OVERLAY = "overlay_enabled";
     private static final int REQUEST_POST_NOTIFICATIONS = 4101;
     private static final int REQUEST_OVERLAY_PERMISSION = 4102;
+    private static final int REQUEST_APP_DETAILS = 4103;
+    private static final String KEY_RESTRICTED_STEP = "restricted_settings_shown";
 
     private static final String[] LANG_CODES = {"en", "ja", "ko", "zh", "th", "id", "es", "pt", "fr", "de"};
     private static final String[] LANG_NAMES = {
@@ -124,8 +127,10 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_OVERLAY_PERMISSION) {
-            // canDrawOverlays() may not update instantly on some devices — recheck after a short delay
             handler.postDelayed(this::refreshPermissionState, 500);
+        } else if (requestCode == REQUEST_APP_DETAILS) {
+            // Returned from app details — now open the overlay permission screen
+            handler.postDelayed(this::launchOverlayPermissionSettings, 300);
         }
     }
 
@@ -631,19 +636,55 @@ public class MainActivity extends Activity {
 
     private void openOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            setStatus(msg(
-                    "On Android 13+: tap the three-dot menu in the permission screen and select Allow restricted settings if the toggle is grayed out.",
-                    "Android 13以降：許可画面で右上のメニューをタップし「制限付き設定を許可」を選択してください（トグルがグレーの場合）。",
-                    "Android 13 이상: 권한 화면에서 메뉴를 누르고 토글이 비활성화된 경우 제한된 설정 허용을 선택하세요.",
-                    "Android 13 及以上：在权限页面点按菜单，若开关为灰色请选择允许受限设置。",
-                    "Android 13+: แตะเมนูในหน้าอนุญาตและเลือกอนุญาตการตั้งค่าจำกัดหากสวิตช์เป็นสีเทา",
-                    "Android 13+: ketuk menu di layar izin dan pilih Izinkan pengaturan terbatas jika tombol abu-abu.",
-                    "Android 13+: toca el menú en la pantalla de permisos y selecciona Permitir ajustes restringidos si el interruptor está en gris.",
-                    "Android 13+: toque no menu na tela de permissão e selecione Permitir configurações restritas se o botão estiver cinza.",
-                    "Android 13+ : appuyez sur le menu de l'écran d'autorisation et sélectionnez Autoriser les paramètres restreints si le bouton est grisé.",
-                    "Android 13+: Tippen Sie im Berechtigungsbildschirm auf das Menü und wählen Sie Eingeschränkte Einstellungen zulassen, wenn der Schalter ausgegraut ist."
-            ));
+            boolean shown = getSharedPreferences(PREFS, MODE_PRIVATE)
+                    .getBoolean(KEY_RESTRICTED_STEP, false);
+            if (!shown) {
+                showRestrictedSettingsGuide();
+                return;
+            }
         }
+        launchOverlayPermissionSettings();
+    }
+
+    private void showRestrictedSettingsGuide() {
+        String title = msg(
+                "2-step setup required",
+                "2ステップの設定が必要です",
+                "2단계 설정 필요",
+                "需要2步设置",
+                "ต้องตั้งค่า 2 ขั้นตอน",
+                "Perlu 2 langkah pengaturan",
+                "Se requieren 2 pasos",
+                "2 etapas necessárias",
+                "Configuration en 2 étapes",
+                "2 Schritte erforderlich");
+        String body = msg(
+                "Step 1: App Info will open.\n  → Tap ⋮ (top-right)\n  → Tap \"Allow restricted settings\"\n\nStep 2: Come back → Overlay permission screen opens.\n  → Enable Command Clock",
+                "ステップ①：アプリ情報が開きます\n  → 右上の ⋮ をタップ\n  →「制限付き設定を許可」をタップ\n\nステップ②：戻ると許可画面が開きます\n  → Command Clock をONにする",
+                "1단계: 앱 정보가 열립니다\n  → 오른쪽 상단 ⋮ 탭\n  → '제한된 설정 허용' 탭\n\n2단계: 돌아오면 권한 화면이 열립니다\n  → Command Clock 켜기",
+                "第①步：应用信息打开\n  → 点按右上角 ⋮\n  → 点按允许受限设置\n\n第②步：返回后权限页面打开\n  → 启用 Command Clock",
+                "ขั้น①: หน้าข้อมูลแอปเปิดขึ้น\n  → แตะ ⋮ มุมขวาบน\n  → แตะ 'อนุญาตการตั้งค่าจำกัด'\n\nขั้น②: กลับมา หน้าอนุญาตจะเปิดขึ้น\n  → เปิด Command Clock",
+                "Langkah①: Info aplikasi terbuka\n  → Ketuk ⋮ kanan atas\n  → Ketuk 'Izinkan pengaturan terbatas'\n\nLangkah②: Kembali, layar izin terbuka\n  → Aktifkan Command Clock",
+                "Paso①: Se abre la info de la app\n  → Toca ⋮ (arriba a la derecha)\n  → Toca 'Permitir ajustes restringidos'\n\nPaso②: Al volver, se abre el permiso\n  → Activa Command Clock",
+                "Passo①: Informações do app abrem\n  → Toque em ⋮ (canto superior direito)\n  → Toque em 'Permitir configurações restritas'\n\nPasso②: Ao voltar, a tela de permissão abre\n  → Ative o Command Clock",
+                "Schritt①: App-Info öffnet sich\n  → ⋮ oben rechts tippen\n  → 'Eingeschränkte Einstellungen zulassen'\n\nSchritt②: Beim Zurückkehren öffnet sich die Berechtigungsseite\n  → Command Clock aktivieren",
+                "Schritt①: App-Info öffnet sich\n  → ⋮ oben rechts tippen\n  → 'Eingeschränkte Einstellungen zulassen'\n\nSchritt②: Beim Zurückkehren öffnet sich die Berechtigungsseite\n  → Command Clock aktivieren");
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(body)
+                .setPositiveButton("OK", (dialog, which) -> {
+                    getSharedPreferences(PREFS, MODE_PRIVATE).edit()
+                            .putBoolean(KEY_RESTRICTED_STEP, true).apply();
+                    Intent intent = new Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:" + getPackageName()));
+                    startActivityForResult(intent, REQUEST_APP_DETAILS);
+                })
+                .setCancelable(true)
+                .show();
+    }
+
+    private void launchOverlayPermissionSettings() {
         Intent intent = new Intent(
                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                 Uri.parse("package:" + getPackageName())

@@ -1,5 +1,41 @@
 # Build Status
 
+## Version 0.1.13 Android 13+ Overlay Permission Guide
+
+Status:
+
+- Release AAB build: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+
+Changed:
+
+- Redesigned the Android 13+ floating overlay permission flow.
+- Tapping Allow floating display now first shows an in-app two-step guide.
+- Step 1 opens the app information screen and explains where to allow restricted settings.
+- Step 2 opens the overlay permission screen after returning to the app.
+- Floating overlay still turns ON automatically after permission is granted.
+- Fixed a Java string quoting error in the Chinese guide text during Codex build verification.
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `14 (0.1.13)`
+- Published: 2026-06-10 18:28
+- Status shown in Play Console: Internal testers, unreviewed
+
+Release notes:
+
+```text
+EN: v0.1.13: Overlay permission setup now guides users step-by-step through Android 13+ restricted settings.
+JA: v0.1.13: 重ねて表示の許可設定を、ステップごとに案内するフローに改善しました（Android 13以降）。
+```
+
 ## Version 0.1.12 Floating Permission Auto-On Fix
 
 Status:
