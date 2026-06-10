@@ -1,5 +1,61 @@
 # Build Status
 
+## Version 0.1.9 Multi-Language Fix
+
+Status:
+
+- Debug build: Success
+- Emulator verification: Success
+- Codex final verification: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+
+Changed:
+
+- Replaced 2-language `msg()` helper with 10-language switch for en, ja, ko, zh, th, id, es, pt, fr, de.
+- Updated all visible UI strings to use full translations instead of English fallback.
+- Wrapped the top language selector in a bordered container for clearer discovery.
+
+Verified on emulator:
+
+- English, Japanese, Korean, and Spanish labels update correctly when language preference changes.
+- Codex re-check confirmed the language selector opens all 10 languages.
+- Codex re-check confirmed Japanese labels, share-code header, and share-code guidance update after language switching.
+
+Screenshots:
+
+```text
+commercial/apps/command_clock/android/verify_multilang_en.png
+commercial/apps/command_clock/android/verify_multilang_ja.png
+commercial/apps/command_clock/android/verify_multilang_ko.png
+commercial/apps/command_clock/android/verify_multilang_es.png
+commercial/apps/command_clock/android/codex_verify_language_dropdown.png
+commercial/apps/command_clock/android/codex_verify_multilang_ja_fixed2.png
+```
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `10 (0.1.9)`
+- Published: 2026-06-10 15:04
+- Status shown in Play Console: Internal testers, unreviewed
+
+Release notes:
+
+```text
+0.1.9 internal test
+
+Improved:
+- Language selector is now easier to find at the top of the screen
+- Added localized UI labels for 10 languages
+- Fixed share-code header and guidance so they update when switching language
+```
+
 ## Version 0.1.8 Work
 
 Status:
@@ -28,6 +84,18 @@ Google Play:
 - Internal test release: `9 (0.1.8)`
 - Published: 2026-06-10 14:13
 - Status shown in Play Console: Internal testers, unreviewed
+
+Release notes draft:
+
+```text
+0.1.8 internal test
+
+Fixed:
+- Floating ON/OFF no longer opens system settings when overlay permission is missing
+- Tapping without permission shows in-app guidance only; use Allow floating display for settings
+```
+
+Codex final verification: 2026-06-10 (code review, debug + signed AAB rebuild, emulator scenario A re-check)
 
 ## 2026-06-10
 

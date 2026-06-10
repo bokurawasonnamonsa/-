@@ -57,6 +57,7 @@ public class MainActivity extends Activity {
     private TextView targetSummary;
     private TextView countdownTitle;
     private TextView countdown;
+    private TextView shareHeader;
     private TextView shareCodeView;
     private TextView status;
     private TextView labelInputLabel;
@@ -132,12 +133,17 @@ public class MainActivity extends Activity {
         title.setGravity(Gravity.CENTER);
         root.addView(title, new LinearLayout.LayoutParams(-1, -2));
 
+        LinearLayout languageBox = new LinearLayout(this);
+        languageBox.setOrientation(LinearLayout.VERTICAL);
+        languageBox.setBackground(border(0xFF161B22, 0xFF58A6FF, 2));
+        languageBox.setPadding(dp(12), dp(10), dp(12), dp(10));
+
         languageLabel = text("", 13, 0xFFF2F5F8, true);
         languageLabel.setPadding(0, 0, 0, dp(5));
-        root.addView(languageLabel, new LinearLayout.LayoutParams(-1, -2));
+        languageBox.addView(languageLabel, new LinearLayout.LayoutParams(-1, -2));
 
         languageSpinner = new Spinner(this);
-        languageSpinner.setBackground(border(0xFF1B2430, 0xFF58A6FF, 2));
+        languageSpinner.setBackground(border(0xFF1B2430, 0xFF2B3542, 1));
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, LANG_NAMES) {
             @Override
             public View getView(int position, View convertView, ViewGroup parent) {
@@ -174,7 +180,8 @@ public class MainActivity extends Activity {
             public void onNothingSelected(AdapterView<?> parent) {
             }
         });
-        root.addView(languageSpinner, new LinearLayout.LayoutParams(-1, -2));
+        languageBox.addView(languageSpinner, new LinearLayout.LayoutParams(-1, -2));
+        root.addView(languageBox, new LinearLayout.LayoutParams(-1, -2));
 
         utcTime = text("", 20, 0xFF58A6FF, false);
         utcTime.setGravity(Gravity.CENTER);
@@ -234,8 +241,17 @@ public class MainActivity extends Activity {
             button.setText(presetLabels[i]);
             button.setOnClickListener(v -> {
                     mySecondsInput.setText(formatDuration(value));
-                setStatus(msg("Preset filled. Tap Issue instruction when values are ready.",
-                        "プリセットを入力しました。設定値が揃ったら「指示開始」を押してください。"));
+                setStatus(msg(
+                        "Preset filled. Tap Issue instruction when values are ready.",
+                        "プリセットを入力しました。設定値が揃ったら「指示開始」を押してください。",
+                        "프리셋을 입력했습니다. 값이 준비되면 \"지시 시작\"을 누르세요.",
+                        "已填入预设。数值就绪后点按“发出指示”。",
+                        "กรอกพรีเซ็ตแล้ว แตะ \"เริ่มคำสั่ง\" เมื่อพร้อม",
+                        "Prasetel diisi. Ketuk Terbitkan instruksi saat nilai siap.",
+                        "Preajuste rellenado. Toca Emitir instrucción cuando los valores estén listos.",
+                        "Predefinição preenchida. Toque em Emitir instrução quando os valores estiverem prontos.",
+                        "Préréglage rempli. Appuyez sur Lancer l'instruction quand les valeurs sont prêtes.",
+                        "Voreinstellung eingetragen. Tippen Sie auf Anweisung starten, wenn die Werte bereit sind."));
             });
             presetRow.addView(button, new LinearLayout.LayoutParams(0, -2, 1));
         }
@@ -250,9 +266,8 @@ public class MainActivity extends Activity {
         actionRow.addView(clearButton, new LinearLayout.LayoutParams(0, -2, 1));
         root.addView(actionRow, new LinearLayout.LayoutParams(-1, -2));
 
-        TextView shareHeader = text("", 18, 0xFFF2F5F8, true);
+        shareHeader = text("", 18, 0xFFF2F5F8, true);
         shareHeader.setGravity(Gravity.CENTER);
-        shareHeader.setText(msg("Share code (optional)", "共有コード（任意）"));
         shareHeader.setPadding(0, dp(18), 0, dp(6));
         root.addView(shareHeader, new LinearLayout.LayoutParams(-1, -2));
 
@@ -359,13 +374,31 @@ public class MainActivity extends Activity {
             label = defaultLabel();
         }
         if (my < 0 || longest <= 0 || buffer < 0 || flow < 0 || my > 7200 || longest > 7200 || buffer > 7200 || flow > 7200) {
-            setStatus(msg("Use seconds from 0 to 7200. Longest time must be greater than 0.",
-                    "秒数は0〜7200で入力してください。最長設定値は1秒以上が必要です。"));
+            setStatus(msg(
+                    "Use seconds from 0 to 7200. Longest time must be greater than 0.",
+                    "秒数は0〜7200で入力してください。最長設定値は1秒以上が必要です。",
+                    "0~7200초로 입력하세요. 최장 시간은 0보다 커야 합니다.",
+                    "请使用 0 到 7200 秒。最长设置必须大于 0。",
+                    "ใช้วินาที 0-7200 เวลานานสุดต้องมากกว่า 0",
+                    "Gunakan detik 0-7200. Waktu terpanjang harus lebih dari 0.",
+                    "Usa segundos de 0 a 7200. El tiempo más largo debe ser mayor que 0.",
+                    "Use segundos de 0 a 7200. O tempo mais longo deve ser maior que 0.",
+                    "Utilisez des secondes de 0 à 7200. Le temps le plus long doit être supérieur à 0.",
+                    "Verwenden Sie Sekunden von 0 bis 7200. Die längste Zeit muss größer als 0 sein."));
             return;
         }
         if (my > longest) {
-            setStatus(msg("My time cannot be longer than the longest time.",
-                    "自分の設定値は、最長設定値より長くできません。"));
+            setStatus(msg(
+                    "My time cannot be longer than the longest time.",
+                    "自分の設定値は、最長設定値より長くできません。",
+                    "내 시간은 최장 시간보다 길 수 없습니다.",
+                    "我的时间不能长于最长时间。",
+                    "เวลาของฉันต้องไม่ยาวกว่าเวลานานสุด",
+                    "Waktu saya tidak boleh lebih lama dari waktu terpanjang.",
+                    "Mi tiempo no puede ser mayor que el tiempo más largo.",
+                    "Meu tempo não pode ser maior que o tempo mais longo.",
+                    "Mon temps ne peut pas être plus long que le temps le plus long.",
+                    "Meine Zeit darf nicht länger als die längste Zeit sein."));
             return;
         }
 
@@ -376,8 +409,17 @@ public class MainActivity extends Activity {
         flowSeconds = flow;
         instructionEpochSeconds = Instant.now().getEpochSecond();
         saveState();
-        setStatus(msg("Instruction issued. Press the game Start button when this countdown reaches zero.",
-                "指示を開始しました。このカウントが0になったら、ゲーム側のスタートを押してください。"));
+        setStatus(msg(
+                "Instruction issued. Press the game Start button when this countdown reaches zero.",
+                "指示を開始しました。このカウントが0になったら、ゲーム側のスタートを押してください。",
+                "지시를 시작했습니다. 카운트가 0이 되면 게임의 Start를 누르세요.",
+                "指示已发出。倒计时为零时请按下游戏中的开始。",
+                "เริ่มคำสั่งแล้ว กด Start ในเกมเมื่อนับถอยหลังถึง 0",
+                "Instruksi diterbitkan. Tekan Start game saat hitungan mencapai nol.",
+                "Instrucción emitida. Pulsa Start del juego cuando la cuenta llegue a cero.",
+                "Instrução emitida. Pressione Start do jogo quando a contagem chegar a zero.",
+                "Instruction lancée. Appuyez sur Start du jeu quand le compte atteint zéro.",
+                "Anweisung gestartet. Drücken Sie Spiel-Start, wenn der Countdown null erreicht."));
         updateClock();
     }
 
@@ -387,7 +429,7 @@ public class MainActivity extends Activity {
         saveState();
         labelInput.setText(activeLabel);
         shareCodeView.setText("");
-        setStatus(msg("Cleared.", "クリアしました。"));
+        setStatus(msg("Cleared.", "クリアしました。", "초기화했습니다.", "已清除。", "ล้างแล้ว", "Dihapus.", "Borrado.", "Limpo.", "Effacé.", "Zurückgesetzt."));
         updateClock();
     }
 
@@ -411,10 +453,19 @@ public class MainActivity extends Activity {
         utcTime.setText(utc);
 
         if (instructionEpochSeconds <= 0) {
-            countdownTitle.setText(msg("Waiting for instruction", "指示待機中"));
+            countdownTitle.setText(msg("Waiting for instruction", "指示待機中", "지시 대기 중", "等待指示", "รอคำสั่ง", "Menunggu instruksi", "Esperando instrucción", "Aguardando instrução", "En attente d'instruction", "Warte auf Anweisung"));
             countdown.setText("--:--");
-            targetSummary.setText(msg("Set your values, then tap Issue instruction.",
-                    "設定値を入力してから「指示開始」を押してください。"));
+            targetSummary.setText(msg(
+                    "Set your values, then tap Issue instruction.",
+                    "設定値を入力してから「指示開始」を押してください。",
+                    "값을 입력한 뒤 \"지시 시작\"을 누르세요.",
+                    "设置数值后点按“发出指示”。",
+                    "ตั้งค่าแล้วแตะ \"เริ่มคำสั่ง\"",
+                    "Atur nilai, lalu ketuk Terbitkan instruksi.",
+                    "Configura los valores y toca Emitir instrucción.",
+                    "Defina os valores e toque em Emitir instrução.",
+                    "Définissez les valeurs, puis appuyez sur Lancer l'instruction.",
+                    "Werte eingeben, dann Anweisung starten."));
             updateOverlay("UTC " + utc + "\n" + countdownTitle.getText() + "\n--:--");
             return;
         }
@@ -425,16 +476,25 @@ public class MainActivity extends Activity {
         long remaining = Math.max(0, targetEpoch - nowEpoch);
         String value = formatDuration(remaining);
         countdownTitle.setText(waitingForStart
-                ? msg("Press game Start in", "ゲーム側STARTまで")
-                : msg("Arrival in", "同時到着まで"));
+                ? msg("Press game Start in", "ゲーム側STARTまで", "게임 START까지", "距按下游戏开始", "กด START ในเกมใน", "Tekan Start game dalam", "Pulsar Start del juego en", "Pressionar Start do jogo em", "Appuyer sur Start du jeu dans", "Spiel-Start in")
+                : msg("Arrival in", "同時到着まで", "동시 도착까지", "距同时到达", "ถึงพร้อมกันใน", "Tiba bersamaan dalam", "Llegada simultánea en", "Chegada simultânea em", "Arrivée simultanée dans", "Gleichzeitige Ankunft in"));
         countdown.setText(value);
         targetSummary.setText(syncSummary());
         updateOverlay("UTC " + utc + "\n" + countdownTitle.getText() + ": " + activeLabel + "\n" + value);
         if (waitingForStart && remaining == 0) {
-            setStatus(msg("Press the game Start button now.",
-                    "今、ゲーム側のスタートを押してください。"));
+            setStatus(msg(
+                    "Press the game Start button now.",
+                    "今、ゲーム側のスタートを押してください。",
+                    "지금 게임의 Start를 누르세요.",
+                    "请现在按下游戏中的开始。",
+                    "กด Start ในเกมตอนนี้",
+                    "Tekan tombol Start game sekarang.",
+                    "Pulsa el botón Start del juego ahora.",
+                    "Pressione o botão Start do jogo agora.",
+                    "Appuyez sur le bouton Start du jeu maintenant.",
+                    "Drücken Sie jetzt die Spiel-Start-Taste."));
         } else if (!waitingForStart && remaining == 0) {
-            setStatus(msg("Arrival time reached.", "到着時刻です。"));
+            setStatus(msg("Arrival time reached.", "到着時刻です。", "도착 시각입니다.", "已到达时刻。", "ถึงเวลาแล้ว", "Waktu tiba tercapai.", "Hora de llegada alcanzada.", "Hora de chegada atingida.", "Heure d'arrivée atteinte.", "Ankunftszeit erreicht."));
         }
     }
 
@@ -453,31 +513,40 @@ public class MainActivity extends Activity {
         String arrive = DateTimeFormatter.ofPattern("HH:mm:ss 'UTC'")
                 .withZone(ZoneOffset.UTC)
                 .format(Instant.ofEpochSecond(arrivalEpochSeconds()));
-        return msg("Press: ", "押下: ") + press
-                + " / " + msg("Arrival: ", "到着: ") + arrive
-                + "\n" + msg("Buffer ", "猶予 ") + formatDuration(bufferSeconds)
-                + " / " + msg("Flow ", "流れ ") + formatDuration(flowSeconds)
-                + " / " + msg("My ", "自分 ") + formatDuration(mySeconds)
-                + " / " + msg("Longest ", "最長 ") + formatDuration(longestSeconds);
+        return msg("Press: ", "押下: ", "누름: ", "按下: ", "กด: ", "Tekan: ", "Pulsar: ", "Pressionar: ", "Appui: ", "Drücken: ") + press
+                + " / " + msg("Arrival: ", "到着: ", "도착: ", "到达: ", "ถึง: ", "Tiba: ", "Llegada: ", "Chegada: ", "Arrivée: ", "Ankunft: ") + arrive
+                + "\n" + msg("Buffer ", "猶予 ", "여유 ", "缓冲 ", "พัก ", "Penyangga ", "Margen ", "Folga ", "Tampon ", "Puffer ") + formatDuration(bufferSeconds)
+                + " / " + msg("Flow ", "流れ ", "진행 ", "流动 ", "ไหล ", "Alur ", "Flujo ", "Fluxo ", "Flux ", "Fluss ") + formatDuration(flowSeconds)
+                + " / " + msg("My ", "自分 ", "내 ", "我的 ", "ฉัน ", "Saya ", "Mi ", "Meu ", "Mon ", "Mein ") + formatDuration(mySeconds)
+                + " / " + msg("Longest ", "最長 ", "최장 ", "最长 ", "นานสุด ", "Terpanjang ", "Más largo ", "Mais longo ", "Plus long ", "Längste ") + formatDuration(longestSeconds);
     }
 
     private void generateShareCode() {
         if (instructionEpochSeconds <= 0) {
-            setStatus(msg("Issue an instruction first.", "先に指示を開始してください。"));
+            setStatus(msg("Issue an instruction first.", "先に指示を開始してください。", "먼저 지시를 시작하세요.", "请先发出指示。", "เริ่มคำสั่งก่อน", "Terbitkan instruksi terlebih dahulu.", "Emite una instrucción primero.", "Emita uma instrução primeiro.", "Lancez d'abord une instruction.", "Starten Sie zuerst eine Anweisung."));
             return;
         }
         String label = Base64.encodeToString(activeLabel.getBytes(StandardCharsets.UTF_8), Base64.URL_SAFE | Base64.NO_WRAP);
         String code = "CC2|" + instructionEpochSeconds + "|" + longestSeconds + "|" + bufferSeconds + "|" + flowSeconds + "|" + label;
         shareCodeView.setText(code);
-        setStatus(msg("Share this code. Others import it, then set their own time.",
-                "このコードを共有してください。受け取った人は取り込み後、自分の設定値を入力します。"));
+        setStatus(msg(
+                "Share this code. Others import it, then set their own time.",
+                "このコードを共有してください。受け取った人は取り込み後、自分の設定値を入力します。",
+                "이 코드를 공유하세요. 다른 사람은 가져온 뒤 자신의 시간을 설정합니다.",
+                "分享此代码。其他人导入后设置自己的时间。",
+                "แชร์รหัสนี้ ผู้อื่นนำเข้าแล้วตั้งเวลาของตนเอง",
+                "Bagikan kode ini. Orang lain mengimpornya lalu mengatur waktu mereka sendiri.",
+                "Comparte este código. Otros lo importan y luego configuran su propio tiempo.",
+                "Compartilhe este código. Outros importam e depois definem o próprio tempo.",
+                "Partagez ce code. Les autres l'importent puis définissent leur propre temps.",
+                "Teilen Sie diesen Code. Andere importieren ihn und legen dann ihre eigene Zeit fest."));
     }
 
     private void importShareCode() {
         String code = importCodeInput.getText().toString().trim();
         String[] parts = code.split("\\|");
         if (parts.length != 6 || !"CC2".equals(parts[0])) {
-            setStatus(msg("Invalid share code.", "共有コードが正しくありません。"));
+            setStatus(msg("Invalid share code.", "共有コードが正しくありません。", "공유 코드가 올바르지 않습니다.", "共享代码无效。", "รหัสแชร์ไม่ถูกต้อง", "Kode berbagi tidak valid.", "Código compartido no válido.", "Código compartilhado inválido.", "Code de partage invalide.", "Freigabecode ungültig."));
             return;
         }
         try {
@@ -491,19 +560,36 @@ public class MainActivity extends Activity {
             bufferSecondsInput.setText(formatDuration(bufferSeconds));
             flowSecondsInput.setText(formatDuration(flowSeconds));
             saveState();
-            setStatus(msg("Imported. Set your own time if needed.",
-                    "取り込みました。必要なら自分の設定値を入力してください。"));
+            setStatus(msg(
+                    "Imported. Set your own time if needed.",
+                    "取り込みました。必要なら自分の設定値を入力してください。",
+                    "가져왔습니다. 필요하면 자신의 시간을 설정하세요.",
+                    "已导入。如需要请设置您的时间。",
+                    "นำเข้าแล้ว ตั้งเวลาของคุณหากจำเป็น",
+                    "Diimpor. Atur waktu Anda sendiri jika perlu.",
+                    "Importado. Configura tu propio tiempo si es necesario.",
+                    "Importado. Defina seu próprio tempo se necessário.",
+                    "Importé. Définissez votre propre temps si nécessaire.",
+                    "Importiert. Legen Sie bei Bedarf Ihre eigene Zeit fest."));
             updateClock();
         } catch (RuntimeException e) {
-            setStatus(msg("Invalid share code.", "共有コードが正しくありません。"));
+            setStatus(msg("Invalid share code.", "共有コードが正しくありません。", "공유 코드가 올바르지 않습니다.", "共享代码无效。", "รหัสแชร์ไม่ถูกต้อง", "Kode berbagi tidak valid.", "Código compartido no válido.", "Código compartilhado inválido.", "Code de partage invalide.", "Freigabecode ungültig."));
         }
     }
 
     private void toggleOverlay() {
         if (!Settings.canDrawOverlays(this)) {
-            setStatus(msg("Allow floating display first, then tap the button again.",
-                    "先に「重ねて表示」を許可してから、もう一度ボタンを押してください。"));
-            openOverlayPermission();
+            setStatus(msg(
+                    "Tap \"Allow floating display\" below to enable this feature.",
+                    "下の「重ねて表示を許可」をタップして機能を有効にしてください。",
+                    "아래 \"다른 앱 위에 표시 허용\"을 눌러 이 기능을 활성화하세요.",
+                    "请点按下方的“允许悬浮显示”以启用此功能。",
+                    "แตะ \"อนุญาตการแสดงทับ\" ด้านล่างเพื่อเปิดใช้งาน",
+                    "Ketuk \"Izinkan tampilan mengambang\" di bawah untuk mengaktifkan fitur ini.",
+                    "Toca \"Permitir visualización flotante\" abajo para activar esta función.",
+                    "Toque em \"Permitir exibição flutuante\" abaixo para ativar este recurso.",
+                    "Appuyez sur \"Autoriser l'affichage flottant\" ci-dessous pour activer cette fonction.",
+                    "Tippen Sie unten auf \"Schwebende Anzeige erlauben\", um diese Funktion zu aktivieren."));
             return;
         }
         overlayEnabled = !overlayEnabled;
@@ -536,7 +622,15 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setStatus(msg(
                     "On Android 13+: tap the three-dot menu in the permission screen and select Allow restricted settings if the toggle is grayed out.",
-                    "Android 13以降：許可画面で右上のメニューをタップし「制限付き設定を許可」を選択してください（トグルがグレーの場合）。"
+                    "Android 13以降：許可画面で右上のメニューをタップし「制限付き設定を許可」を選択してください（トグルがグレーの場合）。",
+                    "Android 13 이상: 권한 화면에서 메뉴를 누르고 토글이 비활성화된 경우 제한된 설정 허용을 선택하세요.",
+                    "Android 13 及以上：在权限页面点按菜单，若开关为灰色请选择允许受限设置。",
+                    "Android 13+: แตะเมนูในหน้าอนุญาตและเลือกอนุญาตการตั้งค่าจำกัดหากสวิตช์เป็นสีเทา",
+                    "Android 13+: ketuk menu di layar izin dan pilih Izinkan pengaturan terbatas jika tombol abu-abu.",
+                    "Android 13+: toca el menú en la pantalla de permisos y selecciona Permitir ajustes restringidos si el interruptor está en gris.",
+                    "Android 13+: toque no menu na tela de permissão e selecione Permitir configurações restritas se o botão estiver cinza.",
+                    "Android 13+ : appuyez sur le menu de l'écran d'autorisation et sélectionnez Autoriser les paramètres restreints si le bouton est grisé.",
+                    "Android 13+: Tippen Sie im Berechtigungsbildschirm auf das Menü und wählen Sie Eingeschränkte Einstellungen zulassen, wenn der Schalter ausgegraut ist."
             ));
         }
         Intent intent = new Intent(
@@ -556,8 +650,8 @@ public class MainActivity extends Activity {
         }
         if (overlayButton != null) {
             overlayButton.setText(overlayEnabled
-                    ? msg("Floating countdown: ON", "フローティング: ON")
-                    : msg("Floating countdown: OFF", "フローティング: OFF"));
+                    ? msg("Floating countdown: ON", "フローティング: ON", "플로팅: ON", "浮动显示: 开", "ลอย: เปิด", "Mengambang: ON", "Flotante: ON", "Flutuante: ON", "Flottant: ON", "Schwebend: AN")
+                    : msg("Floating countdown: OFF", "フローティング: OFF", "플로팅: OFF", "浮动显示: 关", "ลอย: ปิด", "Mengambang: OFF", "Flotante: OFF", "Flutuante: OFF", "Flottant: OFF", "Schwebend: AUS"));
         }
         if (overlayEnabled && Settings.canDrawOverlays(this)) {
             startOverlayService(CommandOverlayService.ACTION_SHOW, null);
@@ -572,35 +666,45 @@ public class MainActivity extends Activity {
     }
 
     private void applyLanguage() {
-        languageLabel.setText(msg("Language", "言語"));
-        labelInputLabel.setText(msg("Operation name", "作戦名"));
-        mySecondsLabel.setText(msg("My setting time (mm:ss)", "自分の設定値（mm:ss）"));
-        longestSecondsLabel.setText(msg("Longest member setting (mm:ss)", "最長設定値（mm:ss）"));
-        bufferSecondsLabel.setText(msg("Buffer after instruction (mm:ss)", "指示後の猶予時間（mm:ss）"));
-        flowSecondsLabel.setText(msg("Flowing/rally time (mm:ss)", "流れている時間（mm:ss）"));
-        labelInput.setHint(msg("Operation name", "作戦名"));
-        mySecondsInput.setHint(msg("Example 01:30", "例 01:30"));
-        longestSecondsInput.setHint(msg("Example 02:00", "例 02:00"));
-        bufferSecondsInput.setHint(msg("Example 00:15", "例 00:15"));
-        flowSecondsInput.setHint(msg("Example 05:00", "例 05:00"));
-        issueButton.setText(msg("Issue instruction", "指示開始"));
-        clearButton.setText(msg("Clear", "クリア"));
-        shareButton.setText(msg("Create share code", "共有コード作成"));
-        importCodeInput.setHint(msg("Paste share code", "共有コードを貼り付け"));
-        importButton.setText(msg("Import shared instruction", "共有指示を取り込む"));
+        languageLabel.setText(msg("Language", "言語", "언어", "语言", "ภาษา", "Bahasa", "Idioma", "Idioma", "Langue", "Sprache"));
+        labelInputLabel.setText(msg("Operation name", "作戦名", "작전 이름", "任务名称", "ชื่อปฏิบัติการ", "Nama operasi", "Nombre de operación", "Nome da operação", "Nom de l'opération", "Einsatzname"));
+        mySecondsLabel.setText(msg("My setting time (mm:ss)", "自分の設定値（mm:ss）", "내 설정 시간 (mm:ss)", "我的设置时间 (mm:ss)", "เวลาตั้งค่าของฉัน (mm:ss)", "Waktu pengaturan saya (mm:ss)", "Mi tiempo de ajuste (mm:ss)", "Meu tempo de ajuste (mm:ss)", "Mon temps de réglage (mm:ss)", "Meine Einstellzeit (mm:ss)"));
+        longestSecondsLabel.setText(msg("Longest member setting (mm:ss)", "最長設定値（mm:ss）", "최장 멤버 설정 (mm:ss)", "最长成员设置 (mm:ss)", "สมาชิกที่นานที่สุด (mm:ss)", "Pengaturan anggota terpanjang (mm:ss)", "Ajuste del miembro más largo (mm:ss)", "Ajuste do membro mais longo (mm:ss)", "Réglage du membre le plus long (mm:ss)", "Längste Mitglieder-Einstellung (mm:ss)"));
+        bufferSecondsLabel.setText(msg("Buffer after instruction (mm:ss)", "指示後の猶予時間（mm:ss）", "지시 후 여유 시간 (mm:ss)", "指示后缓冲时间 (mm:ss)", "เวลาพักหลังคำสั่ง (mm:ss)", "Waktu penyangga setelah instruksi (mm:ss)", "Tiempo de margen tras la instrucción (mm:ss)", "Tempo de folga após instrução (mm:ss)", "Temps tampon après instruction (mm:ss)", "Puffer nach Anweisung (mm:ss)"));
+        flowSecondsLabel.setText(msg("Flowing/rally time (mm:ss)", "流れている時間（mm:ss）", "진행/집결 시간 (mm:ss)", "流动/集结时间 (mm:ss)", "เวลาไหล/รวมตัว (mm:ss)", "Waktu alur/rally (mm:ss)", "Tiempo de flujo/reunión (mm:ss)", "Tempo de fluxo/reunião (mm:ss)", "Temps de flux/rassemblement (mm:ss)", "Fluss-/Sammelzeit (mm:ss)"));
+        labelInput.setHint(msg("Operation name", "作戦名", "작전 이름", "任务名称", "ชื่อปฏิบัติการ", "Nama operasi", "Nombre de operación", "Nome da operação", "Nom de l'opération", "Einsatzname"));
+        mySecondsInput.setHint(msg("Example 01:30", "例 01:30", "예 01:30", "例 01:30", "ตัวอย่าง 01:30", "Contoh 01:30", "Ejemplo 01:30", "Exemplo 01:30", "Exemple 01:30", "Beispiel 01:30"));
+        longestSecondsInput.setHint(msg("Example 02:00", "例 02:00", "예 02:00", "例 02:00", "ตัวอย่าง 02:00", "Contoh 02:00", "Ejemplo 02:00", "Exemplo 02:00", "Exemple 02:00", "Beispiel 02:00"));
+        bufferSecondsInput.setHint(msg("Example 00:15", "例 00:15", "예 00:15", "例 00:15", "ตัวอย่าง 00:15", "Contoh 00:15", "Ejemplo 00:15", "Exemplo 00:15", "Exemple 00:15", "Beispiel 00:15"));
+        flowSecondsInput.setHint(msg("Example 05:00", "例 05:00", "예 05:00", "例 05:00", "ตัวอย่าง 05:00", "Contoh 05:00", "Ejemplo 05:00", "Exemplo 05:00", "Exemple 05:00", "Beispiel 05:00"));
+        issueButton.setText(msg("Issue instruction", "指示開始", "지시 시작", "发出指示", "เริ่มคำสั่ง", "Terbitkan instruksi", "Emitir instrucción", "Emitir instrução", "Lancer l'instruction", "Anweisung starten"));
+        clearButton.setText(msg("Clear", "クリア", "초기화", "清除", "ล้าง", "Hapus", "Borrar", "Limpar", "Effacer", "Zurücksetzen"));
+        shareHeader.setText(msg("Share code (optional)", "共有コード（任意）", "공유 코드 (선택)", "共享代码（可选）", "รหัสแชร์ (ไม่บังคับ)", "Kode berbagi (opsional)", "Código compartido (opcional)", "Código compartilhado (opcional)", "Code de partage (optionnel)", "Freigabecode (optional)"));
+        shareButton.setText(msg("Create share code", "共有コード作成", "공유 코드 생성", "创建共享代码", "สร้างรหัสแชร์", "Buat kode berbagi", "Crear código compartido", "Criar código compartilhado", "Créer un code de partage", "Freigabecode erstellen"));
+        importCodeInput.setHint(msg("Paste share code", "共有コードを貼り付け", "공유 코드 붙여넣기", "粘贴共享代码", "วางรหัสแชร์", "Tempel kode berbagi", "Pegar código compartido", "Colar código compartilhado", "Coller le code de partage", "Freigabecode einfügen"));
+        importButton.setText(msg("Import shared instruction", "共有指示を取り込む", "공유 지시 가져오기", "导入共享指示", "นำเข้าคำสั่งที่แชร์", "Impor instruksi bersama", "Importar instrucción compartida", "Importar instrução compartilhada", "Importer l'instruction partagée", "Geteilte Anweisung importieren"));
         overlayButton.setText(overlayEnabled
-                ? msg("Floating countdown: ON", "フローティング: ON")
-                : msg("Floating countdown: OFF", "フローティング: OFF"));
-        permissionButton.setText(msg("Allow floating display", "重ねて表示を許可"));
-        if (shareCodeView.getText().length() == 0) {
-            shareCodeView.setText(msg("Issue an instruction, then create a code. Others can import it and use their own time.",
-                    "指示開始後にコードを作成できます。受け取った人は取り込み、自分の設定値で使えます。"));
+                ? msg("Floating countdown: ON", "フローティング: ON", "플로팅: ON", "浮动显示: 开", "ลอย: เปิด", "Mengambang: ON", "Flotante: ON", "Flutuante: ON", "Flottant: ON", "Schwebend: AN")
+                : msg("Floating countdown: OFF", "フローティング: OFF", "플로팅: OFF", "浮动显示: 关", "ลอย: ปิด", "Mengambang: OFF", "Flotante: OFF", "Flutuante: OFF", "Flottant: OFF", "Schwebend: AUS"));
+        permissionButton.setText(msg("Allow floating display", "重ねて表示を許可", "다른 앱 위에 표시 허용", "允许悬浮显示", "อนุญาตการแสดงทับ", "Izinkan tampilan mengambang", "Permitir visualización flotante", "Permitir exibição flutuante", "Autoriser l'affichage flottant", "Schwebende Anzeige erlauben"));
+        if (!shareCodeView.getText().toString().startsWith("CC2|")) {
+            shareCodeView.setText(msg(
+                    "Issue an instruction, then create a code. Others can import it and use their own time.",
+                    "指示開始後にコードを作成できます。受け取った人は取り込み、自分の設定値で使えます。",
+                    "지시를 시작한 뒤 코드를 만드세요. 다른 사람은 가져와서 자신의 시간으로 사용할 수 있습니다.",
+                    "发出指示后创建代码。其他人可导入并使用自己的时间。",
+                    "เริ่มคำสั่งแล้วสร้างรหัส ผู้อื่นนำเข้าและใช้เวลาของตนเองได้",
+                    "Terbitkan instruksi, lalu buat kode. Orang lain dapat mengimpor dan memakai waktu mereka sendiri.",
+                    "Emite una instrucción y crea un código. Otros pueden importarlo y usar su propio tiempo.",
+                    "Emita uma instrução e crie um código. Outros podem importar e usar o próprio tempo.",
+                    "Lancez une instruction, puis créez un code. Les autres peuvent l'importer avec leur propre temps.",
+                    "Starten Sie eine Anweisung und erstellen Sie einen Code. Andere können ihn importieren und ihre eigene Zeit nutzen."));
         }
         refreshPermissionState();
     }
 
     private String defaultLabel() {
-        return msg("Next operation", "次の作戦");
+        return msg("Next operation", "次の作戦", "다음 작전", "下一次任务", "ปฏิบัติการถัดไป", "Operasi berikutnya", "Próxima operación", "Próxima operação", "Prochaine opération", "Nächster Einsatz");
     }
 
     private void setLanguage(String nextLanguage) {
@@ -610,8 +714,21 @@ public class MainActivity extends Activity {
         updateClock();
     }
 
-    private String msg(String en, String ja) {
-        return "ja".equals(language) ? ja : en;
+    private String msg(String en, String ja, String ko, String zh,
+                       String th, String id, String es, String pt,
+                       String fr, String de) {
+        switch (language) {
+            case "ja": return ja;
+            case "ko": return ko;
+            case "zh": return zh;
+            case "th": return th;
+            case "id": return id;
+            case "es": return es;
+            case "pt": return pt;
+            case "fr": return fr;
+            case "de": return de;
+            default:   return en;
+        }
     }
 
     private int parseDuration(String value, int fallback) {
