@@ -1,0 +1,63 @@
+plugins {
+    id "com.android.application"
+}
+
+def releaseKeyPropertiesFile = rootProject.file("../../../secrets/command-clock-keystore.properties")
+def releasePasswordPropertiesFile = rootProject.file("../../../secrets/command-clock-passwords.properties")
+def releaseKeyProperties = new Properties()
+if (releaseKeyPropertiesFile.exists()) {
+    releaseKeyPropertiesFile.withInputStream { releaseKeyProperties.load(it) }
+}
+def releasePasswordProperties = new Properties()
+if (releasePasswordPropertiesFile.exists()) {
+    releasePasswordPropertiesFile.withInputStream { releasePasswordProperties.load(it) }
+}
+def releaseStorePassword =
+        System.getenv("COMMAND_CLOCK_STORE_PASSWORD") ?: releasePasswordProperties.getProperty("storePassword")
+def releaseKeyPassword =
+        System.getenv("COMMAND_CLOCK_KEY_PASSWORD") ?: releasePasswordProperties.getProperty("keyPassword")
+def hasReleaseSigning =
+        releaseKeyProperties.getProperty("storeFile") &&
+        releaseKeyProperties.getProperty("keyAlias") &&
+        releaseStorePassword &&
+        releaseKeyPassword
+
+android {
+    namespace "com.tactnodelabs.commandclock"
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "com.tactnodelabs.commandclock"
+        minSdk 26
+        targetSdk 36
+        versionCode 8
+        versionName "0.1.7"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile rootProject.file(releaseKeyProperties.getProperty("storeFile"))
+                storePassword releaseStorePassword
+                keyAlias releaseKeyProperties.getProperty("keyAlias")
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+}
