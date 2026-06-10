@@ -7,6 +7,9 @@ Status:
 - Debug build: Success
 - Release AAB build: Success
 - Signed AAB: Success
+- Retrigger verified: 2026-06-10 (debug + signed AAB rebuild OK)
+- Prep commit: `90b30a2`
+- Google Play internal test release: Success
 
 Changed:
 
@@ -19,6 +22,12 @@ Output:
 ```text
 commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
 ```
+
+Google Play:
+
+- Internal test release: `9 (0.1.8)`
+- Published: 2026-06-10 14:13
+- Status shown in Play Console: Internal testers, unreviewed
 
 ## 2026-06-10
 
