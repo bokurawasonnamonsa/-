@@ -91,23 +91,8 @@ function Open-InCursor($path) {
         Write-Log "Opened in Cursor: $(Split-Path $path -Leaf)"
         Show-Notification "Cursor task ready" (Split-Path $path -Leaf)
 
-        Start-Sleep -Seconds 2
-        $repoRoot = (Resolve-Path "$PSScriptRoot\..").Path
-        $relativePath = Resolve-Path -LiteralPath $path -Relative
-        $cursorMessage = @"
-Please execute this Cursor task now:
-$relativePath
-
-Read AGENTS.md and .cursor/rules/tactnode-agent-ops.mdc first.
-Implement only the task scope.
-When complete, update the task file to Status: Done.
-"@
-        $sent = Send-ToChat -ProcessName "Cursor" -WindowTitlePattern "Cursor" -Message $cursorMessage
-        if ($sent) {
-            Write-Log "Sent task prompt to Cursor: $(Split-Path $path -Leaf)"
-        } else {
-            Write-Log "Cursor prompt was not sent; file was opened only: $(Split-Path $path -Leaf)"
-        }
+        # Cursor の auto-cursor-tasks.mdc ルールがファイルを開いた瞬間に自動実行する。
+        # UI送信は不要（誤送信の原因になるため廃止）。
     } else {
         Write-Log "cursor.cmd not found at: $cursorCmd"
     }
@@ -251,10 +236,18 @@ function Invoke-TaskSweep($label, $since) {
 # Startup sweep: pick up recent Ready tasks created while the watcher was down.
 Invoke-TaskSweep "Startup" (Get-Date).AddHours(-2)
 
+# Initial dashboard generation
+& "$PSScriptRoot\generate_dashboard.ps1" 2>$null
+
+$script:dashTick = 0
 try {
     while ($true) {
         Start-Sleep -Seconds 10
         Invoke-TaskSweep "Polling" (Get-Date).AddHours(-2)
+        $script:dashTick++
+        if ($script:dashTick % 3 -eq 0) {
+            & "$PSScriptRoot\generate_dashboard.ps1" 2>$null
+        }
     }
 } finally {
     $watcher.EnableRaisingEvents = $false
