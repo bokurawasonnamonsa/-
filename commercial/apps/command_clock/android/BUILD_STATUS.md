@@ -1,5 +1,46 @@
 # Build Status
 
+## Version 0.1.19 Arrival Format Fix
+
+Status:
+
+- Debug build: Success
+- Emulator visual check: Success
+- Release AAB build: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+
+Changed:
+
+- Simplified arrival display format on the main screen from `Arrival time: HH:mm UTC` to `Arrival HH:mm:ss`.
+- Simplified Japanese arrival display from `到着時刻: HH:mm UTC` to `到着 HH:mm:ss`.
+- Applied the same format to the floating overlay.
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `20 (0.1.19)`
+- Published: 2026-06-11 16:48
+- Status shown in Play Console: Internal testers, unreviewed
+
+Verification:
+
+```text
+commercial/apps/command_clock/android/verify_019_arrival_format.png
+```
+
+Release notes:
+
+```text
+EN: v0.1.19: Simplified arrival display format to Arrival HH:mm:ss on the main screen and floating overlay.
+JA: v0.1.19: 到着表示を、メイン画面とフローティング表示で「到着 HH:mm:ss」形式に統一しました。
+```
+
 ## Version 0.1.18 Arrival Time Display Fix
 
 Status:

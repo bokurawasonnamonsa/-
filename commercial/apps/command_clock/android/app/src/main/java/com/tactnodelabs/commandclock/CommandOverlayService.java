@@ -241,10 +241,10 @@ public class CommandOverlayService extends Service {
         long baseEpoch = instructionEpoch > 0 ? instructionEpoch : now.getEpochSecond();
         long arrivalEpoch = baseEpoch + buffer + longest + flow;
         String arrivalLine = loc(lang,
-                "Arrival time", "到着時刻", "도착 시간", "到达时间",
-                "เวลาถึง", "Waktu tiba", "Hora de llegada",
-                "Hora de chegada", "Heure d'arrivée", "Ankunftszeit")
-                + ": " + DateTimeFormatter.ofPattern("HH:mm 'UTC'")
+                "Arrival", "到着", "도착", "到达",
+                "ถึง", "Tiba", "Llegada",
+                "Chegada", "Arrivée", "Ankunft")
+                + " " + DateTimeFormatter.ofPattern("HH:mm:ss")
                 .withZone(ZoneOffset.UTC)
                 .format(Instant.ofEpochSecond(arrivalEpoch));
         String phaseLine;

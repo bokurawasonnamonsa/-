@@ -608,10 +608,10 @@ public class MainActivity extends Activity {
         int buffer = inputDurationOrCurrent(bufferSecondsInput, bufferSeconds);
         int flow = inputDurationOrCurrent(flowSecondsInput, flowSeconds);
         long arrivalEpoch = base + buffer + longest + flow;
-        String arrival = DateTimeFormatter.ofPattern("HH:mm 'UTC'")
+        String arrival = DateTimeFormatter.ofPattern("HH:mm:ss")
                 .withZone(ZoneOffset.UTC)
                 .format(Instant.ofEpochSecond(arrivalEpoch));
-        arrivalPreviewLabel.setText(arrivalLabel() + ": " + arrival);
+        arrivalPreviewLabel.setText(arrivalLabel() + " " + arrival);
     }
 
     private int inputDurationOrCurrent(EditText input, int currentValue) {
@@ -623,7 +623,7 @@ public class MainActivity extends Activity {
     }
 
     private String arrivalLabel() {
-        return msg("Arrival time", "到着時刻", "도착 시간", "到达时间", "เวลาถึง", "Waktu tiba", "Hora de llegada", "Hora de chegada", "Heure d'arrivée", "Ankunftszeit");
+        return msg("Arrival", "到着", "도착", "到达", "ถึง", "Tiba", "Llegada", "Chegada", "Arrivée", "Ankunft");
     }
 
     private String syncSummary() {
