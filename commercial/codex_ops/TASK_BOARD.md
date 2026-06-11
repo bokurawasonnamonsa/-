@@ -1,16 +1,15 @@
 # TactNode Labs Task Board
 
-Last updated: 2026-06-10
+Last updated: 2026-06-11
 
 ## Doing
 
-- Multi-agent workflow hardening:
-  - Claude Code creates `commercial/codex_ops/cursor_tasks/*.md`
-  - Claude hook opens Cursor for implementation
-  - Cursor marks task `Status: Done`
-  - watcher generates `commercial/codex_ops/codex_ready/*_codex.md`
-  - watcher posts the Codex instruction into the open Codex window
-  - Codex performs final verification/release work and notifies Claude with `automation/notify_claude.ps1`
+- Claude Code + Codex direct workflow:
+  - Cursor is paused unless the owner explicitly re-enables it.
+  - Claude Code prepares implementation/design tasks and discusses priorities with Codex.
+  - Codex performs final verification, builds, Play Console releases, emulator/device checks, and documentation.
+  - Codex notifies Claude Code after every completed task with `automation/notify_claude.ps1`.
+  - Do not rely on Cursor watcher/hook automation for current production work.
 
 ## Next: Command Clock Product Repair
 
@@ -47,6 +46,7 @@ Last updated: 2026-06-10
 - Claude -> Cursor hook created.
 - Cursor -> Codex watcher created.
 - Codex -> Claude notification script created.
+- Cursor workflow paused on 2026-06-11; operation moved to Claude Code + Codex direct workflow.
 - Command Clock `0.1.7` internal test release published.
 - Command Clock `0.1.8` internal test release `9 (0.1.8)` published.
 - Command Clock `0.1.9` internal test release `10 (0.1.9)` published with multi-language support fix.
