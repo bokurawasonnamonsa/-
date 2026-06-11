@@ -1,5 +1,38 @@
 # Build Status
 
+## Version 0.1.14 Simplified Overlay Permission Flow
+
+Status:
+
+- Release AAB build: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+
+Changed:
+
+- Removed the unnecessary Android 13+ two-step restricted settings dialog.
+- Tapping Allow floating display now directly opens the overlay permission screen.
+- Removed leftover app-details callback constants and branch from the previous flow during Codex verification.
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `15 (0.1.14)`
+- Published: 2026-06-11 09:39
+- Status shown in Play Console: Internal testers, unreviewed
+
+Release notes:
+
+```text
+EN: v0.1.14: Simplified overlay permission flow — tapping the button now goes directly to the permission screen.
+JA: v0.1.14: 重ねて表示の許可フローを簡略化。ボタンを押すと直接許可画面に移動します。
+```
+
 ## Version 0.1.13 Android 13+ Overlay Permission Guide
 
 Status:
