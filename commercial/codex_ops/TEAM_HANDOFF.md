@@ -12,7 +12,7 @@ The owner wants to grow this from a 3301-specific tool into a commercial, global
 - Platform: Android first
 - Distribution: Google Play internal testing
 - Package: `com.tactnodelabs.commandclock`
-- Current internal version after latest publish: `0.1.16`, version code `17`
+- Current internal version after latest publish: `0.1.18`, version code `19`
 - Main issue from owner: app still does not fully express the valuable 3301 coordination mechanism, and floating overlay reliability must be proven by emulator/device verification.
 
 ## Core Product Logic To Preserve

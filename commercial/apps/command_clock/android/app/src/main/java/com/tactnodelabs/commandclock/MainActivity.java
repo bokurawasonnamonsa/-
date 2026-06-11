@@ -47,6 +47,7 @@ public class MainActivity extends Activity {
     private static final String KEY_SHOW_UTC = "show_utc";
     private static final String KEY_SHOW_PHASE = "show_phase";
     private static final String KEY_SHOW_COUNTDOWN = "show_countdown";
+    private static final String KEY_SHOW_ARRIVAL = "show_arrival";
     private static final int REQUEST_POST_NOTIFICATIONS = 4101;
     private static final int REQUEST_OVERLAY_PERMISSION = 4102;
 
@@ -71,10 +72,12 @@ public class MainActivity extends Activity {
     private TextView longestSecondsLabel;
     private TextView bufferSecondsLabel;
     private TextView flowSecondsLabel;
+    private TextView arrivalPreviewLabel;
     private TextView overlaySettingsLabel;
     private TextView showUtcLabel;
     private TextView showPhaseLabel;
     private TextView showCountdownLabel;
+    private TextView showArrivalLabel;
     private EditText labelInput;
     private EditText mySecondsInput;
     private EditText longestSecondsInput;
@@ -90,6 +93,7 @@ public class MainActivity extends Activity {
     private Switch showUtcSwitch;
     private Switch showPhaseSwitch;
     private Switch showCountdownSwitch;
+    private Switch showArrivalSwitch;
 
     private long instructionEpochSeconds;
     private int mySeconds = 60;
@@ -279,6 +283,11 @@ public class MainActivity extends Activity {
         }
         root.addView(presetRow, new LinearLayout.LayoutParams(-1, -2));
 
+        arrivalPreviewLabel = text("", 14, 0xFFA7B0BC, true);
+        arrivalPreviewLabel.setGravity(Gravity.CENTER);
+        arrivalPreviewLabel.setPadding(0, dp(10), 0, dp(4));
+        root.addView(arrivalPreviewLabel, new LinearLayout.LayoutParams(-1, -2));
+
         LinearLayout actionRow = row();
         issueButton = new Button(this);
         issueButton.setOnClickListener(v -> issueInstruction());
@@ -336,9 +345,14 @@ public class MainActivity extends Activity {
         showCountdownSwitch.setChecked(prefs.getBoolean(KEY_SHOW_COUNTDOWN, true));
         showCountdownLabel = overlaySettingRow(root, showCountdownSwitch);
 
+        showArrivalSwitch = new Switch(this);
+        showArrivalSwitch.setChecked(prefs.getBoolean(KEY_SHOW_ARRIVAL, true));
+        showArrivalLabel = overlaySettingRow(root, showArrivalSwitch);
+
         showUtcSwitch.setOnCheckedChangeListener((button, checked) -> updateOverlayDisplaySetting(KEY_SHOW_UTC, checked));
         showPhaseSwitch.setOnCheckedChangeListener((button, checked) -> updateOverlayDisplaySetting(KEY_SHOW_PHASE, checked));
         showCountdownSwitch.setOnCheckedChangeListener((button, checked) -> updateOverlayDisplaySetting(KEY_SHOW_COUNTDOWN, checked));
+        showArrivalSwitch.setOnCheckedChangeListener((button, checked) -> updateOverlayDisplaySetting(KEY_SHOW_ARRIVAL, checked));
 
         status = text("", 13, 0xFFA7B0BC, false);
         status.setGravity(Gravity.CENTER);
@@ -532,6 +546,7 @@ public class MainActivity extends Activity {
                 .withZone(ZoneOffset.UTC)
                 .format(now);
         utcTime.setText(utc);
+        updateArrivalPreview(now);
 
         if (instructionEpochSeconds <= 0) {
             countdownTitle.setText(msg("Waiting for instruction", "指示待機中", "지시 대기 중", "等待指示", "รอคำสั่ง", "Menunggu instruksi", "Esperando instrucción", "Aguardando instrução", "En attente d'instruction", "Warte auf Anweisung"));
@@ -585,6 +600,30 @@ public class MainActivity extends Activity {
 
     private long arrivalEpochSeconds() {
         return instructionEpochSeconds + bufferSeconds + longestSeconds + flowSeconds;
+    }
+
+    private void updateArrivalPreview(Instant now) {
+        long base = instructionEpochSeconds > 0 ? instructionEpochSeconds : now.getEpochSecond();
+        int longest = inputDurationOrCurrent(longestSecondsInput, longestSeconds);
+        int buffer = inputDurationOrCurrent(bufferSecondsInput, bufferSeconds);
+        int flow = inputDurationOrCurrent(flowSecondsInput, flowSeconds);
+        long arrivalEpoch = base + buffer + longest + flow;
+        String arrival = DateTimeFormatter.ofPattern("HH:mm 'UTC'")
+                .withZone(ZoneOffset.UTC)
+                .format(Instant.ofEpochSecond(arrivalEpoch));
+        arrivalPreviewLabel.setText(arrivalLabel() + ": " + arrival);
+    }
+
+    private int inputDurationOrCurrent(EditText input, int currentValue) {
+        if (input == null) {
+            return currentValue;
+        }
+        int parsed = parseDuration(input.getText().toString().trim(), currentValue);
+        return parsed < 0 ? currentValue : parsed;
+    }
+
+    private String arrivalLabel() {
+        return msg("Arrival time", "到着時刻", "도착 시간", "到达时间", "เวลาถึง", "Waktu tiba", "Hora de llegada", "Hora de chegada", "Heure d'arrivée", "Ankunftszeit");
     }
 
     private String syncSummary() {
@@ -778,6 +817,7 @@ public class MainActivity extends Activity {
         showUtcLabel.setText(msg("UTC time", "UTC時刻", "UTC 시간", "UTC 时间", "เวลา UTC", "Waktu UTC", "Hora UTC", "Hora UTC", "Heure UTC", "UTC-Zeit"));
         showPhaseLabel.setText(msg("Phase", "フェーズ", "단계", "阶段", "ช่วง", "Fase", "Fase", "Fase", "Phase", "Phase"));
         showCountdownLabel.setText(msg("Countdown", "カウントダウン", "카운트다운", "倒计时", "นับถอยหลัง", "Hitung mundur", "Cuenta atrás", "Contagem regressiva", "Compte à rebours", "Countdown"));
+        showArrivalLabel.setText(arrivalLabel());
         if (!shareCodeView.getText().toString().startsWith("CC2|")) {
             shareCodeView.setText(msg(
                     "Issue an instruction, then create a code. Others can import it and use their own time.",

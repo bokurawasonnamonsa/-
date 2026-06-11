@@ -1,5 +1,50 @@
 # Build Status
 
+## Version 0.1.18 Arrival Time Display Fix
+
+Status:
+
+- Release AAB build: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+- Emulator visual check: Success
+
+Changed:
+
+- Added arrival time display to the main screen.
+- Added arrival time display to the floating overlay.
+- Added floating overlay display switch for arrival time.
+- Increased floating overlay display area to show the new arrival time line without clipping.
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `19 (0.1.18)`
+- Published: 2026-06-11 15:09
+- Status shown in Play Console: Internal testers, unreviewed
+
+Verification:
+
+```text
+commercial/apps/command_clock/android/verify_018_arrival_overlay2.png
+```
+
+Release notes:
+
+```text
+EN: v0.1.18: Added arrival time display to the main screen and floating overlay, with a larger overlay area for the new line.
+JA: v0.1.18: メイン画面とフローティング表示に到着予定時刻を追加し、表示領域を調整しました。
+```
+
+Note:
+
+- `18 (0.1.17)` was published first, then superseded immediately by `19 (0.1.18)` after emulator verification found the floating overlay needed a larger display area for the new arrival line.
+
 ## Version 0.1.16 Floating Display Toggles
 
 Status:

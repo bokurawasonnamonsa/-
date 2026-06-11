@@ -1,15 +1,16 @@
-# TactNode Labs Task Board
+﻿# TactNode Labs Task Board
 
 Last updated: 2026-06-11
 
 ## Doing
 
-- Claude Code + Codex direct workflow:
-  - Cursor is paused unless the owner explicitly re-enables it.
-  - Claude Code prepares implementation/design tasks and discusses priorities with Codex.
-  - Codex performs final verification, builds, Play Console releases, emulator/device checks, and documentation.
-  - Codex notifies Claude Code after every completed task with `automation/notify_claude.ps1`.
-  - Do not rely on Cursor watcher/hook automation for current production work.
+（なし — 次のタスク待ち）
+
+## Workflow (確定: 2026-06-11)
+
+- **Claude Code** → 設計・タスクファイル作成 (`cursor_tasks/*.md`)
+- **Codex** → 実装・ビルド・Play Consoleリリース・完了通知 (`notify_claude.ps1`)
+- **Cursor は使用しない。Cursor関連hook/watcherは再有効化しない。**
 
 ## Next: Command Clock Product Repair
 
@@ -40,6 +41,10 @@ Last updated: 2026-06-11
 - Prepare English-first content, then expand to high-priority languages.
 
 ## Done
+- Task `20260611_arrival_time_display` (到着時刻表示) completed by Codex.
+  - 0.1.17 (versionCode 18): 初回リリース
+  - 0.1.18 (versionCode 19): フローティング4行目切れ修正 → 表示領域拡張。2026-06-11 15:09 内部テスト公開済み（未審査）
+- Task `20260611_overlay_display_toggles` (Cursor Task: フローティング表示項目トグル) completed by Codex.
 
 - Git for Windows installed on this machine.
 - Shared agent instruction files added.
@@ -56,7 +61,10 @@ Last updated: 2026-06-11
 - Command Clock `0.1.13` internal test release `14 (0.1.13)` published with Android 13+ overlay permission step-by-step guide.
 - Command Clock `0.1.14` internal test release `15 (0.1.14)` published with simplified direct overlay permission flow.
 - Command Clock `0.1.15` internal test release `16 (0.1.15)` published with overlay UTC duplicate fix and localized overlay text.
-- Command Clock `0.1.16` internal test release `17 (0.1.16)` published with floating overlay display toggles for UTC, phase, and countdown.
+- Cursor workflow 完全停止 (2026-06-11): Claude Code + Codex直接連携フローへ移行確定。
+- Command Clock `0.1.16` internal test release `17 (0.1.16)` published with floating overlay display toggles (UTC / phase / countdown Switch widgets).
+- Command Clock `0.1.17` internal test release `18 (0.1.17)` published with arrival time display, then superseded by `0.1.18`.
+- Command Clock `0.1.18` internal test release `19 (0.1.18)` published with arrival time display and larger floating overlay area.
 - Realtime agent dashboard generator added at `automation/generate_dashboard.ps1`; `automation/dashboard.html` now regenerates from live task, release, and git state.
 - Google Play listing draft v1 created at `commercial/store/play_listing_v1.md`.
 - Codex -> Claude completion notifications sent for Floating Button Behavior Fix, Release 0.1.8 Prep, Release 0.1.8 Prep Retrigger, and Hook Test.
