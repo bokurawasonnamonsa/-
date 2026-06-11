@@ -23,6 +23,8 @@ import android.widget.TextView;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 public class CommandOverlayService extends Service {
@@ -42,6 +44,9 @@ public class CommandOverlayService extends Service {
     private static final String KEY_FLOW_SECONDS = "flow_seconds";
     private static final String KEY_OVERLAY = "overlay_enabled";
     private static final String KEY_LANGUAGE = "language";
+    private static final String KEY_SHOW_UTC = "show_utc";
+    private static final String KEY_SHOW_PHASE = "show_phase";
+    private static final String KEY_SHOW_COUNTDOWN = "show_countdown";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private WindowManager windowManager;
@@ -217,6 +222,9 @@ public class CommandOverlayService extends Service {
 
     private String buildClockText() {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        boolean showUtc = prefs.getBoolean(KEY_SHOW_UTC, true);
+        boolean showPhase = prefs.getBoolean(KEY_SHOW_PHASE, true);
+        boolean showCountdown = prefs.getBoolean(KEY_SHOW_COUNTDOWN, true);
         long instructionEpoch = prefs.getLong(KEY_INSTRUCTION_EPOCH, 0L);
         int my = prefs.getInt(KEY_MY_SECONDS, 60);
         int longest = prefs.getInt(KEY_LONGEST_SECONDS, 60);
@@ -228,11 +236,15 @@ public class CommandOverlayService extends Service {
         String utc = "UTC " + DateTimeFormatter.ofPattern("HH:mm:ss")
                 .withZone(ZoneOffset.UTC)
                 .format(now);
+        String phaseLine;
+        String countdownLine;
         if (instructionEpoch <= 0) {
-            return utc + "\n" + loc(lang,
+            phaseLine = loc(lang,
                     "Waiting…", "待機中…", "대기 중…", "等待中…",
                     "รอคำสั่ง…", "Menunggu…", "Esperando…",
-                    "Aguardando…", "En attente…", "Warten…") + "\n--:--";
+                    "Aguardando…", "En attente…", "Warten…");
+            countdownLine = "--:--";
+            return composeOverlayText(utc, phaseLine, countdownLine, showUtc, showPhase, showCountdown);
         }
         long pressEpoch = instructionEpoch + buffer + Math.max(0, longest - my);
         long arrivalEpoch = instructionEpoch + buffer + longest + flow;
@@ -244,7 +256,27 @@ public class CommandOverlayService extends Service {
                 ? loc(lang, "Start: ", "開始: ", "시작: ", "开始: ", "เริ่ม: ", "Mulai: ", "Inicio: ", "Início: ", "Début: ", "Start: ")
                 : loc(lang, "Arrive: ", "到着: ", "도착: ", "到达: ", "ถึง: ", "Tiba: ", "Llegar: ", "Chegar: ", "Arrivée: ", "Ankunft: ");
         String labelPart = label.isEmpty() ? "" : " " + label;
-        return utc + "\n" + phase + labelPart + "\n" + formatDuration(remaining);
+        phaseLine = phase + labelPart;
+        countdownLine = formatDuration(remaining);
+        return composeOverlayText(utc, phaseLine, countdownLine, showUtc, showPhase, showCountdown);
+    }
+
+    private String composeOverlayText(String utc, String phase, String countdown,
+                                      boolean showUtc, boolean showPhase, boolean showCountdown) {
+        List<String> lines = new ArrayList<>();
+        if (showUtc) {
+            lines.add(utc);
+        }
+        if (showPhase) {
+            lines.add(phase);
+        }
+        if (showCountdown) {
+            lines.add(countdown);
+        }
+        if (lines.isEmpty()) {
+            return utc;
+        }
+        return String.join("\n", lines);
     }
 
     private String loc(String lang, String en, String ja, String ko, String zh,

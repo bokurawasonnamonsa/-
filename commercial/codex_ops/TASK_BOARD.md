@@ -56,6 +56,7 @@ Last updated: 2026-06-10
 - Command Clock `0.1.13` internal test release `14 (0.1.13)` published with Android 13+ overlay permission step-by-step guide.
 - Command Clock `0.1.14` internal test release `15 (0.1.14)` published with simplified direct overlay permission flow.
 - Command Clock `0.1.15` internal test release `16 (0.1.15)` published with overlay UTC duplicate fix and localized overlay text.
+- Command Clock `0.1.16` internal test release `17 (0.1.16)` published with floating overlay display toggles for UTC, phase, and countdown.
 - Realtime agent dashboard generator added at `automation/generate_dashboard.ps1`; `automation/dashboard.html` now regenerates from live task, release, and git state.
 - Google Play listing draft v1 created at `commercial/store/play_listing_v1.md`.
 - Codex -> Claude completion notifications sent for Floating Button Behavior Fix, Release 0.1.8 Prep, Release 0.1.8 Prep Retrigger, and Hook Test.

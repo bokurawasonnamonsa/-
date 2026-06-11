@@ -1,5 +1,39 @@
 # Build Status
 
+## Version 0.1.16 Floating Display Toggles
+
+Status:
+
+- Release AAB build: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+
+Changed:
+
+- Added floating overlay display switches for UTC time, phase, and countdown.
+- Saved display switch states to SharedPreferences.
+- Floating overlay now immediately reflects the selected display rows.
+- If every display row is OFF, the overlay falls back to UTC time so it is never blank.
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `17 (0.1.16)`
+- Published: 2026-06-11 13:55
+- Status shown in Play Console: Internal testers, unreviewed
+
+Release notes:
+
+```text
+EN: v0.1.16: Added floating display switches for UTC time, phase, and countdown.
+JA: v0.1.16: フローティング表示に、UTC時刻・フェーズ・カウントダウンの表示切替を追加しました。
+```
+
 ## Version 0.1.15 Overlay Text Language Fix
 
 Status:

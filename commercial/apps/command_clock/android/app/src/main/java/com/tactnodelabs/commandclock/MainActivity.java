@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
@@ -24,6 +25,7 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import java.nio.charset.StandardCharsets;
@@ -42,6 +44,9 @@ public class MainActivity extends Activity {
     private static final String KEY_FLOW_SECONDS = "flow_seconds";
     private static final String KEY_LANGUAGE = "language";
     private static final String KEY_OVERLAY = "overlay_enabled";
+    private static final String KEY_SHOW_UTC = "show_utc";
+    private static final String KEY_SHOW_PHASE = "show_phase";
+    private static final String KEY_SHOW_COUNTDOWN = "show_countdown";
     private static final int REQUEST_POST_NOTIFICATIONS = 4101;
     private static final int REQUEST_OVERLAY_PERMISSION = 4102;
 
@@ -66,6 +71,10 @@ public class MainActivity extends Activity {
     private TextView longestSecondsLabel;
     private TextView bufferSecondsLabel;
     private TextView flowSecondsLabel;
+    private TextView overlaySettingsLabel;
+    private TextView showUtcLabel;
+    private TextView showPhaseLabel;
+    private TextView showCountdownLabel;
     private EditText labelInput;
     private EditText mySecondsInput;
     private EditText longestSecondsInput;
@@ -78,6 +87,9 @@ public class MainActivity extends Activity {
     private Button importButton;
     private Button overlayButton;
     private Button permissionButton;
+    private Switch showUtcSwitch;
+    private Switch showPhaseSwitch;
+    private Switch showCountdownSwitch;
 
     private long instructionEpochSeconds;
     private int mySeconds = 60;
@@ -306,6 +318,28 @@ public class MainActivity extends Activity {
         permissionButton.setOnClickListener(v -> openOverlayPermission());
         root.addView(permissionButton, new LinearLayout.LayoutParams(-1, -2));
 
+        overlaySettingsLabel = text("", 16, 0xFFF2F5F8, true);
+        overlaySettingsLabel.setGravity(Gravity.CENTER);
+        overlaySettingsLabel.setPadding(0, dp(16), 0, dp(4));
+        root.addView(overlaySettingsLabel, new LinearLayout.LayoutParams(-1, -2));
+
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        showUtcSwitch = new Switch(this);
+        showUtcSwitch.setChecked(prefs.getBoolean(KEY_SHOW_UTC, true));
+        showUtcLabel = overlaySettingRow(root, showUtcSwitch);
+
+        showPhaseSwitch = new Switch(this);
+        showPhaseSwitch.setChecked(prefs.getBoolean(KEY_SHOW_PHASE, true));
+        showPhaseLabel = overlaySettingRow(root, showPhaseSwitch);
+
+        showCountdownSwitch = new Switch(this);
+        showCountdownSwitch.setChecked(prefs.getBoolean(KEY_SHOW_COUNTDOWN, true));
+        showCountdownLabel = overlaySettingRow(root, showCountdownSwitch);
+
+        showUtcSwitch.setOnCheckedChangeListener((button, checked) -> updateOverlayDisplaySetting(KEY_SHOW_UTC, checked));
+        showPhaseSwitch.setOnCheckedChangeListener((button, checked) -> updateOverlayDisplaySetting(KEY_SHOW_PHASE, checked));
+        showCountdownSwitch.setOnCheckedChangeListener((button, checked) -> updateOverlayDisplaySetting(KEY_SHOW_COUNTDOWN, checked));
+
         status = text("", 13, 0xFFA7B0BC, false);
         status.setGravity(Gravity.CENTER);
         status.setPadding(0, dp(14), 0, 0);
@@ -330,6 +364,43 @@ public class MainActivity extends Activity {
         input.setTextColor(0xFFF2F5F8);
         input.setHintTextColor(0xFF8B949E);
         return input;
+    }
+
+    private TextView overlaySettingRow(LinearLayout root, Switch settingSwitch) {
+        LinearLayout line = new LinearLayout(this);
+        line.setOrientation(LinearLayout.HORIZONTAL);
+        line.setGravity(Gravity.CENTER_VERTICAL);
+        line.setPadding(dp(10), dp(6), dp(10), dp(6));
+        line.setBackground(border(0xFF0D1117, 0xFF30363D, 1));
+
+        TextView label = text("", 14, 0xFFE6EDF3, true);
+        line.addView(label, new LinearLayout.LayoutParams(0, -2, 1));
+
+        tintSwitch(settingSwitch);
+        line.addView(settingSwitch, new LinearLayout.LayoutParams(-2, -2));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.setMargins(0, dp(6), 0, 0);
+        root.addView(line, params);
+        return label;
+    }
+
+    private void tintSwitch(Switch settingSwitch) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            int[][] states = new int[][]{
+                    new int[]{android.R.attr.state_checked},
+                    new int[]{-android.R.attr.state_checked}
+            };
+            settingSwitch.setThumbTintList(new ColorStateList(states, new int[]{0xFF58A6FF, 0xFF8B949E}));
+            settingSwitch.setTrackTintList(new ColorStateList(states, new int[]{0x6658A6FF, 0x3330363D}));
+        }
+    }
+
+    private void updateOverlayDisplaySetting(String key, boolean checked) {
+        getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean(key, checked).apply();
+        if (overlayEnabled) {
+            startOverlayService(CommandOverlayService.ACTION_SHOW, null);
+            updateClock();
+        }
     }
 
     private TextView fieldLabel() {
@@ -703,6 +774,10 @@ public class MainActivity extends Activity {
                 ? msg("Floating countdown: ON", "フローティング: ON", "플로팅: ON", "浮动显示: 开", "ลอย: เปิด", "Mengambang: ON", "Flotante: ON", "Flutuante: ON", "Flottant: ON", "Schwebend: AN")
                 : msg("Floating countdown: OFF", "フローティング: OFF", "플로팅: OFF", "浮动显示: 关", "ลอย: ปิด", "Mengambang: OFF", "Flotante: OFF", "Flutuante: OFF", "Flottant: OFF", "Schwebend: AUS"));
         permissionButton.setText(msg("Allow floating display", "重ねて表示を許可", "다른 앱 위에 표시 허용", "允许悬浮显示", "อนุญาตการแสดงทับ", "Izinkan tampilan mengambang", "Permitir visualización flotante", "Permitir exibição flutuante", "Autoriser l'affichage flottant", "Schwebende Anzeige erlauben"));
+        overlaySettingsLabel.setText(msg("Floating display settings", "フローティング表示設定", "플로팅 표시 설정", "浮动显示设置", "ตั้งค่าการแสดงลอย", "Pengaturan tampilan mengambang", "Ajustes de visualización flotante", "Configurações de exibição flutuante", "Paramètres d'affichage flottant", "Einstellungen fuer schwebende Anzeige"));
+        showUtcLabel.setText(msg("UTC time", "UTC時刻", "UTC 시간", "UTC 时间", "เวลา UTC", "Waktu UTC", "Hora UTC", "Hora UTC", "Heure UTC", "UTC-Zeit"));
+        showPhaseLabel.setText(msg("Phase", "フェーズ", "단계", "阶段", "ช่วง", "Fase", "Fase", "Fase", "Phase", "Phase"));
+        showCountdownLabel.setText(msg("Countdown", "カウントダウン", "카운트다운", "倒计时", "นับถอยหลัง", "Hitung mundur", "Cuenta atrás", "Contagem regressiva", "Compte à rebours", "Countdown"));
         if (!shareCodeView.getText().toString().startsWith("CC2|")) {
             shareCodeView.setText(msg(
                     "Issue an instruction, then create a code. Others can import it and use their own time.",
