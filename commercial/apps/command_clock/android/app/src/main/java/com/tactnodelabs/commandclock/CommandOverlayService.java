@@ -41,6 +41,7 @@ public class CommandOverlayService extends Service {
     private static final String KEY_BUFFER_SECONDS = "buffer_seconds";
     private static final String KEY_FLOW_SECONDS = "flow_seconds";
     private static final String KEY_OVERLAY = "overlay_enabled";
+    private static final String KEY_LANGUAGE = "language";
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private WindowManager windowManager;
@@ -221,13 +222,17 @@ public class CommandOverlayService extends Service {
         int longest = prefs.getInt(KEY_LONGEST_SECONDS, 60);
         int buffer = prefs.getInt(KEY_BUFFER_SECONDS, 15);
         int flow = prefs.getInt(KEY_FLOW_SECONDS, 300);
-        String label = prefs.getString(KEY_LABEL, "Next operation");
+        String label = prefs.getString(KEY_LABEL, "");
+        String lang = prefs.getString(KEY_LANGUAGE, "en");
         Instant now = Instant.now();
-        String utc = DateTimeFormatter.ofPattern("HH:mm:ss 'UTC'")
+        String utc = "UTC " + DateTimeFormatter.ofPattern("HH:mm:ss")
                 .withZone(ZoneOffset.UTC)
                 .format(now);
         if (instructionEpoch <= 0) {
-            return "UTC " + utc + "\nWaiting for instruction\n--:--";
+            return utc + "\n" + loc(lang,
+                    "Waiting…", "待機中…", "대기 중…", "等待中…",
+                    "รอคำสั่ง…", "Menunggu…", "Esperando…",
+                    "Aguardando…", "En attente…", "Warten…") + "\n--:--";
         }
         long pressEpoch = instructionEpoch + buffer + Math.max(0, longest - my);
         long arrivalEpoch = instructionEpoch + buffer + longest + flow;
@@ -235,8 +240,27 @@ public class CommandOverlayService extends Service {
         boolean waitingForStart = nowEpoch < pressEpoch;
         long targetEpoch = waitingForStart ? pressEpoch : arrivalEpoch;
         long remaining = Math.max(0, targetEpoch - nowEpoch);
-        String phase = waitingForStart ? "Press Start: " : "Arrival: ";
-        return "UTC " + utc + "\n" + phase + label + "\n" + formatDuration(remaining);
+        String phase = waitingForStart
+                ? loc(lang, "Start: ", "開始: ", "시작: ", "开始: ", "เริ่ม: ", "Mulai: ", "Inicio: ", "Início: ", "Début: ", "Start: ")
+                : loc(lang, "Arrive: ", "到着: ", "도착: ", "到达: ", "ถึง: ", "Tiba: ", "Llegar: ", "Chegar: ", "Arrivée: ", "Ankunft: ");
+        String labelPart = label.isEmpty() ? "" : " " + label;
+        return utc + "\n" + phase + labelPart + "\n" + formatDuration(remaining);
+    }
+
+    private String loc(String lang, String en, String ja, String ko, String zh,
+                       String th, String id, String es, String pt, String fr, String de) {
+        switch (lang) {
+            case "ja": return ja;
+            case "ko": return ko;
+            case "zh": return zh;
+            case "th": return th;
+            case "id": return id;
+            case "es": return es;
+            case "pt": return pt;
+            case "fr": return fr;
+            case "de": return de;
+            default:   return en;
+        }
     }
 
     private String formatDuration(long secondsRemaining) {

@@ -1,5 +1,38 @@
 # Build Status
 
+## Version 0.1.15 Overlay Text Language Fix
+
+Status:
+
+- Release AAB build: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+
+Changed:
+
+- Removed duplicate UTC text from the floating overlay.
+- Floating overlay labels now match the selected app language.
+- Added language preference handling to `CommandOverlayService`.
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `16 (0.1.15)`
+- Published: 2026-06-11 11:31
+- Status shown in Play Console: Internal testers, unreviewed
+
+Release notes:
+
+```text
+EN: v0.1.15: Fixed duplicate UTC label in overlay. Overlay text now matches selected language.
+JA: v0.1.15: フローティング表示のUTC重複を修正。表示テキストが言語設定に合わせて切り替わるようになりました。
+```
+
 ## Version 0.1.14 Simplified Overlay Permission Flow
 
 Status:
