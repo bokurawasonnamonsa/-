@@ -1,5 +1,47 @@
 # Build Status
 
+## Version 0.1.20 Free Text Note Field
+
+Status:
+
+- Debug build: Success
+- Emulator visual check: Success
+- Release AAB build: Success
+- Signed AAB: Success
+- Google Play internal test release: Success
+
+Changed:
+
+- Changed the operation name field label to `Note` / `メモ`.
+- Changed the placeholder to `Free text` / `自由記入`.
+- Removed the automatic default text from the note field, so it starts blank.
+- Clear now returns the note field to blank.
+
+Output:
+
+```text
+commercial/apps/command_clock/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Google Play:
+
+- Internal test release: `21 (0.1.20)`
+- Published: 2026-06-11 17:14
+- Status shown in Play Console: Internal testers, unreviewed
+
+Verification:
+
+```text
+commercial/apps/command_clock/android/verify_020_label_free_text3.png
+```
+
+Release notes:
+
+```text
+EN: v0.1.20: Changed the operation name field into an optional free-text note field.
+JA: v0.1.20: 作戦名入力を任意のメモ欄に変更し、空欄のまま開始できるようにしました。
+```
+
 ## Version 0.1.19 Arrival Format Fix
 
 Status:

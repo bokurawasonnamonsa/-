@@ -231,7 +231,6 @@ public class MainActivity extends Activity {
         labelInputLabel = fieldLabel();
         root.addView(labelInputLabel, new LinearLayout.LayoutParams(-1, -2));
         labelInput = input();
-        labelInput.setText(activeLabel);
         root.addView(labelInput, new LinearLayout.LayoutParams(-1, -2));
 
         mySecondsLabel = fieldLabel();
@@ -446,7 +445,7 @@ public class MainActivity extends Activity {
         SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         language = prefs.getString(KEY_LANGUAGE, defaultLanguage());
         overlayEnabled = prefs.getBoolean(KEY_OVERLAY, false);
-        activeLabel = prefs.getString(KEY_LABEL, defaultLabel());
+        activeLabel = prefs.getString(KEY_LABEL, "");
         instructionEpochSeconds = prefs.getLong(KEY_INSTRUCTION_EPOCH, 0L);
         mySeconds = prefs.getInt(KEY_MY_SECONDS, 60);
         longestSeconds = prefs.getInt(KEY_LONGEST_SECONDS, 60);
@@ -520,9 +519,9 @@ public class MainActivity extends Activity {
 
     private void clearOperation() {
         instructionEpochSeconds = 0L;
-        activeLabel = defaultLabel();
+        activeLabel = "";
         saveState();
-        labelInput.setText(activeLabel);
+        labelInput.setText("");
         shareCodeView.setText("");
         setStatus(msg("Cleared.", "クリアしました。", "초기화했습니다.", "已清除。", "ล้างแล้ว", "Dihapus.", "Borrado.", "Limpo.", "Effacé.", "Zurückgesetzt."));
         updateClock();
@@ -793,12 +792,12 @@ public class MainActivity extends Activity {
 
     private void applyLanguage() {
         languageLabel.setText(msg("Language", "言語", "언어", "语言", "ภาษา", "Bahasa", "Idioma", "Idioma", "Langue", "Sprache"));
-        labelInputLabel.setText(msg("Operation name", "作戦名", "작전 이름", "任务名称", "ชื่อปฏิบัติการ", "Nama operasi", "Nombre de operación", "Nome da operação", "Nom de l'opération", "Einsatzname"));
+        labelInputLabel.setText(msg("Note", "メモ", "메모", "备注", "บันทึก", "Catatan", "Nota", "Nota", "Note", "Notiz"));
         mySecondsLabel.setText(msg("My setting time (mm:ss)", "自分の設定値（mm:ss）", "내 설정 시간 (mm:ss)", "我的设置时间 (mm:ss)", "เวลาตั้งค่าของฉัน (mm:ss)", "Waktu pengaturan saya (mm:ss)", "Mi tiempo de ajuste (mm:ss)", "Meu tempo de ajuste (mm:ss)", "Mon temps de réglage (mm:ss)", "Meine Einstellzeit (mm:ss)"));
         longestSecondsLabel.setText(msg("Longest member setting (mm:ss)", "最長設定値（mm:ss）", "최장 멤버 설정 (mm:ss)", "最长成员设置 (mm:ss)", "สมาชิกที่นานที่สุด (mm:ss)", "Pengaturan anggota terpanjang (mm:ss)", "Ajuste del miembro más largo (mm:ss)", "Ajuste do membro mais longo (mm:ss)", "Réglage du membre le plus long (mm:ss)", "Längste Mitglieder-Einstellung (mm:ss)"));
         bufferSecondsLabel.setText(msg("Buffer after instruction (mm:ss)", "指示後の猶予時間（mm:ss）", "지시 후 여유 시간 (mm:ss)", "指示后缓冲时间 (mm:ss)", "เวลาพักหลังคำสั่ง (mm:ss)", "Waktu penyangga setelah instruksi (mm:ss)", "Tiempo de margen tras la instrucción (mm:ss)", "Tempo de folga após instrução (mm:ss)", "Temps tampon après instruction (mm:ss)", "Puffer nach Anweisung (mm:ss)"));
         flowSecondsLabel.setText(msg("Flowing/rally time (mm:ss)", "流れている時間（mm:ss）", "진행/집결 시간 (mm:ss)", "流动/集结时间 (mm:ss)", "เวลาไหล/รวมตัว (mm:ss)", "Waktu alur/rally (mm:ss)", "Tiempo de flujo/reunión (mm:ss)", "Tempo de fluxo/reunião (mm:ss)", "Temps de flux/rassemblement (mm:ss)", "Fluss-/Sammelzeit (mm:ss)"));
-        labelInput.setHint(msg("Operation name", "作戦名", "작전 이름", "任务名称", "ชื่อปฏิบัติการ", "Nama operasi", "Nombre de operación", "Nome da operação", "Nom de l'opération", "Einsatzname"));
+        labelInput.setHint(msg("Free text", "自由記入", "자유 입력", "自由填写", "ข้อความอิสระ", "Teks bebas", "Texto libre", "Texto livre", "Texte libre", "Freitext"));
         mySecondsInput.setHint(msg("Example 01:30", "例 01:30", "예 01:30", "例 01:30", "ตัวอย่าง 01:30", "Contoh 01:30", "Ejemplo 01:30", "Exemplo 01:30", "Exemple 01:30", "Beispiel 01:30"));
         longestSecondsInput.setHint(msg("Example 02:00", "例 02:00", "예 02:00", "例 02:00", "ตัวอย่าง 02:00", "Contoh 02:00", "Ejemplo 02:00", "Exemplo 02:00", "Exemple 02:00", "Beispiel 02:00"));
         bufferSecondsInput.setHint(msg("Example 00:15", "例 00:15", "예 00:15", "例 00:15", "ตัวอย่าง 00:15", "Contoh 00:15", "Ejemplo 00:15", "Exemplo 00:15", "Exemple 00:15", "Beispiel 00:15"));

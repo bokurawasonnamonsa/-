@@ -41,6 +41,7 @@ Last updated: 2026-06-11
 - Prepare English-first content, then expand to high-priority languages.
 
 ## Done
+- Task `20260611_label_input_free_text` (Label input: free text field) completed by Codex.
 - Task `20260611_arrival_format_fix` (Arrival time format fix) completed by Codex.
 - Task `20260611_arrival_time_display` (到着時刻表示) completed by Codex.
   - 0.1.17 (versionCode 18): 初回リリース
@@ -67,6 +68,7 @@ Last updated: 2026-06-11
 - Command Clock `0.1.17` internal test release `18 (0.1.17)` published with arrival time display, then superseded by `0.1.18`.
 - Command Clock `0.1.18` internal test release `19 (0.1.18)` published with arrival time display and larger floating overlay area.
 - Command Clock `0.1.19` internal test release `20 (0.1.19)` published with simplified arrival display format.
+- Command Clock `0.1.20` internal test release `21 (0.1.20)` published with the optional free-text note field.
 - Realtime agent dashboard generator added at `automation/generate_dashboard.ps1`; `automation/dashboard.html` now regenerates from live task, release, and git state.
 - Google Play listing draft v1 created at `commercial/store/play_listing_v1.md`.
 - Codex -> Claude completion notifications sent for Floating Button Behavior Fix, Release 0.1.8 Prep, Release 0.1.8 Prep Retrigger, and Hook Test.
